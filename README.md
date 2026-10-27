@@ -1,44 +1,50 @@
 # MenuCraft
 
-An interactive frontend prototype for a digital-menu website builder SaaS — marketing site, template marketplace, visual editor, restaurant dashboard, public menu, QR page and platform admin.
+Restaurant digital-menu SaaS — marketing site, template marketplace, inline (Elementor-style) template editor, restaurant dashboard, kitchen/worker board, platform admin.
 
-**React 19 · TypeScript · Vite 6 · Tailwind CSS v4 · zustand · qrcode.react**
+Monorepo layout:
 
-## Run it
+```
+frontend/   React 19 · TypeScript · Vite 6 · Tailwind CSS v4 · framer-motion · zustand · qrcode.react
+backend/    (API — coming next)
+```
+
+## Run the frontend
 
 ```bash
+cd frontend
 npm install
 npm run dev      # http://localhost:5173
 ```
 
 ```bash
-npm run build    # type-check + production build into dist/
-npm run preview  # serve the production build
+npm run build    # type-check + production build
+npm run preview
 ```
 
-## Routes
+## Languages & direction
 
-| Route | What it is |
+The whole product speaks **English / العربية / کوردی** from a language switcher in the header and the dashboard.
+`ar` and `ku` render full RTL (Tailwind logical utilities), `en` renders LTR.
+
+## Roles
+
+| Role | Sees |
 | --- | --- |
-| `/` | Marketing homepage |
-| `/templates` | Template marketplace — search, filters, live previews |
-| `/templates/:id` | Full-page template preview (desktop / phone) |
-| `/signin` | Sign-in screen (demo, accepts anything) |
-| `/dashboard` | Restaurant workspace — overview, menu, branding, QR, subscription, settings |
-| `/dashboard/editor` | Three-part visual editor with undo/redo and publish flow |
-| `/dashboard/qr-code` | Real, scannable QR code with PNG/SVG download and print |
-| `/menu-demo` | Public Bella site with the simulated address bar |
-| `/admin` | Platform admin (mock analytics) |
-| anything else | 404 |
+| **Client** — anyone who registers | their restaurant: orders, earnings, reports, menu builder, payments, subscription |
+| **Worker** | kitchen board only — moves orders `received → preparing → served` |
+| **Admin** | limited platform access (permission-controlled) |
+| **Super admin** | clients, subscriptions, sales reports, templates, team/access, payment providers |
 
-## Notes
+## Folder structure (`frontend/src`)
 
-- **No backend.** All data is demo data persisted to `localStorage` (`menucraft-demo-v1`); three restaurants are seeded independently.
-- Sign-in, payments, DNS, subdomains and traffic analytics are **simulated** — URLs such as `bella.menucraft.com` are clearly labelled as simulated in the UI.
-- Food photography is bundled in `public/images/food/` (credits in `public/images/CREDITS.txt`); web fonts load from Google Fonts.
+```
+components/   home-page sections only
+features/     auth · marketing · client · worker · admin
+templates/    template data, site renderer, inline editor
+shared/       ui kit, i18n (en/ar/ku), store, lib, chrome
+```
 
-## Verified
+## Status
 
-- `tsc -b` clean, production build passes (no chunk warnings).
-- 44 automated browser checks (editor CRUD, design panels, undo/redo, downloads, persistence) passing.
-- 15 routes at 1440×900 and 8 routes at 390/768 — no console errors, no broken images, no horizontal overflow.
+Everything is front-end demo data persisted to `localStorage` until the backend lands — sign-in, payments, analytics and subdomains are simulated and labelled as such in the UI.

@@ -3,6 +3,8 @@ dist/
 dist-ssr/
 *.local
 .DS_Store
+# dev-only verification scripts (screenshots / audits)
+_*
 .vscode/*
 !.vscode/extensions.json
 .idea/
