@@ -8,7 +8,7 @@ import { RestaurantSite } from '../../templates/site/RestaurantSite.tsx'
 import { Badge, Button, Card, Img } from '../../shared/ui/ui.tsx'
 import { useCustomize } from '../../shared/lib/hooks.ts'
 import { FONTS } from '../../templates/data/fonts.ts'
-import { TEMPLATES, buildTemplatePreviewRestaurant, getTemplate } from '../../templates/data/templates.ts'
+import { buildTemplatePreviewRestaurant, getTemplate, hasTemplate } from '../../templates/data/templates.ts'
 import { cx, money } from '../../shared/lib/utils.ts'
 import { useActiveRestaurant } from '../../shared/store/useStore.ts'
 
@@ -16,7 +16,7 @@ type Device = 'desktop' | 'phone'
 
 export default function TemplatePreview() {
   const { id = '' } = useParams()
-  const exists = TEMPLATES.some((t) => t.id === id)
+  const exists = hasTemplate(id)
   const template = getTemplate(id)
   const active = useActiveRestaurant()
   const customize = useCustomize()

@@ -5,7 +5,8 @@ import { MarketingFooter } from '../../shared/chrome/MarketingFooter.tsx'
 import { MarketingHeader } from '../../shared/chrome/MarketingHeader.tsx'
 import { Badge, Button, EmptyState, Img } from '../../shared/ui/ui.tsx'
 import { useCustomize } from '../../shared/lib/hooks.ts'
-import { TEMPLATES, TEMPLATE_CATEGORIES } from '../../templates/data/templates.ts'
+import { TEMPLATE_CATEGORIES } from '../../templates/data/templates.ts'
+import { useTemplateList } from '../../templates/data/useTemplateList.ts'
 import { cx } from '../../shared/lib/utils.ts'
 import type { TemplateCategory } from '../../shared/lib/types.ts'
 
@@ -13,13 +14,14 @@ type SortId = 'featured' | 'az' | 'category'
 
 export default function Templates() {
   const customize = useCustomize()
+  const templates = useTemplateList()
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<(typeof TEMPLATE_CATEGORIES)[number]>('All')
   const [sort, setSort] = useState<SortId>('featured')
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const filtered = TEMPLATES.filter((template) => {
+    const filtered = templates.filter((template) => {
       const matchesCategory = category === 'All' || template.category === category
       if (!matchesCategory) return false
       if (!q) return true
@@ -39,7 +41,7 @@ export default function Templates() {
     if (sort === 'az') return [...filtered].sort((a, b) => a.name.localeCompare(b.name))
     if (sort === 'category') return [...filtered].sort((a, b) => a.category.localeCompare(b.category))
     return [...filtered].sort((a, b) => Number(b.featured) - Number(a.featured))
-  }, [query, category, sort])
+  }, [query, category, sort, templates])
 
   const reset = () => {
     setQuery('')
@@ -103,7 +105,7 @@ export default function Templates() {
 
             <div className="flex flex-wrap items-center gap-2">
               <span className="me-1 text-[12.5px] text-clay">
-                {results.length} of {TEMPLATES.length}
+                {results.length} of {templates.length}
               </span>
               <select
                 value={sort}
@@ -123,8 +125,8 @@ export default function Templates() {
               const active = category === item
               const count =
                 item === 'All'
-                  ? TEMPLATES.length
-                  : TEMPLATES.filter((t) => t.category === (item as TemplateCategory)).length
+                  ? templates.length
+                  : templates.filter((t) => t.category === (item as TemplateCategory)).length
               return (
                 <button
                   key={item}
@@ -187,6 +189,11 @@ export default function Templates() {
                   <span className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-black/15" />
 
                   <span className="absolute start-4 top-4 flex flex-wrap gap-2">
+                    {template.custom ? (
+                      <Badge tone="dark" className="bg-gold text-ink">
+                        New
+                      </Badge>
+                    ) : null}
                     {template.featured ? (
                       <Badge tone="dark" className="bg-flame text-white" icon="star">
                         Featured
@@ -237,7 +244,9 @@ export default function Templates() {
                     </span>
                     <span className="flex items-center gap-1.5">
                       <Icon name="users" size={13} />
-                      {template.usageCount.toLocaleString()} uses
+                      {template.custom
+                        ? 'just added'
+                        : `${template.usageCount.toLocaleString()} uses`}
                     </span>
                   </div>
 

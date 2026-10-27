@@ -2,13 +2,15 @@ import { Link } from 'react-router-dom'
 import { Icon } from '../../shared/ui/icons.tsx'
 import { Badge, Button, Card, Img } from '../../shared/ui/ui.tsx'
 import { useCustomize } from '../../shared/lib/hooks.ts'
-import { TEMPLATES, getTemplate } from '../../templates/data/templates.ts'
+import { getTemplate } from '../../templates/data/templates.ts'
+import { useTemplateList } from '../../templates/data/useTemplateList.ts'
 import { cx } from '../../shared/lib/utils.ts'
 import { useActiveRestaurant } from '../../shared/store/useStore.ts'
 
 export default function TemplatesPage() {
   const r = useActiveRestaurant()
   const customize = useCustomize()
+  const templates = useTemplateList()
   const current = getTemplate(r.templateId)
 
   return (
@@ -33,7 +35,7 @@ export default function TemplatesPage() {
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {TEMPLATES.map((template) => {
+        {templates.map((template) => {
           const active = template.id === r.templateId
           return (
             <article
@@ -56,6 +58,11 @@ export default function TemplatesPage() {
                   {active ? (
                     <Badge tone="dark" className="bg-flame text-white">
                       In use
+                    </Badge>
+                  ) : null}
+                  {template.custom && !active ? (
+                    <Badge tone="dark" className="bg-gold text-ink">
+                      New
                     </Badge>
                   ) : null}
                   {template.featured && !active ? <Badge tone="dark">Featured</Badge> : null}

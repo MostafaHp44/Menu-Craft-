@@ -7,6 +7,7 @@ import type {
   OpeningHour,
   SectionId,
   SectionState,
+  TemplateCategory,
   TemplateDefinition,
   TypographyConfig,
 } from '../../shared/lib/types.ts'
@@ -883,8 +884,73 @@ function meatballs(): MenuItem {
   return item('Polpette della Nonna', 'Beef & pork meatballs, sugo, parmesan', 13, IMG.tableSpread)
 }
 
+/* ------------------------------------------------------------------ *
+ * Super-admin duplicated designs live in the platform store (they are
+ * user data, not stock data), so this module never imports the store.
+ * The store injects a read-only provider instead — see usePlatform.ts.
+ * ------------------------------------------------------------------ */
+
+export interface CustomTemplateSeed {
+  /** stock template the super admin duplicated */
+  baseTemplateId: string
+  name: string
+  category?: string
+}
+
+let customTemplatesProvider: (() => CustomTemplateSeed[]) | null = null
+
+/** Called once at startup with a reader for the platform store's duplicates. */
+export function registerCustomTemplates(provider: () => CustomTemplateSeed[]): void {
+  customTemplatesProvider = provider
+}
+
+/** Stable public id for a duplicated design ("My Café" → "custom-my-café"). */
+export function customTemplateId(name: string): string {
+  const slug =
+    name
+      .trim()
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, '-')
+      .replace(/^-+|-+$/g, '') || 'template'
+  return `custom-${slug}`
+}
+
+function resolveCategory(value: string | undefined, fallback: TemplateCategory): TemplateCategory {
+  const match = TEMPLATE_CATEGORIES.find(
+    (c) => c !== 'All' && c.toLowerCase() === value?.toLowerCase()
+  )
+  return (match as TemplateCategory) ?? fallback
+}
+
+/** Duplicated designs rendered as full template definitions (design of the base). */
+function customTemplateDefinitions(): TemplateDefinition[] {
+  if (!customTemplatesProvider) return []
+  return customTemplatesProvider().map((custom) => {
+    const base = TEMPLATES.find((t) => t.id === custom.baseTemplateId) ?? TEMPLATES[0]
+    return {
+      ...base,
+      id: customTemplateId(custom.name),
+      name: custom.name,
+      category: resolveCategory(custom.category, base.category),
+      featured: false,
+      usageCount: 0,
+      custom: true,
+    }
+  })
+}
+
+/** Every design a visitor can pick — super-admin duplicates first, then stock. */
+export function allTemplates(): TemplateDefinition[] {
+  const customs = customTemplateDefinitions()
+  return customs.length ? [...customs, ...TEMPLATES] : TEMPLATES
+}
+
+export function hasTemplate(id: string): boolean {
+  return allTemplates().some((t) => t.id === id)
+}
+
 export function getTemplate(id: string): TemplateDefinition {
-  return TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0]
+  return allTemplates().find((t) => t.id === id) ?? TEMPLATES[0]
 }
 
 export const TEMPLATE_CATEGORIES = [

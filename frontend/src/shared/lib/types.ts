@@ -189,6 +189,8 @@ export interface TemplateDefinition {
   defaultDesign: DesignConfiguration
   /** used by the platform admin view (mock) */
   usageCount: number
+  /** true when the super admin duplicated an existing design */
+  custom?: boolean
 }
 
 export interface AdminRestaurantRow {

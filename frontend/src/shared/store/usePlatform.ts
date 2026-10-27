@@ -13,6 +13,7 @@ import {
   createSeedPayments,
   createSeedSubscriptions,
 } from '../lib/demoData.ts'
+import { registerCustomTemplates } from '../../templates/data/templates.ts'
 
 export interface NewTemplateInput {
   /** template the super admin duplicates */
@@ -207,6 +208,11 @@ export const usePlatformStore = create<PlatformState>()(
     }
   )
 )
+
+/* The template data module stays store-free: it exposes a provider hook and
+   this store feeds it, so `getTemplate()` resolves super-admin duplicates
+   everywhere (gallery, previews, editor, published menu). */
+registerCustomTemplates(() => usePlatformStore.getState().customTemplates)
 
 /* ------------------------------- selectors ------------------------------- */
 
