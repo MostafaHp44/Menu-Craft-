@@ -5,11 +5,42 @@ import { RestaurantSite } from '../../templates/site/RestaurantSite.tsx'
 import { Button } from '../../shared/ui/ui.tsx'
 import { publicUrl } from '../../shared/lib/hooks.ts'
 import { useActiveRestaurant, useStore } from '../../shared/store/useStore.ts'
+import { useSubscription } from '../../shared/store/usePlatform.ts'
+import { useI18n } from '../../shared/i18n'
 
 export default function MenuDemo() {
+  const { t } = useI18n()
   const r = useActiveRestaurant()
   const dirty = useStore((s) => s.dirty)
   const publishDemo = useStore((s) => s.publishDemo)
+  const sub = useSubscription(r.id)
+
+  /* an ended subscription pauses the whole public page */
+  if (sub?.status === 'expired') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-ivory px-6 py-12">
+        <div className="w-full max-w-md rounded-3xl border border-sand bg-ink px-6 py-10 text-center text-ivory shadow-[0_50px_110px_-60px_rgba(15,13,11,0.9)] sm:px-10">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/10">
+            <Icon name="clock" size={26} className="text-flame-light" />
+          </span>
+          <h1 className="display-serif mt-5 text-[clamp(26px,5vw,34px)] leading-tight">
+            {t('flow.pausedTitle')}
+          </h1>
+          <p className="mx-auto mt-3 max-w-sm text-[14px] leading-relaxed text-ivory/70">
+            {t('flow.pausedSub')}
+          </p>
+          <div className="mt-7">
+            <Button to="/" variant="light" icon="arrowLeft">
+              {t('flow.backToMenuCraft')}
+            </Button>
+          </div>
+          <p className="mt-6 text-[11.5px] uppercase tracking-[0.14em] text-ivory/40">
+            {t('flow.simulated')}
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div

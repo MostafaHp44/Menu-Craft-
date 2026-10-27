@@ -34,7 +34,15 @@ The whole product speaks **English / العربية / کوردی** from a langua
 | **Client** — anyone who registers | their restaurant: orders, earnings, reports, menu builder, payments, subscription |
 | **Worker** | kitchen board only — moves orders `received → preparing → served` |
 | **Admin** | limited platform access (permission-controlled) |
-| **Super admin** | clients, subscriptions, sales reports, templates, team/access, payment providers |
+| **Super admin** | clients, subscriptions, sales reports, templates, team/access, payment providers, **the whole home-page content** |
+
+## Visitor → client flow
+
+1. Anyone can browse templates and **edit freely without an account** (a local draft).
+2. Publishing or subscribing asks for a **simple sign-up** — the draft becomes their site.
+3. **Typing the site name reveals a pricing bubble** in the editor → subscribe in one tap.
+4. When a subscription ends, the public menu switches to a *paused* screen until it is renewed.
+5. Auto-renewal is visible in the dashboard with an explicit client opt-out.
 
 ## Folder structure (`frontend/src`)
 

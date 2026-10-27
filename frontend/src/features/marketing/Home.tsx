@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { BrowserFrame, PhoneFrame, ScaledFrame } from '../../shared/ui/ScaledFrame.tsx'
@@ -6,7 +6,7 @@ import { Icon } from '../../shared/ui/icons.tsx'
 import { MarketingFooter } from '../../shared/chrome/MarketingFooter.tsx'
 import { MarketingHeader } from '../../shared/chrome/MarketingHeader.tsx'
 import { RestaurantSite } from '../../templates/site/RestaurantSite.tsx'
-import { Badge, Button, SectionHeading, Sparkline } from '../../shared/ui/ui.tsx'
+import { Badge, Button, Img, SectionHeading, Sparkline } from '../../shared/ui/ui.tsx'
 import { PLANS } from '../../shared/lib/demoData.ts'
 import { useCustomize } from '../../shared/lib/hooks.ts'
 import { PALETTE_PRESETS } from '../../templates/data/palettes.ts'
@@ -15,22 +15,122 @@ import type { ColorSet, FontId } from '../../shared/lib/types.ts'
 import { cx } from '../../shared/lib/utils.ts'
 import type { Restaurant } from '../../shared/lib/types.ts'
 import { useActiveRestaurant } from '../../shared/store/useStore.ts'
+import { HOME_SEED, useHomeContent } from '../../shared/store/useHomeContent.ts'
+import type { HomeContent } from '../../shared/store/useHomeContent.ts'
+
+/* ------------------------- store copy → rendered copy ------------------------ */
+
+/**
+ * Stored titles may contain `*accent*` spans and `\n` line breaks — the seed
+ * copy uses them to reproduce the original hand-written markup exactly.
+ */
+function AccentText({ text, accentClass = 'text-flame' }: { text: string; accentClass?: string }) {
+  return (
+    <>
+      {text.split('\n').map((line, lineIndex) => (
+        <Fragment key={lineIndex}>
+          {lineIndex > 0 ? <br /> : null}
+          {line.split(/(\*[^*]+\*)/g).map((part, partIndex) =>
+            part.length > 2 && part.startsWith('*') && part.endsWith('*') ? (
+              <span key={partIndex} className={accentClass}>
+                {part.slice(1, -1)}
+              </span>
+            ) : (
+              part
+            )
+          )}
+        </Fragment>
+      ))}
+    </>
+  )
+}
+
+/** an emptied field falls back to the seed, so the page can never look broken */
+function txt(value: string | undefined, seed: string): string {
+  return value && value.trim() ? value : seed
+}
+
+function safeCopy(content: HomeContent): HomeContent {
+  const seed = HOME_SEED
+  return {
+    ...content,
+    hero: {
+      ...content.hero,
+      eyebrow: txt(content.hero.eyebrow, seed.hero.eyebrow),
+      title: txt(content.hero.title, seed.hero.title),
+      sub: txt(content.hero.sub, seed.hero.sub),
+      cta: txt(content.hero.cta, seed.hero.cta),
+      secondaryCta: txt(content.hero.secondaryCta, seed.hero.secondaryCta),
+      note: txt(content.hero.note, seed.hero.note),
+    },
+    templates: {
+      ...content.templates,
+      eyebrow: txt(content.templates.eyebrow, seed.templates.eyebrow ?? ''),
+      title: txt(content.templates.title, seed.templates.title),
+      sub: txt(content.templates.sub, seed.templates.sub ?? ''),
+    },
+    editorShowcase: {
+      ...content.editorShowcase,
+      eyebrow: txt(content.editorShowcase.eyebrow, seed.editorShowcase.eyebrow),
+      title: txt(content.editorShowcase.title, seed.editorShowcase.title),
+      sub: txt(content.editorShowcase.sub, seed.editorShowcase.sub),
+    },
+    workflow: {
+      ...content.workflow,
+      eyebrow: txt(content.workflow.eyebrow, seed.workflow.eyebrow),
+      title: txt(content.workflow.title, seed.workflow.title),
+      sub: txt(content.workflow.sub, seed.workflow.sub),
+      steps: content.workflow.steps.length > 0 ? content.workflow.steps : seed.workflow.steps,
+    },
+    highlights: {
+      ...content.highlights,
+      items: content.highlights.items.length > 0 ? content.highlights.items : seed.highlights.items,
+    },
+    showcase: {
+      ...content.showcase,
+      eyebrow: txt(content.showcase.eyebrow, seed.showcase.eyebrow ?? ''),
+      title: txt(content.showcase.title, seed.showcase.title),
+      sub: txt(content.showcase.sub, seed.showcase.sub ?? ''),
+    },
+    pricing: {
+      ...content.pricing,
+      eyebrow: txt(content.pricing.eyebrow, seed.pricing.eyebrow ?? ''),
+      title: txt(content.pricing.title, seed.pricing.title),
+      sub: txt(content.pricing.sub, seed.pricing.sub ?? ''),
+      note: txt(content.pricing.note, seed.pricing.note),
+    },
+    finalCta: {
+      ...content.finalCta,
+      title: txt(content.finalCta.title, seed.finalCta.title),
+      sub: txt(content.finalCta.sub, seed.finalCta.sub),
+      cta: txt(content.finalCta.cta, seed.finalCta.cta),
+    },
+  }
+}
 
 export default function Home() {
   const restaurant = useActiveRestaurant()
   const customize = useCustomize()
+  const content = useHomeContent()
+  const copy = useMemo(() => safeCopy(content), [content])
 
   return (
     <div className="min-h-screen bg-ivory">
       <MarketingHeader />
-      <Hero restaurant={restaurant} />
-      <FeaturedTemplates onCustomize={customize} />
-      <EditorShowcase restaurant={restaurant} />
-      <Workflow onCustomize={customize} />
-      <FeatureHighlights />
-      <ResponsiveShowcase restaurant={restaurant} />
-      <Pricing onCustomize={customize} />
-      <FinalCta />
+      {copy.hero.enabled ? <Hero restaurant={restaurant} hero={copy.hero} /> : null}
+      {copy.templates.enabled ? (
+        <FeaturedTemplates onCustomize={customize} section={copy.templates} />
+      ) : null}
+      {copy.editorShowcase.enabled ? (
+        <EditorShowcase restaurant={restaurant} section={copy.editorShowcase} />
+      ) : null}
+      {copy.workflow.enabled ? <Workflow onCustomize={customize} section={copy.workflow} /> : null}
+      {copy.highlights.enabled ? <FeatureHighlights section={copy.highlights} /> : null}
+      {copy.showcase.enabled ? (
+        <ResponsiveShowcase restaurant={restaurant} section={copy.showcase} />
+      ) : null}
+      {copy.pricing.enabled ? <Pricing onCustomize={customize} section={copy.pricing} /> : null}
+      {copy.finalCta.enabled ? <FinalCta section={copy.finalCta} /> : null}
       <MarketingFooter />
     </div>
   )
@@ -38,13 +138,21 @@ export default function Home() {
 
 /* ---------------------------------- hero ---------------------------------- */
 
-function Hero({ restaurant }: { restaurant: Restaurant }) {
+function Hero({ restaurant, hero }: { restaurant: Restaurant; hero: HomeContent['hero'] }) {
   return (
     <section className="relative overflow-hidden pb-28 pt-[118px] lg:pt-[142px]">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-[760px] bg-[radial-gradient(ellipse_at_top,rgba(232,87,31,0.14),transparent_62%)]"
       />
+      {hero.image ? (
+        <Img
+          src={hero.image}
+          alt=""
+          eager
+          className="pointer-events-none absolute inset-x-0 top-0 h-[760px] w-full object-cover opacity-25 [mask-image:radial-gradient(ellipse_at_top,black,transparent_62%)]"
+        />
+      ) : null}
       <div aria-hidden="true" className="grid-lines pointer-events-none absolute inset-0 opacity-70" />
 
       <div className="page relative">
@@ -53,27 +161,23 @@ function Hero({ restaurant }: { restaurant: Restaurant }) {
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-flame text-white">
               <Icon name="sparkles" size={11} strokeWidth={2.2} />
             </span>
-            The digital menu builder for food businesses
+            {hero.eyebrow}
           </span>
 
           <h1 className="display-serif mt-7 text-[clamp(40px,6.6vw,82px)] leading-[1.03] text-charcoal">
-            Your Restaurant Menu.
-            <br />
-            Your Brand. <span className="text-flame">Your Rules.</span>
+            <AccentText text={hero.title} />
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-[17px] leading-relaxed text-espresso/85">
-            Create a beautiful digital menu for your restaurant, cafe, or bakery. Choose your
-            design, customize every detail, and share your menu with the world — no coding
-            required.
+            {hero.sub}
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Button to="/templates" size="lg" icon="arrowRight">
-              Explore Templates
+              {hero.cta}
             </Button>
             <Button to="/dashboard/editor" size="lg" variant="outline" icon="layout">
-              Explore the Editor
+              {hero.secondaryCta}
             </Button>
           </div>
 
@@ -152,9 +256,7 @@ function Hero({ restaurant }: { restaurant: Restaurant }) {
           </div>
         </div>
 
-        <p className="mt-14 text-center text-[13px] text-clay xl:mt-24">
-          A real MenuCraft preview — the same renderer that powers the editor and the published site.
-        </p>
+        <p className="mt-14 text-center text-[13px] text-clay xl:mt-24">{hero.note}</p>
       </div>
     </section>
   )
@@ -162,21 +264,22 @@ function Hero({ restaurant }: { restaurant: Restaurant }) {
 
 /* ---------------------------- featured templates --------------------------- */
 
-function FeaturedTemplates({ onCustomize }: { onCustomize: (id: string) => void }) {
+function FeaturedTemplates({
+  onCustomize,
+  section,
+}: {
+  onCustomize: (id: string) => void
+  section: HomeContent['templates']
+}) {
   const featured = TEMPLATES.filter((t) => t.featured).slice(0, 3)
 
   return (
     <section className="border-t border-sand bg-paper py-20 lg:py-28" id="templates">
       <div className="page">
         <SectionHeading
-          eyebrow="Template marketplace"
-          title={
-            <>
-              Designs that already look{' '}
-              <span className="italic text-flame">finished</span>
-            </>
-          }
-          description="Every template is a complete restaurant website: its own typography, palette, header, hero and menu style. Start from one, then change anything."
+          eyebrow={section.eyebrow ?? ''}
+          title={<AccentText text={section.title} accentClass="italic text-flame" />}
+          description={section.sub ?? ''}
         />
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">
@@ -263,7 +366,13 @@ const SHOWCASE_PALETTES: ColorSet[] = [
 
 const SHOWCASE_PALETTE_NAMES = ['Ivory & Flame', 'Midnight & Gold', 'Olive Garden']
 
-function EditorShowcase({ restaurant }: { restaurant: Restaurant }) {
+function EditorShowcase({
+  restaurant,
+  section,
+}: {
+  restaurant: Restaurant
+  section: HomeContent['editorShowcase']
+}) {
   const [palette, setPalette] = useState(0)
   const [headingFont, setHeadingFont] = useState<FontId>('playfair')
   const [menuLayout, setMenuLayout] = useState<'grid' | 'list'>('list')
@@ -276,19 +385,31 @@ function EditorShowcase({ restaurant }: { restaurant: Restaurant }) {
     return next
   }, [restaurant, palette, headingFont, menuLayout])
 
+  const bullets = section.bullets.filter((bullet) => bullet.trim())
+
   return (
     <section className="relative overflow-hidden bg-ink py-20 text-ivory lg:py-28" id="features">
       <div className="page">
         <div className="grid items-center gap-12 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
-            <span className="eyebrow text-ivory/50">The visual editor</span>
+            <span className="eyebrow text-ivory/50">{section.eyebrow}</span>
             <h2 className="display-serif mt-4 text-[clamp(30px,4vw,48px)] leading-[1.06]">
-              Change it and watch it happen.
+              <AccentText text={section.title} />
             </h2>
-            <p className="mt-5 text-[16px] leading-relaxed text-ivory/65">
-              Colors, fonts, layout, menu content — every control in the MenuCraft editor writes to
-              the live preview as you type. No preview button, no page reload, no guessing.
-            </p>
+            <p className="mt-5 text-[16px] leading-relaxed text-ivory/65">{section.sub}</p>
+
+            {bullets.length > 0 ? (
+              <ul className="mt-6 space-y-2.5">
+                {bullets.map((bullet) => (
+                  <li key={bullet} className="flex items-center gap-2.5 text-[14.5px] text-ivory/70">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-flame/15 text-flame-light">
+                      <Icon name="check" size={12} strokeWidth={3} />
+                    </span>
+                    {bullet}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
 
             <div className="mt-8 space-y-6">
               <div>
@@ -424,41 +545,29 @@ function EditorShowcase({ restaurant }: { restaurant: Restaurant }) {
 
 /* -------------------------------- workflow -------------------------------- */
 
-const STEPS = [
-  {
-    step: '01',
-    icon: 'layers',
-    title: 'Choose',
-    copy: 'Browse eight complete restaurant designs and preview each one as a real, scrollable website.',
-    to: '/templates',
-    cta: 'Browse templates',
-  },
-  {
-    step: '02',
-    icon: 'palette',
-    title: 'Customize',
-    copy: 'Rename the restaurant, recolor, switch fonts, rework the menu — everything updates live.',
-    to: '/dashboard/editor',
-    cta: 'Try the editor',
-  },
-  {
-    step: '03',
-    icon: 'send',
-    title: 'Publish',
-    copy: 'Save your demo, open the mobile-friendly site and generate the QR code for your tables.',
-    to: '/menu-demo',
-    cta: 'See a published site',
-  },
+/** step number, icon, link and CTA label stay structural — only copy is editable */
+const STEP_META = [
+  { icon: 'layers', to: '/templates', cta: 'Browse templates' },
+  { icon: 'palette', to: '/dashboard/editor', cta: 'Try the editor' },
+  { icon: 'send', to: '/menu-demo', cta: 'See a published site' },
 ]
 
-function Workflow({ onCustomize }: { onCustomize: (id: string) => void }) {
+const STEP_META_FALLBACK = { icon: 'sparkles', to: '/templates', cta: 'Learn more' }
+
+function Workflow({
+  onCustomize,
+  section,
+}: {
+  onCustomize: (id: string) => void
+  section: HomeContent['workflow']
+}) {
   return (
     <section className="bg-ivory py-20 lg:py-28" id="how">
       <div className="page">
         <SectionHeading
-          eyebrow="How it works"
-          title="Three steps from idea to live menu"
-          description="The whole journey is designed to take minutes — and it is fully interactive in this demo."
+          eyebrow={section.eyebrow ?? ''}
+          title={<AccentText text={section.title} />}
+          description={section.sub ?? ''}
         />
 
         <div className="relative mt-14 grid gap-6 md:grid-cols-3">
@@ -466,32 +575,36 @@ function Workflow({ onCustomize }: { onCustomize: (id: string) => void }) {
             aria-hidden="true"
             className="absolute start-[16%] end-[16%] top-[46px] hidden h-px bg-gradient-to-r from-transparent via-stone to-transparent md:block"
           />
-          {STEPS.map((step) => (
-            <Link
-              key={step.step}
-              to={step.to}
-              className="group relative rounded-3xl border border-sand bg-paper p-6 transition duration-300 hover:border-clay hover:shadow-[0_36px_70px_-52px_rgba(15,13,11,0.9)]"
-            >
-              <div className="flex items-center justify-between">
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-charcoal text-ivory transition group-hover:bg-flame">
-                  <Icon name={step.icon} size={21} />
+          {section.steps.map((step, index) => {
+            const meta = STEP_META[index] ?? STEP_META_FALLBACK
+            const number = String(index + 1).padStart(2, '0')
+            return (
+              <Link
+                key={number}
+                to={meta.to}
+                className="group relative rounded-3xl border border-sand bg-paper p-6 transition duration-300 hover:border-clay hover:shadow-[0_36px_70px_-52px_rgba(15,13,11,0.9)]"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-charcoal text-ivory transition group-hover:bg-flame">
+                    <Icon name={meta.icon} size={21} />
+                  </span>
+                  <span className="display-serif text-[38px] leading-none text-sand transition group-hover:text-flame/70">
+                    {number}
+                  </span>
+                </div>
+                <h3 className="display-serif mt-5 text-[25px] text-charcoal">{step.title}</h3>
+                <p className="mt-2.5 text-[14.5px] leading-relaxed text-umber">{step.body}</p>
+                <span className="mt-5 inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-charcoal">
+                  {meta.cta}
+                  <Icon
+                    name="arrowRight"
+                    size={15}
+                    className="transition-transform duration-300 group-hover:translate-x-1 rtl:group-hover:-translate-x-1"
+                  />
                 </span>
-                <span className="display-serif text-[38px] leading-none text-sand transition group-hover:text-flame/70">
-                  {step.step}
-                </span>
-              </div>
-              <h3 className="display-serif mt-5 text-[25px] text-charcoal">{step.title}</h3>
-              <p className="mt-2.5 text-[14.5px] leading-relaxed text-umber">{step.copy}</p>
-              <span className="mt-5 inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-charcoal">
-                {step.cta}
-                <Icon
-                  name="arrowRight"
-                  size={15}
-                  className="transition-transform duration-300 group-hover:translate-x-1 rtl:group-hover:-translate-x-1"
-                />
-              </span>
-            </Link>
-          ))}
+              </Link>
+            )
+          })}
         </div>
 
         <div className="mt-8 flex justify-center">
@@ -506,40 +619,18 @@ function Workflow({ onCustomize }: { onCustomize: (id: string) => void }) {
 
 /* --------------------------- feature highlights --------------------------- */
 
-const HIGHLIGHTS = [
-  {
-    icon: 'palette',
-    title: 'Branding',
-    copy: 'Name, logo, tagline, hero photography, contact details and opening hours — all editable, all live.',
-    wide: true,
-  },
-  {
-    icon: 'type',
-    title: 'Typography',
-    copy: 'Six curated families for headings, body and menu items, with size, weight and leading controls.',
-    wide: false,
-  },
-  {
-    icon: 'book',
-    title: 'Menu management',
-    copy: 'Categories, items, prices, promotional pricing, availability, featured dishes and drag-free reordering.',
-    wide: false,
-  },
-  {
-    icon: 'qr',
-    title: 'QR codes',
-    copy: 'A real, scannable QR code for every menu — downloadable and print-ready for tables and windows.',
-    wide: false,
-  },
-  {
-    icon: 'smartphone',
-    title: 'Mobile-friendly',
-    copy: 'Every template is built responsive-first, so the menu reads perfectly on a phone at the table.',
-    wide: false,
-  },
+/** icon + wide-card flag per highlight position — copy is fully editable */
+const HIGHLIGHT_META = [
+  { icon: 'palette', wide: true },
+  { icon: 'type', wide: false },
+  { icon: 'book', wide: false },
+  { icon: 'qr', wide: false },
+  { icon: 'smartphone', wide: false },
 ]
 
-function FeatureHighlights() {
+const HIGHLIGHT_META_FALLBACK = { icon: 'sparkles', wide: false }
+
+function FeatureHighlights({ section }: { section: HomeContent['highlights'] }) {
   const restaurant = useActiveRestaurant()
 
   return (
@@ -552,40 +643,43 @@ function FeatureHighlights() {
         />
 
         <div className="mt-12 grid gap-5 lg:grid-cols-3">
-          {HIGHLIGHTS.map((item) => (
-            <article
-              key={item.title}
-              className={cx(
-                'flex flex-col justify-between rounded-3xl border border-sand bg-ivory p-6 transition duration-300 hover:border-clay hover:bg-paper',
-                item.wide && 'lg:col-span-2'
-              )}
-            >
-              <div className="flex items-start gap-4">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-charcoal text-ivory">
-                  <Icon name={item.icon} size={20} />
-                </span>
-                <div>
-                  <h3 className="text-[17px] font-semibold tracking-[-0.01em] text-charcoal">
-                    {item.title}
-                  </h3>
-                  <p className="mt-1.5 max-w-md text-[14.5px] leading-relaxed text-umber">
-                    {item.copy}
-                  </p>
+          {section.items.map((item, index) => {
+            const meta = HIGHLIGHT_META[index] ?? HIGHLIGHT_META_FALLBACK
+            return (
+              <article
+                key={`${index}-${item.title}`}
+                className={cx(
+                  'flex flex-col justify-between rounded-3xl border border-sand bg-ivory p-6 transition duration-300 hover:border-clay hover:bg-paper',
+                  meta.wide && 'lg:col-span-2'
+                )}
+              >
+                <div className="flex items-start gap-4">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-charcoal text-ivory">
+                    <Icon name={meta.icon} size={20} />
+                  </span>
+                  <div>
+                    <h3 className="text-[17px] font-semibold tracking-[-0.01em] text-charcoal">
+                      {item.title}
+                    </h3>
+                    <p className="mt-1.5 max-w-md text-[14.5px] leading-relaxed text-umber">
+                      {item.body}
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="mt-6">{highlightVisual(item.title, restaurant)}</div>
-            </article>
-          ))}
+                <div className="mt-6">{highlightVisual(index, restaurant)}</div>
+              </article>
+            )
+          })}
         </div>
       </div>
     </section>
   )
 }
 
-function highlightVisual(title: string, restaurant: Restaurant) {
-  switch (title) {
-    case 'Branding':
+function highlightVisual(index: number, restaurant: Restaurant) {
+  switch (index) {
+    case 0:
       return (
         <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-sand bg-paper p-4">
           <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-charcoal font-display text-[17px] text-ivory">
@@ -608,7 +702,7 @@ function highlightVisual(title: string, restaurant: Restaurant) {
           </span>
         </div>
       )
-    case 'Typography':
+    case 1:
       return (
         <div className="flex items-end justify-between gap-4 rounded-2xl border border-sand bg-paper p-4">
           <span className="display-serif text-[46px] leading-[0.85] text-charcoal">Aa</span>
@@ -619,7 +713,7 @@ function highlightVisual(title: string, restaurant: Restaurant) {
           </span>
         </div>
       )
-    case 'Menu management':
+    case 2:
       return (
         <div className="divide-y divide-sand rounded-2xl border border-sand bg-paper">
           {restaurant.menu[0]?.items.slice(0, 3).map((item) => (
@@ -630,7 +724,7 @@ function highlightVisual(title: string, restaurant: Restaurant) {
           ))}
         </div>
       )
-    case 'QR codes':
+    case 3:
       return (
         <div className="flex items-center gap-4 rounded-2xl border border-sand bg-paper p-4">
           <span className="rounded-xl border border-sand bg-white p-2">
@@ -666,21 +760,23 @@ function highlightVisual(title: string, restaurant: Restaurant) {
 
 /* --------------------------- responsive showcase -------------------------- */
 
-function ResponsiveShowcase({ restaurant }: { restaurant: Restaurant }) {
+function ResponsiveShowcase({
+  restaurant,
+  section,
+}: {
+  restaurant: Restaurant
+  section: HomeContent['showcase']
+}) {
   return (
     <section className="overflow-hidden bg-charcoal py-20 text-ivory lg:py-28">
       <div className="page-wide page">
         <div className="grid items-center gap-14 lg:grid-cols-[1fr_1.25fr]">
           <div>
-            <span className="eyebrow text-ivory/50">Responsive by default</span>
+            <span className="eyebrow text-ivory/50">{section.eyebrow}</span>
             <h2 className="display-serif mt-4 text-[clamp(30px,4vw,48px)] leading-[1.06]">
-              One menu. Every screen.
+              <AccentText text={section.title} />
             </h2>
-            <p className="mt-5 text-[16px] leading-relaxed text-ivory/65">
-              Guests open your menu on the phone in their hand. MenuCraft templates reflow for
-              desktop, tablet and mobile without a single extra setting — preview both sizes side by
-              side before you publish.
-            </p>
+            <p className="mt-5 text-[16px] leading-relaxed text-ivory/65">{section.sub}</p>
             <ul className="mt-8 space-y-3.5">
               {[
                 { icon: 'monitor', title: 'Desktop', copy: 'Wide layouts, editorial heroes, three-column menus.' },
@@ -737,18 +833,20 @@ function ResponsiveShowcase({ restaurant }: { restaurant: Restaurant }) {
 
 /* --------------------------------- pricing -------------------------------- */
 
-function Pricing({ onCustomize }: { onCustomize: (id: string) => void }) {
+function Pricing({
+  onCustomize,
+  section,
+}: {
+  onCustomize: (id: string) => void
+  section: HomeContent['pricing']
+}) {
   return (
     <section className="bg-ivory py-20 lg:py-28" id="pricing">
       <div className="page">
         <SectionHeading
-          eyebrow="Pricing"
-          title={
-            <>
-              Simple plans, <span className="italic text-flame">demo pricing</span>
-            </>
-          }
-          description="These prices are illustrative only. This prototype processes no payments and provisions no real hosting."
+          eyebrow={section.eyebrow ?? ''}
+          title={<AccentText text={section.title} accentClass="italic text-flame" />}
+          description={section.sub ?? ''}
         />
 
         <div className="mt-6 flex justify-center">
@@ -839,9 +937,7 @@ function Pricing({ onCustomize }: { onCustomize: (id: string) => void }) {
           ))}
         </div>
 
-        <p className="mt-7 text-center text-[13px] text-clay">
-          Every button in this prototype leads somewhere — plans simply open the demo editor.
-        </p>
+        <p className="mt-7 text-center text-[13px] text-clay">{section.note}</p>
       </div>
     </section>
   )
@@ -849,7 +945,7 @@ function Pricing({ onCustomize }: { onCustomize: (id: string) => void }) {
 
 /* -------------------------------- final CTA ------------------------------- */
 
-function FinalCta() {
+function FinalCta({ section }: { section: HomeContent['finalCta'] }) {
   return (
     <section className="bg-ivory pb-24">
       <div className="page">
@@ -863,15 +959,14 @@ function FinalCta() {
           <div className="relative mx-auto max-w-3xl">
             <span className="eyebrow text-flame-light">Ready when you are</span>
             <h2 className="display-serif mt-4 text-[clamp(32px,5vw,58px)] leading-[1.05]">
-              Your menu deserves better than a PDF.
+              <AccentText text={section.title} />
             </h2>
             <p className="mx-auto mt-5 max-w-xl text-[16.5px] leading-relaxed text-ivory/65">
-              Pick a template, change the restaurant name, edit a price, swap the font — in under two
-              minutes you will have a menu worth sharing.
+              {section.sub}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Button to="/templates" size="lg" icon="arrowRight">
-                Explore Templates
+                {section.cta}
               </Button>
               <Button to="/dashboard/editor" size="lg" variant="light">
                 Explore the Editor

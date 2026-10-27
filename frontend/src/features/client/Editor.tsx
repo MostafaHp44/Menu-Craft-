@@ -21,6 +21,12 @@ import { publicUrl } from '../../shared/lib/hooks.ts'
 import { getTemplate } from '../../templates/data/templates.ts'
 import { cx } from '../../shared/lib/utils.ts'
 import { useStore } from '../../shared/store/useStore.ts'
+import { useAuthStore } from '../../shared/store/useAuth.ts'
+import { useSubscription } from '../../shared/store/usePlatform.ts'
+import { useI18n } from '../../shared/i18n'
+import { PricingBubble } from './billing/PricingBubble.tsx'
+import { SubscribeModal } from './billing/SubscribeModal.tsx'
+import { AuthModal } from './billing/AuthModal.tsx'
 
 type PanelId = 'content' | 'menu' | 'colors' | 'type' | 'layout' | 'sections' | 'settings'
 type Device = 'desktop' | 'phone'
@@ -37,6 +43,7 @@ const PANELS: Array<{ id: PanelId; label: string; icon: string; note: string }> 
 
 export default function Editor() {
   const navigate = useNavigate()
+  const { t } = useI18n()
   const draft = useStore((s) => s.draft)
   const dirty = useStore((s) => s.dirty)
   const past = useStore((s) => s.past)
@@ -48,6 +55,15 @@ export default function Editor() {
   const publishDemo = useStore((s) => s.publishDemo)
   const resetDesign = useStore((s) => s.resetDesign)
   const discardDraft = useStore((s) => s.discardDraft)
+
+  /* subscription gating -------------------------------------------------- */
+  const session = useAuthStore((s) => s.session)
+  const sub = useSubscription(draft?.id ?? '')
+  const live = Boolean(sub && sub.status !== 'expired')
+  const expired = sub?.status === 'expired'
+  const [subscribeOpen, setSubscribeOpen] = useState(false)
+  const [subscribeFromPublish, setSubscribeFromPublish] = useState(false)
+  const [gateOpen, setGateOpen] = useState(false)
 
   const [panel, setPanel] = useState<PanelId>('content')
   const [device, setDevice] = useState<Device>('desktop')
@@ -88,6 +104,20 @@ export default function Editor() {
   useEffect(() => {
     if (!draft) beginEdit()
   }, [draft, beginEdit])
+
+  /* publish is gated: session → live subscription → publish */
+  const requestPublish = useCallback(() => {
+    if (!session) {
+      setGateOpen(true)
+      return
+    }
+    if (!live) {
+      setSubscribeFromPublish(true)
+      setSubscribeOpen(true)
+      return
+    }
+    publishDemo()
+  }, [session, live, publishDemo])
 
   /* unsaved-changes guard */
   useEffect(() => {
@@ -257,7 +287,7 @@ export default function Editor() {
             >
               Save draft
             </Button>
-            <Button size="sm" variant="accent" icon="send" onClick={() => publishDemo()}>
+            <Button size="sm" variant="accent" icon="send" onClick={() => requestPublish()}>
               <span className="hidden sm:inline">Publish demo</span>
               <span className="sm:hidden">Publish</span>
             </Button>
@@ -283,6 +313,19 @@ export default function Editor() {
           </div>
         </div>
       </header>
+
+      {/* ------------------------- expired subscription ------------------------ */}
+      {expired ? (
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-rose/30 bg-rose/10 px-4 py-2.5">
+          <span className="flex items-center gap-2 text-[13px] font-medium text-rose">
+            <Icon name="alert" size={15} className="shrink-0" />
+            {t('flow.expiredNotice')}
+          </span>
+          <Button size="sm" variant="danger" icon="refresh" onClick={() => navigate('/dashboard/subscription')}>
+            {t('subscription.renew')}
+          </Button>
+        </div>
+      ) : null}
 
       {/* --------------------------------- body -------------------------------- */}
       <div className="flex min-h-0 flex-1">
@@ -387,7 +430,9 @@ export default function Editor() {
             {panel === 'type' ? <TypographyPanel /> : null}
             {panel === 'layout' ? <LayoutPanel /> : null}
             {panel === 'sections' ? <SectionsPanel /> : null}
-            {panel === 'settings' ? <EditorSettings /> : null}
+            {panel === 'settings' ? (
+              <EditorSettings canPublish={Boolean(session) && live} onBlockedPublish={requestPublish} />
+            ) : null}
           </div>
         </section>
 
@@ -487,13 +532,46 @@ export default function Editor() {
         onCommit={handleCommit}
         onClear={() => setActiveField(null)}
       />
+
+      {/* --------------------- pricing bubble + subscribe gate ----------------- */}
+      {!live && draft.name.trim() ? (
+        <PricingBubble
+          slug={draft.slug}
+          onSubscribe={() => {
+            setSubscribeFromPublish(false)
+            setSubscribeOpen(true)
+          }}
+        />
+      ) : null}
+
+      <SubscribeModal
+        open={subscribeOpen}
+        onClose={() => setSubscribeOpen(false)}
+        restaurantId={draft.id}
+        restaurantName={draft.name}
+        onSuccess={subscribeFromPublish ? () => publishDemo() : undefined}
+      />
+
+      <AuthModal
+        open={gateOpen}
+        onClose={() => setGateOpen(false)}
+        restaurantName={draft.name}
+        onSuccess={() => publishDemo()}
+      />
     </div>
   )
 }
 
 /* ----------------------------- editor settings ---------------------------- */
 
-function EditorSettings() {
+function EditorSettings({
+  canPublish,
+  onBlockedPublish,
+}: {
+  canPublish: boolean
+  onBlockedPublish: () => void
+}) {
+  const { t } = useI18n()
   const draft = useStore((s) => s.draft)
   const updateDraft = useStore((s) => s.updateDraft)
   const showToast = useStore((s) => s.showToast)
@@ -533,12 +611,24 @@ function EditorSettings() {
           label="Published"
           description="Published menus appear on the public demo page"
           checked={draft.status === 'published'}
-          onChange={(v) =>
+          onChange={(v) => {
+            // publishing is gated the same way as the top-bar button:
+            // no session or no live subscription → open the flow instead
+            if (v && !canPublish) {
+              onBlockedPublish()
+              return
+            }
             updateDraft((d) => {
               d.status = v ? 'published' : 'draft'
             })
-          }
+          }}
         />
+        {!canPublish ? (
+          <p className="flex items-start gap-2 rounded-xl border border-gold/35 bg-gold/10 px-3.5 py-2.5 text-[12px] leading-relaxed text-gold">
+            <Icon name="info" size={14} className="mt-0.5 shrink-0" />
+            {t('flow.publishNeedsPlan')}
+          </p>
+        ) : null}
         <div className="rounded-xl border border-sand bg-cream/50 p-3.5">
           <div className="text-[12.5px] font-medium text-espresso">Template in use</div>
           <div className="mt-0.5 text-[13px] text-charcoal">{getTemplate(draft.templateId).name}</div>

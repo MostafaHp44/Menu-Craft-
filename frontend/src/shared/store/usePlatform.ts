@@ -214,6 +214,20 @@ export function useSubscription(restaurantId: string): SubscriptionRecord | unde
   return usePlatformStore((s) => s.subscriptions.find((r) => r.restaurantId === restaurantId))
 }
 
+/** true while the restaurant has a subscription record that has not expired */
+export function isSubscriptionLive(id: string | undefined): boolean {
+  const record = usePlatformStore
+    .getState()
+    .subscriptions.find((r) => r.restaurantId === id)
+  return Boolean(record && record.status !== 'expired')
+}
+
+/** reactive version of `isSubscriptionLive` for components */
+export function useIsSubscribed(restaurantId: string | undefined): boolean {
+  const record = useSubscription(restaurantId ?? '')
+  return Boolean(record && record.status !== 'expired')
+}
+
 export function usePayments(restaurantId: string): PaymentMethod[] {
   const payments = usePlatformStore((s) => s.payments)
   return payments[restaurantId] ?? EMPTY

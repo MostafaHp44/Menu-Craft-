@@ -1,36 +1,92 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Icon, Wordmark } from '../../shared/ui/icons.tsx'
-import { Button, Card, Img, Input } from '../../shared/ui/ui.tsx'
+import { Button, Card, Img, Input, Segmented } from '../../shared/ui/ui.tsx'
 import { IMG } from '../../shared/lib/images.ts'
 import { TEMPLATES } from '../../templates/data/templates.ts'
 import { cx } from '../../shared/lib/utils.ts'
+import { useI18n } from '../../shared/i18n'
+import { useStore } from '../../shared/store/useStore.ts'
+import { isPlatformAdmin, useAuthStore } from '../../shared/store/useAuth.ts'
+
+type Mode = 'signin' | 'signup'
+
+const EMAIL_RE = /^\S+@\S+\.\S+$/
 
 export default function SignIn() {
+  const { t, dir } = useI18n()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('marco@bellaitalian.demo')
-  const [password, setPassword] = useState('demo-password')
-  const [show, setShow] = useState(false)
+  const [params] = useSearchParams()
+
+  const draft = useStore((s) => s.draft)
+  const signIn = useAuthStore((s) => s.signIn)
+  const signUp = useAuthStore((s) => s.signUp)
+
+  const [mode, setMode] = useState<Mode>(() => {
+    const query = params.get('mode')
+    if (query === 'signup') return 'signup'
+    if (query === 'signin') return 'signin'
+    // a visitor arriving from the editor always lands on "create account"
+    return draft ? 'signup' : 'signin'
+  })
+
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [restaurantName, setRestaurantName] = useState(draft?.name ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  const submit = (e: FormEvent) => {
+  const switchMode = (next: Mode) => {
+    setMode(next)
+    setError('')
+  }
+
+  const submitSignIn = (e: FormEvent) => {
     e.preventDefault()
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
-      setError('Enter a valid email address to continue.')
-      return
-    }
-    if (password.length < 6) {
-      setError('Passwords need at least 6 characters.')
+    if (!EMAIL_RE.test(email)) {
+      setError(t('flow.validEmail'))
       return
     }
     setError('')
     setBusy(true)
     window.setTimeout(() => {
+      const result = signIn(email)
       setBusy(false)
-      navigate('/dashboard')
-    }, 650)
+      if (!result.ok) {
+        setError(result.reason === 'suspended' ? t('flow.suspended') : t('flow.validEmail'))
+        return
+      }
+      navigate(isPlatformAdmin(result.account ?? null) ? '/admin' : '/dashboard')
+    }, 450)
   }
+
+  const submitSignUp = (e: FormEvent) => {
+    e.preventDefault()
+    if (!EMAIL_RE.test(email)) {
+      setError(t('flow.validEmail'))
+      return
+    }
+    setError('')
+    setBusy(true)
+    const hadDraft = Boolean(useStore.getState().draft)
+    window.setTimeout(() => {
+      signUp({
+        name,
+        email,
+        restaurantName,
+        templateId: useStore.getState().draft?.templateId ?? TEMPLATES[0].id,
+      })
+      setBusy(false)
+      navigate(hadDraft ? '/dashboard/editor' : '/dashboard/templates')
+    }, 450)
+  }
+
+  const asideFeatures = [
+    { icon: 'palette', label: t('flow.asideDesign') },
+    { icon: 'utensils', label: t('flow.asideMenu') },
+    { icon: 'qr', label: t('flow.asideQr') },
+    { icon: 'chart', label: t('flow.asideAnalytics') },
+  ]
 
   return (
     <div className="grid min-h-screen lg:grid-cols-[1fr_1.05fr]">
@@ -40,118 +96,153 @@ export default function SignIn() {
           <Link to="/" aria-label="MenuCraft home">
             <Wordmark />
           </Link>
-          <Link to="/" className="text-[13px] font-medium text-umber transition hover:text-charcoal">
-            ← Back home
+          <Link
+            to="/"
+            className="flex items-center gap-1.5 text-[13px] font-medium text-umber transition hover:text-charcoal"
+          >
+            <Icon name={dir === 'rtl' ? 'arrowRight' : 'arrowLeft'} size={15} />
+            {t('flow.backHome')}
           </Link>
         </div>
 
-        <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-12">
-          <span className="eyebrow">Welcome back</span>
-          <h1 className="display-serif mt-3 text-[clamp(32px,4vw,44px)] leading-[1.05] text-charcoal">
-            Sign in to your
-            <br />
-            menu workspace.
+        <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-10">
+          <span className="eyebrow">{mode === 'signup' ? t('flow.signUpTab') : t('auth.signInTitle')}</span>
+          <h1 className="display-serif mt-3 text-[clamp(30px,4vw,44px)] leading-[1.05] text-charcoal">
+            {mode === 'signup' ? t('auth.signUpTitle') : t('auth.signInSub')}
           </h1>
           <p className="mt-4 text-[15px] leading-relaxed text-umber">
-            This prototype has no authentication — the form simply walks you into the demo dashboard.
+            {mode === 'signup' ? t('flow.signUpLead') : t('flow.signInLead')}
           </p>
 
           <Card className="mt-7 p-6">
-            <form onSubmit={submit} className="space-y-4" noValidate>
+            <Segmented<Mode>
+              full
+              value={mode}
+              onChange={switchMode}
+              ariaLabel={t('flow.modeLabel')}
+              options={[
+                { value: 'signin', label: t('flow.signInTab'), icon: 'logout' },
+                { value: 'signup', label: t('flow.signUpTab'), icon: 'sparkles' },
+              ]}
+            />
+
+            {mode === 'signup' && draft ? (
+              <p className="mt-4 flex items-start gap-2 rounded-xl border border-flame/25 bg-flame/8 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-flame-dark">
+                <Icon name="sparkles" size={14} className="mt-0.5 shrink-0" />
+                {t('flow.draftBecomesSite')}
+              </p>
+            ) : null}
+
+            <form
+              key={mode}
+              onSubmit={mode === 'signup' ? submitSignUp : submitSignIn}
+              className="mt-4 space-y-4"
+              noValidate
+            >
+              {mode === 'signup' ? (
+                <label className="block">
+                  <span className="mb-1.5 block text-[13px] font-medium text-espresso">{t('auth.fullName')}</span>
+                  <Input
+                    autoComplete="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={t('auth.fullNamePh')}
+                  />
+                </label>
+              ) : null}
+
               <label className="block">
-                <span className="mb-1.5 block text-[13px] font-medium text-espresso">Email</span>
+                <span className="mb-1.5 block text-[13px] font-medium text-espresso">{t('auth.email')}</span>
                 <Input
                   type="email"
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@restaurant.com"
-                  aria-invalid={Boolean(error) && !/^\S+@\S+\.\S+$/.test(email)}
+                  placeholder={t('auth.emailPh')}
+                  aria-invalid={Boolean(error) && !EMAIL_RE.test(email)}
                 />
               </label>
 
-              <label className="block">
-                <span className="mb-1.5 flex items-baseline justify-between">
-                  <span className="text-[13px] font-medium text-espresso">Password</span>
-                  <button
-                    type="button"
-                    onClick={() => setShow((v) => !v)}
-                    className="text-[12px] font-medium text-umber transition hover:text-flame"
-                  >
-                    {show ? 'Hide' : 'Show'}
-                  </button>
-                </span>
-                <span className="relative block">
+              {mode === 'signup' ? (
+                <label className="block">
+                  <span className="mb-1.5 block text-[13px] font-medium text-espresso">{t('auth.restaurant')}</span>
                   <Input
-                    type={show ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pe-11"
+                    autoComplete="organization"
+                    value={restaurantName}
+                    onChange={(e) => setRestaurantName(e.target.value)}
+                    placeholder={t('auth.restaurantPh')}
                   />
-                  <span className="pointer-events-none absolute end-3.5 top-1/2 -translate-y-1/2 text-umber">
-                    <Icon name={show ? 'eyeOff' : 'eye'} size={16} />
-                  </span>
-                </span>
-              </label>
+                </label>
+              ) : (
+                <p className="flex items-start gap-2 text-[12.5px] leading-relaxed text-clay">
+                  <Icon name="mail" size={14} className="mt-0.5 shrink-0" />
+                  {t('flow.magicNote')}
+                </p>
+              )}
 
               {error ? (
                 <p className="flex items-center gap-2 rounded-xl border border-rose/40 bg-rose/8 px-3.5 py-2.5 text-[13px] text-rose">
-                  <Icon name="alert" size={15} />
+                  <Icon name="alert" size={15} className="shrink-0" />
                   {error}
                 </p>
               ) : null}
 
-              <div className="flex items-center justify-between">
-                <label className="flex cursor-pointer items-center gap-2 text-[13px] text-umber">
-                  <input type="checkbox" defaultChecked className="h-4 w-4 accent-[#e8571f]" />
-                  Keep me signed in
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('marco@bellaitalian.demo')
-                    setPassword('demo-password')
-                  }}
-                  className="text-[12.5px] font-medium text-flame transition hover:text-flame-dark"
-                >
-                  Use demo credentials
-                </button>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[12px] text-clay">
+                  {mode === 'signup' ? t('auth.anyoneIsClient') : null}
+                </span>
+                {mode === 'signin' ? (
+                  <button
+                    type="button"
+                    onClick={() => setEmail('owner@bella.demo')}
+                    className="shrink-0 text-[12.5px] font-medium text-flame transition hover:text-flame-dark"
+                  >
+                    {t('flow.useDemoEmail')}
+                  </button>
+                ) : null}
               </div>
 
-              <Button type="submit" size="lg" full loading={busy} icon={busy ? undefined : 'arrowRight'}>
-                {busy ? 'Opening workspace…' : 'Continue to dashboard'}
+              <Button
+                type="submit"
+                size="lg"
+                full
+                loading={busy}
+                icon={busy ? undefined : 'arrowRight'}
+              >
+                {busy
+                  ? mode === 'signup'
+                    ? t('flow.creatingAccount')
+                    : t('flow.openingWorkspace')
+                  : mode === 'signup'
+                    ? t('auth.submitSignUp')
+                    : t('auth.submitSignIn')}
               </Button>
             </form>
 
-            <div className="mt-5 flex items-center gap-3">
-              <span className="h-px flex-1 bg-sand" />
-              <span className="text-[11.5px] uppercase tracking-[0.16em] text-clay">or</span>
-              <span className="h-px flex-1 bg-sand" />
-            </div>
-
-            <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
-              <Button to="/dashboard" variant="outline" size="sm" icon="home" full>
-                Demo dashboard
-              </Button>
-              <Button to="/admin" variant="outline" size="sm" icon="settings" full>
-                Platform admin
-              </Button>
-            </div>
+            <p className="mt-5 text-center text-[13px] text-umber">
+              {mode === 'signup' ? t('auth.haveAccount') : t('auth.noAccount')}{' '}
+              <button
+                type="button"
+                onClick={() => switchMode(mode === 'signup' ? 'signin' : 'signup')}
+                className="font-medium text-flame transition hover:text-flame-dark"
+              >
+                {mode === 'signup' ? t('flow.signInTab') : t('flow.signUpTab')}
+              </button>
+            </p>
           </Card>
 
           <p className="mt-5 text-center text-[13px] text-umber">
-            No account needed —{' '}
             <Link to="/templates" className="font-medium text-flame transition hover:text-flame-dark">
-              browse the eight templates
-            </Link>{' '}
-            first.
+              {t('flow.browseFirst')}
+            </Link>
+            {' · '}
+            <Link to="/admin" className="text-clay transition hover:text-umber">
+              {t('flow.adminLink')}
+            </Link>
           </p>
         </div>
 
-        <p className="text-center text-[12px] text-clay">
-          Prototype · no credentials are stored or transmitted anywhere.
-        </p>
+        <p className="text-center text-[12px] text-clay">{t('flow.prototypeNote')}</p>
       </div>
 
       {/* ------------------------------- visual -------------------------------- */}
@@ -178,20 +269,12 @@ export default function SignIn() {
 
           <div>
             <h2 className="display-serif max-w-lg text-[clamp(30px,3.4vw,46px)] leading-[1.06]">
-              One workspace for every menu you serve.
+              {t('flow.asideTitle')}
             </h2>
-            <p className="mt-5 max-w-md text-[15.5px] leading-relaxed text-ivory/70">
-              Three independent restaurant configurations, a full visual editor, print-ready QR codes and
-              mock analytics — all running locally in your browser.
-            </p>
+            <p className="mt-5 max-w-md text-[15.5px] leading-relaxed text-ivory/70">{t('flow.asideLead')}</p>
 
             <ul className="mt-8 grid max-w-lg gap-3 sm:grid-cols-2">
-              {[
-                { icon: 'palette', label: 'Design studio' },
-                { icon: 'utensils', label: 'Menu CRUD' },
-                { icon: 'qr', label: 'QR generator' },
-                { icon: 'chart', label: 'Demo analytics' },
-              ].map((item) => (
+              {asideFeatures.map((item) => (
                 <li
                   key={item.label}
                   className="flex items-center gap-3 rounded-xl border border-white/12 bg-white/6 px-3.5 py-3 text-[13.5px] backdrop-blur-sm"
@@ -205,9 +288,7 @@ export default function SignIn() {
             </ul>
           </div>
 
-          <p className="text-[12.5px] text-ivory/45">
-            Photography bundled locally · the demo works with no internet connection.
-          </p>
+          <p className="text-[12.5px] text-ivory/45">{t('flow.asideFoot')}</p>
         </div>
       </aside>
     </div>

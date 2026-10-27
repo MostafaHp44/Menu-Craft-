@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { AdminPermission, Role, UserAccount } from '../lib/types.ts'
+import type { AdminPermission, Restaurant, Role, UserAccount } from '../lib/types.ts'
 import { createSeedAccounts, createRestaurantFromTemplate } from '../lib/demoData.ts'
 import { useStore } from './useStore.ts'
 import { usePlatformStore } from './usePlatform.ts'
@@ -93,19 +93,45 @@ export const useAuthStore = create<AuthState>()(
       signUp: (input) => {
         const name = input.name.trim() || 'Restaurant owner'
         const email = input.email.trim().toLowerCase() || `owner@${slugify(input.restaurantName)}.demo`
-        const restaurantId = `rst-${slugify(input.restaurantName)}-${Date.now().toString(36)}`
+        const now = new Date().toISOString()
 
-        const restaurant = createRestaurantFromTemplate(input.templateId, {
-          id: restaurantId,
-          name: input.restaurantName.trim() || 'My restaurant',
-          slug: slugify(input.restaurantName),
-          status: 'draft',
-          plan: 'trial',
-        })
+        const store = useStore.getState()
+        const draft = store.draft
 
-        useStore.getState().addRestaurant(restaurant)
-        useStore.getState().setActive(restaurantId)
-        usePlatformStore.getState().subscribe(restaurantId, 'trial')
+        let restaurantId: string
+        if (draft) {
+          /* the visitor was editing — their draft BECOMES the new client's restaurant */
+          const displayName = input.restaurantName.trim() || draft.name
+          restaurantId = `rst-${slugify(displayName)}-${Date.now().toString(36)}`
+          const restaurant: Restaurant = {
+            ...draft,
+            id: restaurantId,
+            name: displayName,
+            slug: input.restaurantName.trim() ? slugify(input.restaurantName) : draft.slug,
+            status: 'draft',
+            plan: 'trial',
+            updatedAt: now,
+          }
+          store.addRestaurant(restaurant)
+          store.replaceDraft(restaurant)
+          // ids now match, so setActive keeps the working copy
+          store.setActive(restaurantId)
+          usePlatformStore.getState().subscribe(restaurantId, 'trial')
+        } else {
+          /* no draft — fall back to a fresh restaurant built from the template */
+          restaurantId = `rst-${slugify(input.restaurantName)}-${Date.now().toString(36)}`
+          const restaurant = createRestaurantFromTemplate(input.templateId, {
+            id: restaurantId,
+            name: input.restaurantName.trim() || 'My restaurant',
+            slug: slugify(input.restaurantName),
+            status: 'draft',
+            plan: 'trial',
+            updatedAt: now,
+          })
+          store.addRestaurant(restaurant)
+          store.setActive(restaurantId)
+          usePlatformStore.getState().subscribe(restaurantId, 'trial')
+        }
 
         const account: UserAccount = {
           id: `u-${Date.now().toString(36)}-${accountCounter++}`,

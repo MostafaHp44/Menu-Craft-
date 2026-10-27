@@ -13,22 +13,28 @@ import ClientsTab from './tabs/ClientsTab.tsx'
 import SubscriptionsTab from './tabs/SubscriptionsTab.tsx'
 import SalesTab from './tabs/SalesTab.tsx'
 import TemplatesTab from './tabs/TemplatesTab.tsx'
+import HomeTab from './tabs/HomeTab.tsx'
 import TeamTab from './tabs/TeamTab.tsx'
 import PaymentsTab from './tabs/PaymentsTab.tsx'
 
+/** `home` is not a permission of its own — it reuses the `templates` permission */
+type AdminTabId = AdminPermission | 'home'
+
 interface TabDef {
-  id: AdminPermission
+  id: AdminTabId
+  permission: AdminPermission
   labelKey: TKey
   icon: string
 }
 
 const TABS: TabDef[] = [
-  { id: 'clients', labelKey: 'admin.clients', icon: 'users' },
-  { id: 'subscriptions', labelKey: 'admin.subscriptions', icon: 'card' },
-  { id: 'sales', labelKey: 'admin.sales', icon: 'chart' },
-  { id: 'templates', labelKey: 'admin.templates', icon: 'layers' },
-  { id: 'team', labelKey: 'admin.team', icon: 'settings' },
-  { id: 'payments', labelKey: 'admin.payments', icon: 'globe' },
+  { id: 'clients', permission: 'clients', labelKey: 'admin.clients', icon: 'users' },
+  { id: 'subscriptions', permission: 'subscriptions', labelKey: 'admin.subscriptions', icon: 'card' },
+  { id: 'sales', permission: 'sales', labelKey: 'admin.sales', icon: 'chart' },
+  { id: 'templates', permission: 'templates', labelKey: 'admin.templates', icon: 'layers' },
+  { id: 'home', permission: 'templates', labelKey: 'platformMore.home.tab', icon: 'home' },
+  { id: 'team', permission: 'team', labelKey: 'admin.team', icon: 'settings' },
+  { id: 'payments', permission: 'payments', labelKey: 'admin.payments', icon: 'globe' },
 ]
 
 export default function Admin() {
@@ -38,16 +44,16 @@ export default function Admin() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const authorized = isPlatformAdmin(session) && session?.status === 'active'
-  const tabs = authorized ? TABS.filter((tab) => can(session, tab.id)) : []
+  const tabs = authorized ? TABS.filter((tab) => can(session, tab.permission)) : []
 
   const requested = searchParams.get('tab')
-  const activeId: AdminPermission =
+  const activeId: AdminTabId =
     requested && tabs.some((tab) => tab.id === requested)
-      ? (requested as AdminPermission)
+      ? (requested as AdminTabId)
       : (tabs[0]?.id ?? 'clients')
   const focusClientId = searchParams.get('client')
 
-  const goTab = (id: AdminPermission, client?: string | null) => {
+  const goTab = (id: AdminTabId, client?: string | null) => {
     const next = new URLSearchParams()
     next.set('tab', id)
     if (client) next.set('client', client)
@@ -160,6 +166,7 @@ export default function Admin() {
                 {activeId === 'subscriptions' ? <SubscriptionsTab /> : null}
                 {activeId === 'sales' ? <SalesTab focusClientId={focusClientId} /> : null}
                 {activeId === 'templates' ? <TemplatesTab /> : null}
+                {activeId === 'home' ? <HomeTab /> : null}
                 {activeId === 'team' ? <TeamTab /> : null}
                 {activeId === 'payments' ? <PaymentsTab /> : null}
               </motion.div>
