@@ -457,4 +457,28 @@ export const ar: Dict = {
     sub: 'يمكن الرابط قديم أو الصفحة انتقلت.',
     goHome: 'العودة للرئيسية',
   },
+
+  images: {
+    search: 'ابحث في الصور…',
+    clear: 'مسح البحث',
+    all: 'الكل',
+    categories: {
+      pizza: 'بيتزا',
+      pasta: 'معكرونة',
+      meat: 'لحوم ومشاوي',
+      burger: 'برغر وسندويتش',
+      coffee: 'قهوة ومشروبات',
+      dessert: 'حلويات ومخبوزات',
+      breakfast: 'فطور',
+      healthy: 'صحّي',
+      interior: 'أجواء ومقاهٍ',
+      lifestyle: 'مائدة ونمط حياة',
+    },
+    empty: 'لا توجد صور مطابقة للبحث',
+    useUrl: 'استخدم رابط صورة',
+    urlPlaceholder: 'https://…',
+    urlInvalid: 'أدخل رابطاً صحيحاً يبدأ بـ http:// أو https://',
+    current: 'الحالية',
+    selected: 'مختارة',
+  },
 }

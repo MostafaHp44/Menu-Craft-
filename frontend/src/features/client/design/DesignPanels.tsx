@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Icon } from '../../../shared/ui/icons.tsx'
 import { Badge, Button, ChoiceCard, ColorField, Field, IconButton, Img, Input, SliderField, Toggle } from '../../../shared/ui/ui.tsx'
+import { ImagePicker } from '../../../shared/ui/ImagePicker.tsx'
 import { TouchSegmented } from './TouchSegmented.tsx'
 import { FONTS, fontName } from '../../../templates/data/fonts.ts'
-import { IMAGE_LIBRARY } from '../../../shared/lib/images.ts'
 import { PALETTE_PRESETS, THEME_OPTIONS, THEME_SURFACES } from '../../../templates/data/palettes.ts'
 import { getTemplate } from '../../../templates/data/templates.ts'
 import type { ColorSet, FontId, ImageAspect, LogoStyle, Restaurant, SectionId } from '../../../shared/lib/types.ts'
@@ -143,28 +143,13 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
           </span>
         </button>
         {heroOpen ? (
-          <div className="max-h-56 overflow-y-auto rounded-xl border border-sand p-2 thin-scroll">
-            <div className="grid grid-cols-4 gap-2">
-              {IMAGE_LIBRARY.map((image) => (
-                <button
-                  key={image.src}
-                  type="button"
-                  title={image.label}
-                  aria-label={t('design.useImage', { label: image.label })}
-                  onClick={() => {
-                    set('heroImage', image.src)
-                    setHeroOpen(false)
-                  }}
-                  className={cx(
-                    'overflow-hidden rounded-lg border-2 transition',
-                    draft.heroImage === image.src ? 'border-flame ring-2 ring-flame/25' : 'border-transparent hover:border-clay'
-                  )}
-                >
-                  <Img src={image.src} alt={image.label} className="aspect-[4/3] w-full object-cover" />
-                </button>
-              ))}
-            </div>
-          </div>
+          <ImagePicker
+            value={draft.heroImage}
+            onSelect={(src) => {
+              set('heroImage', src)
+              setHeroOpen(false)
+            }}
+          />
         ) : null}
       </PanelBlock>
 
@@ -172,36 +157,17 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
         title={t('design.gallery')}
         description={t('design.galleryDesc', { count: draft.gallery.length })}
       >
-        <div className="grid grid-cols-3 gap-2">
-          {IMAGE_LIBRARY.slice(0, 15).map((image) => {
-            const active = draft.gallery.includes(image.src)
-            return (
-              <button
-                key={image.src}
-                type="button"
-                aria-pressed={active}
-                title={image.label}
-                onClick={() =>
-                  set(
-                    'gallery',
-                    active ? draft.gallery.filter((s) => s !== image.src) : [...draft.gallery, image.src]
-                  )
-                }
-                className={cx(
-                  'relative overflow-hidden rounded-lg border-2 transition',
-                  active ? 'border-flame' : 'border-transparent opacity-70 hover:opacity-100'
-                )}
-              >
-                <Img src={image.src} alt={image.label} className="aspect-square w-full object-cover" />
-                {active ? (
-                  <span className="absolute end-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-flame text-white">
-                    <Icon name="check" size={10} strokeWidth={3} />
-                  </span>
-                ) : null}
-              </button>
+        <ImagePicker
+          value={draft.gallery}
+          onToggle={(src) =>
+            set(
+              'gallery',
+              draft.gallery.includes(src)
+                ? draft.gallery.filter((s) => s !== src)
+                : [...draft.gallery, src]
             )
-          })}
-        </div>
+          }
+        />
       </PanelBlock>
 
       <PanelBlock title={t('design.contactDetails')} description={t('design.contactDesc')}>

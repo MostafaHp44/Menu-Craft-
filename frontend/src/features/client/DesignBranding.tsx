@@ -111,7 +111,7 @@ export default function DesignBranding() {
         </div>
       </Card>
 
-      <div className="grid gap-4 sm:gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
         {/* live preview — first on phones (compact + collapsible), right column on desktop */}
         <div className="lg:col-start-2 lg:row-start-1 lg:sticky lg:top-[92px] lg:self-start">
           <Card className="overflow-hidden">

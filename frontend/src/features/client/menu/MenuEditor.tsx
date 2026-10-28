@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Icon } from '../../../shared/ui/icons.tsx'
 import { Badge, Button, EmptyState, Field, IconButton, Img, Input, Modal, Toggle } from '../../../shared/ui/ui.tsx'
-import { IMAGE_LIBRARY, IMG } from '../../../shared/lib/images.ts'
+import { ImagePicker } from '../../../shared/ui/ImagePicker.tsx'
+import { IMG } from '../../../shared/lib/images.ts'
 import { cx, money, uid } from '../../../shared/lib/utils.ts'
 import type { MenuItem } from '../../../shared/lib/types.ts'
 import { useStore } from '../../../shared/store/useStore.ts'
@@ -479,25 +480,7 @@ function ItemModal({
             <span className="text-[13px] font-medium text-espresso">Pick a photo</span>
             <span className="text-[11.5px] text-clay">Bundled library · works offline</span>
           </div>
-          <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-6">
-            {IMAGE_LIBRARY.map((image) => (
-              <button
-                key={image.src}
-                type="button"
-                title={image.label}
-                aria-label={image.label}
-                onClick={() => onChange({ image: image.src })}
-                className={cx(
-                  'relative overflow-hidden rounded-lg border-2 transition',
-                  item.image === image.src
-                    ? 'border-flame ring-2 ring-flame/25'
-                    : 'border-transparent hover:border-clay'
-                )}
-              >
-                <Img src={image.src} alt={image.label} className="aspect-square w-full object-cover" />
-              </button>
-            ))}
-          </div>
+          <ImagePicker value={item.image} onSelect={(src) => onChange({ image: src })} />
           <div className="mt-4 flex items-center gap-3 rounded-xl border border-sand p-3">
             <Img src={item.image} alt="Current dish" className="h-16 w-16 rounded-lg border border-sand object-cover" />
             <div className="min-w-0">

@@ -456,6 +456,30 @@ export const en = {
     sub: 'The link may be old, or the page moved.',
     goHome: 'Back to home',
   },
+
+  images: {
+    search: 'Search images…',
+    clear: 'Clear search',
+    all: 'All',
+    categories: {
+      pizza: 'Pizza',
+      pasta: 'Pasta',
+      meat: 'Meat & grills',
+      burger: 'Burgers & sandwiches',
+      coffee: 'Coffee & drinks',
+      dessert: 'Sweets & bakery',
+      breakfast: 'Breakfast',
+      healthy: 'Healthy',
+      interior: 'Interiors & cafés',
+      lifestyle: 'Dining & lifestyle',
+    },
+    empty: 'No images match your search',
+    useUrl: 'Use an image URL',
+    urlPlaceholder: 'https://…',
+    urlInvalid: 'Enter a valid link starting with http:// or https://',
+    current: 'Current',
+    selected: 'Selected',
+  },
 }
 
 export type Dict = typeof en

@@ -3,7 +3,7 @@ import { useI18n, type TKey } from '../../../shared/i18n/index.tsx'
 import { Button, Modal } from '../../../shared/ui/ui.tsx'
 import { Icon } from '../../../shared/ui/icons.tsx'
 import { cx } from '../../../shared/lib/utils.ts'
-import { IMAGE_LIBRARY } from '../../../shared/lib/images.ts'
+import { ImagePicker } from '../../../shared/ui/ImagePicker.tsx'
 import { FONTS, fontName, fontStack } from '../../../templates/data/fonts.ts'
 import type { ActiveField } from '../../../templates/editor/inlineEdit.tsx'
 import type { InlineTextStyle } from '../../../shared/lib/types.ts'
@@ -245,29 +245,13 @@ export function InlineToolbar({
         description={t('editor.inline.pickPhotoSub')}
         size="lg"
       >
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {IMAGE_LIBRARY.map((image) => (
-            <button
-              key={image.src}
-              type="button"
-              className="group relative overflow-hidden rounded-xl border border-sand transition hover:border-flame"
-              onClick={() => {
-                onCommit(field.path, image.src)
-                setPickerOpen(false)
-              }}
-            >
-              <img
-                src={image.src}
-                alt={image.label}
-                loading="lazy"
-                className="aspect-[4/3] w-full object-cover"
-              />
-              <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-2 pb-1.5 pt-4 text-start text-[10.5px] text-white">
-                {image.label}
-              </span>
-            </button>
-          ))}
-        </div>
+        <ImagePicker
+          value=""
+          onSelect={(src) => {
+            onCommit(field.path, src)
+            setPickerOpen(false)
+          }}
+        />
       </Modal>
     </>
   )

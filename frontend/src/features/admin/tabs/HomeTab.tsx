@@ -3,7 +3,7 @@ import { LANGS, useI18n } from '../../../shared/i18n'
 import type { TKey } from '../../../shared/i18n'
 import { Icon } from '../../../shared/ui/icons.tsx'
 import { Badge, Button, IconButton, Img, Input, Modal, TextArea } from '../../../shared/ui/ui.tsx'
-import { IMAGE_LIBRARY } from '../../../shared/lib/images.ts'
+import { ImagePicker as LibraryImagePicker } from '../../../shared/ui/ImagePicker.tsx'
 import { useStore } from '../../../shared/store/useStore.ts'
 import {
   HOME_SEED,
@@ -335,40 +335,24 @@ function ImagePicker({ value, onChange }: { value: string; onChange: (src: strin
           </div>
         )}
 
-        <div className="mt-2.5 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+        <div className="mt-2.5 flex justify-end">
           <button
             type="button"
             aria-label={t('platformMore.home.noImage')}
             aria-pressed={!value}
             onClick={() => onChange('')}
             className={cx(
-              'flex aspect-[4/3] items-center justify-center rounded-lg border transition',
+              'flex h-9 items-center justify-center gap-1.5 rounded-lg border px-3 text-[12px] transition',
               !value
                 ? 'border-flame bg-flame/12 text-flame-light'
                 : 'border-white/12 bg-white/4 text-ivory/50 hover:border-white/30'
             )}
           >
-            <Icon name="x" size={16} />
+            <Icon name="x" size={14} />
+            {t('platformMore.home.noImage')}
           </button>
-          {IMAGE_LIBRARY.map((image) => (
-            <button
-              key={image.src}
-              type="button"
-              title={image.label}
-              aria-label={image.label}
-              aria-pressed={value === image.src}
-              onClick={() => onChange(image.src)}
-              className={cx(
-                'aspect-[4/3] overflow-hidden rounded-lg border-2 transition',
-                value === image.src
-                  ? 'border-flame'
-                  : 'border-transparent hover:border-white/25'
-              )}
-            >
-              <Img src={image.src} alt={image.label} className="h-full w-full object-cover" />
-            </button>
-          ))}
         </div>
+        <LibraryImagePicker value={value} onSelect={onChange} className="mt-2.5" />
       </div>
     </div>
   )
