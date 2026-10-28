@@ -57,6 +57,21 @@ const en = {
       share: 'Share',
       demoNote:
         'Deterministic demo numbers per restaurant — no real orders sit behind this chart.',
+      dishesTitle: 'Top dishes',
+      dishesNote:
+        'Revenue earned per dish across every order of this client — profit figures are simulated for the demo (no real cost data in this prototype).',
+      dish: 'Dish',
+      qty: 'Qty',
+      profit: 'Profit',
+      totalProfit: 'Total profit',
+      margin: 'Margin',
+      noOrders: 'No orders yet for this client',
+      timingTitle: 'First & last orders per day',
+      timingNote:
+        'Order times below come from real orders — days without real orders are simulated for the demo.',
+      firstOrder: 'First order',
+      lastOrder: 'Last order',
+      simulatedDay: 'Simulated',
     },
     templates: {
       copyNote:
@@ -183,6 +198,21 @@ const ar: Deep<typeof en> = {
       thisMonth: 'هذا الشهر',
       share: 'الحصة',
       demoNote: 'أرقام تجريبية حتمية لكل مطعم — لا توجد طلبات حقيقية خلف هذا الرسم.',
+      dishesTitle: 'الأطباق الأكثر مبيعاً',
+      dishesNote:
+        'إيراد كل طبق من كل طلبات هذا العميل — أرقام الأرباح محاكاة للنموذج التجريبي (لا توجد بيانات تكلفة حقيقية في هذا النموذج).',
+      dish: 'الطبق',
+      qty: 'الكمية',
+      profit: 'الربح',
+      totalProfit: 'إجمالي الربح',
+      margin: 'هامش الربح',
+      noOrders: 'لا توجد طلبات لهذا العميل بعد',
+      timingTitle: 'أول وآخر طلب في كل يوم',
+      timingNote:
+        'أوقات الطلبات أدناه من طلبات حقيقية — الأيام التي لا تحوي طلبات حقيقية محاكاة للنموذج التجريبي.',
+      firstOrder: 'أول طلب',
+      lastOrder: 'آخر طلب',
+      simulatedDay: 'محاكى',
     },
     templates: {
       copyNote: 'القالب الجديد نسخة من التصميم الأساسي — عدّل النسخة بحرية والأصل يبقى كما هو.',
@@ -307,6 +337,21 @@ const ku: Deep<typeof en> = {
       thisMonth: 'ئەم مانگە',
       share: 'بەش',
       demoNote: 'ژمارەی تاقیکراوی دیاریکراو بۆ هەر چایەخانەیەک — هیچ داواکارییەکی ڕاستەقینە لە ئەم وێنەیەدا نییە.',
+      dishesTitle: 'باشترین خواردنەکان',
+      dishesNote:
+        'داهاتی هەر خواردنێک لە هەموو داواکارییەکانی ئەم کڕیارەوە — ژمارەی قازیج بۆ تاقیکردنەوە محاکەکراوە (لەم پێوانەیەدا داتای هەقیبەڵی نییە).',
+      dish: 'خواردن',
+      qty: 'ژمارە',
+      profit: 'قازیج',
+      totalProfit: 'کۆی قازیج',
+      margin: 'ڕێژەی قازیج',
+      noOrders: 'هێشتا هیچ داواکارییەک بۆ ئەم کڕیارە نییە',
+      timingTitle: 'یەکەم و کۆتایی داواکاری لە هەر ڕۆژێکدا',
+      timingNote:
+        'کاتی داواکارییەکان لە خوارەوە لە داواکارییەکی ڕاستەقینەیەکەوەن — ڕۆژەکانی بێ داواکارییەکی ڕاستەقینە بۆ تاقیکردنەوە محاکەکراون.',
+      firstOrder: 'یەکەم داواکاری',
+      lastOrder: 'کۆتایی داواکاری',
+      simulatedDay: 'محاکەکراوە',
     },
     templates: {
       copyNote:

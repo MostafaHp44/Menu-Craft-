@@ -62,6 +62,14 @@ const en = {
     phone: 'Phone',
     email: 'Email',
     address: 'Address',
+    socialsGroup: 'Social links',
+    socialsNote: 'Shown as tappable icons in the footer. Keep a field empty to use the template link.',
+    instagram: 'Instagram',
+    instagramPlaceholder: '@yourhandle',
+    facebook: 'Facebook',
+    facebookPlaceholder: 'yourhandle',
+    website: 'Website',
+    websitePlaceholder: 'yourrestaurant.com',
 
     /* -------------------------------- colors ------------------------------ */
     palettes: 'Palettes',
@@ -212,6 +220,14 @@ const ar: Deep<typeof en> = {
     phone: 'الهاتف',
     email: 'البريد الإلكتروني',
     address: 'العنوان',
+    socialsGroup: 'روابط التواصل',
+    socialsNote: 'تظهر كأيقونات قابلة للنقر في التذييل. اترك الحقل فارغاً للإبقاء على رابط القالب.',
+    instagram: 'إنستغرام',
+    instagramPlaceholder: '@yourhandle',
+    facebook: 'فيسبوك',
+    facebookPlaceholder: 'yourhandle',
+    website: 'الموقع الإلكتروني',
+    websitePlaceholder: 'yourrestaurant.com',
 
     /* -------------------------------- colors ------------------------------ */
     palettes: 'لوحات الألوان',
@@ -362,6 +378,14 @@ const ku: Deep<typeof en> = {
     phone: 'مۆبایل',
     email: 'ئیمەیل',
     address: 'ناونیشان',
+    socialsGroup: 'بەستەرەکانی سۆشیال میدیا',
+    socialsNote: 'وەک ئایکۆنی لێدان لە جەرگەکەدا دەردەکەون. خانەکە بەتاڵبهێنە بۆ بەکارهێنانی بەستەری قالبەکە.',
+    instagram: 'ئینستاگرام',
+    instagramPlaceholder: '@yourhandle',
+    facebook: 'فەیسبوک',
+    facebookPlaceholder: 'yourhandle',
+    website: 'ماڵپەڕ',
+    websitePlaceholder: 'yourrestaurant.com',
 
     /* -------------------------------- colors ------------------------------ */
     palettes: 'پەلیتی ڕەنگەکان',

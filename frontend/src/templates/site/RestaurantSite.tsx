@@ -984,6 +984,17 @@ function SiteFooter({
 }) {
   const { t } = useI18n()
   const year = new Date().getFullYear()
+  const inline = useInlineEdit()
+  const editing = Boolean(inline?.enabled)
+
+  // socials live on the restaurant; empty values fall back to the template sample
+  const sampleSocials = getTemplate(r.templateId).sample.socials
+  const instagram = r.socials.instagram.trim() || sampleSocials.instagram.trim()
+  const facebook = r.socials.facebook.trim() || sampleSocials.facebook.trim()
+  const website = r.socials.website.trim() || sampleSocials.website.trim()
+
+  const profileHref = (base: string, handle: string) => `${base}/${handle.replace(/^@/, '')}`
+  const siteHref = (value: string) => (/^https?:\/\//i.test(value) ? value : `https://${value}`)
 
   return (
     <footer className="rs-footer">
@@ -1005,15 +1016,54 @@ function SiteFooter({
             </a>
             <Ed as="p" path="tagline" className="rs-footer__blurb" multiline label="editor.inline.f.tagline" />
             <div className="rs-socials">
-              <a href={`#${prefix}rs-top`} aria-label="Instagram">
-                <Icon name="instagram" size={16} />
-              </a>
-              <a href={`#${prefix}rs-top`} aria-label="Facebook">
-                <Icon name="facebook" size={16} />
-              </a>
-              <a href={`#${prefix}rs-top`} aria-label={t('web.site.footer.websiteAria')}>
-                <Icon name="globe" size={16} />
-              </a>
+              {instagram ? (
+                <a
+                  href={editing ? undefined : profileHref('https://instagram.com', instagram)}
+                  target={editing ? undefined : '_blank'}
+                  rel="noreferrer"
+                  aria-label={`Instagram ${instagram}`}
+                >
+                  <Icon name="instagram" size={16} />
+                  <Ed
+                    as="span"
+                    path="socials.instagram"
+                    className="rs-socials__handle"
+                    label="editor.inline.f.socialInstagram"
+                  />
+                </a>
+              ) : null}
+              {facebook ? (
+                <a
+                  href={editing ? undefined : profileHref('https://facebook.com', facebook)}
+                  target={editing ? undefined : '_blank'}
+                  rel="noreferrer"
+                  aria-label={`Facebook ${facebook}`}
+                >
+                  <Icon name="facebook" size={16} />
+                  <Ed
+                    as="span"
+                    path="socials.facebook"
+                    className="rs-socials__handle"
+                    label="editor.inline.f.socialFacebook"
+                  />
+                </a>
+              ) : null}
+              {website ? (
+                <a
+                  href={editing ? undefined : siteHref(website)}
+                  target={editing ? undefined : '_blank'}
+                  rel="noreferrer"
+                  aria-label={`${t('web.site.footer.websiteAria')} ${website}`}
+                >
+                  <Icon name="globe" size={16} />
+                  <Ed
+                    as="span"
+                    path="socials.website"
+                    className="rs-socials__handle"
+                    label="editor.inline.f.socialWebsite"
+                  />
+                </a>
+              ) : null}
             </div>
           </div>
 

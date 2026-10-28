@@ -1232,18 +1232,26 @@
 
 .rs-socials {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
 .rs-socials a {
-  display: grid;
-  place-items: center;
-  width: 2.4em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
   height: 2.4em;
+  padding-inline: 0.75em;
   border-radius: 999px;
   border: 1px solid var(--rs-border);
   color: var(--rs-muted);
   transition: all 0.2s ease;
+}
+
+.rs-socials__handle {
+  font-size: 11px;
+  line-height: 1;
 }
 
 .rs-socials a:hover {

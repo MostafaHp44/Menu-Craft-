@@ -10,6 +10,7 @@ import type { ColorSet, FontId, ImageAspect, LogoStyle, Restaurant, SectionId } 
 import { cx, slugify } from '../../../shared/lib/utils.ts'
 import { useStore } from '../../../shared/store/useStore.ts'
 import { useI18n, type TKey } from '../../../shared/i18n'
+import { setByPath } from '../../../templates/editor/inlineEdit.tsx'
 
 /* ------------------------------------------------------------------ *
  * Design control panels — one implementation shared by the visual
@@ -53,6 +54,12 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
   const set = <K extends keyof Restaurant>(key: K, value: Restaurant[K]) =>
     updateDraft((d) => {
       d[key] = value
+    })
+
+  /** deep commit — e.g. `setDeep('socials.instagram', v)` */
+  const setDeep = (path: string, value: string) =>
+    updateDraft((d) => {
+      Object.assign(d, setByPath(d, path, value))
     })
 
   return (
@@ -181,6 +188,32 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
         </div>
         <Field label={t('design.address')}>
           <Input value={draft.address} onChange={(e) => set('address', e.target.value)} />
+        </Field>
+      </PanelBlock>
+
+      <PanelBlock title={t('design.socialsGroup')} description={t('design.socialsNote')}>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label={t('design.instagram')}>
+            <Input
+              value={draft.socials.instagram}
+              placeholder={t('design.instagramPlaceholder')}
+              onChange={(e) => setDeep('socials.instagram', e.target.value)}
+            />
+          </Field>
+          <Field label={t('design.facebook')}>
+            <Input
+              value={draft.socials.facebook}
+              placeholder={t('design.facebookPlaceholder')}
+              onChange={(e) => setDeep('socials.facebook', e.target.value)}
+            />
+          </Field>
+        </div>
+        <Field label={t('design.website')}>
+          <Input
+            value={draft.socials.website}
+            placeholder={t('design.websitePlaceholder')}
+            onChange={(e) => setDeep('socials.website', e.target.value)}
+          />
         </Field>
       </PanelBlock>
     </div>

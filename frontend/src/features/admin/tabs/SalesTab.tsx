@@ -3,9 +3,12 @@ import { useI18n } from '../../../shared/i18n'
 import type { TKey } from '../../../shared/i18n'
 import { Badge, Field, Segmented, Select, StatCard } from '../../../shared/ui/ui.tsx'
 import { useStore } from '../../../shared/store/useStore.ts'
+import { useRestaurantOrders } from '../../../shared/store/useOrders.ts'
 import { useSalesSeries } from '../../../shared/lib/hooks.ts'
 import { createSalesSeries } from '../../../shared/lib/demoData.ts'
-import { formatDate, money } from '../../../shared/lib/utils.ts'
+import { buildDailyTiming, buildDishBreakdown } from '../../../shared/lib/salesReport.ts'
+import type { DishTotals } from '../../../shared/lib/salesReport.ts'
+import { cx, formatDate, money } from '../../../shared/lib/utils.ts'
 import type { SalesPoint } from '../../../shared/lib/types.ts'
 import { DarkEmpty, Panel, PanelHeading, PlanBadge } from '../parts.tsx'
 
@@ -58,6 +61,34 @@ function RevenueBars({ points, period }: { points: SalesPoint[]; period: Period 
   )
 }
 
+/** totals footer shared by the top-dishes desktop table and mobile cards */
+function DishTotalsBar({ totals }: { totals: DishTotals }) {
+  const { t } = useI18n()
+  return (
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/4 px-4 py-3">
+      <span className="text-[11px] uppercase tracking-[0.14em] text-ivory/40">
+        {t('common.total')}
+      </span>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px]">
+        <span className="text-ivory/55">
+          {t('common.revenue')}
+          <strong className="ms-1.5 font-semibold text-ivory">{money(totals.revenue)}</strong>
+        </span>
+        <span className="text-ivory/55">
+          {t('platformMore.sales.totalProfit')}
+          <strong className="ms-1.5 font-semibold text-flame-light">{money(totals.profit)}</strong>
+        </span>
+        <span className="text-ivory/55">
+          {t('platformMore.sales.margin')}
+          <strong className="ms-1.5 font-semibold text-ivory">
+            {totals.margin.toFixed(0)}%
+          </strong>
+        </span>
+      </div>
+    </div>
+  )
+}
+
 export default function SalesTab({ focusClientId }: { focusClientId: string | null }) {
   const { t } = useI18n()
   const restaurants = useStore((s) => s.restaurants)
@@ -73,6 +104,21 @@ export default function SalesTab({ focusClientId }: { focusClientId: string | nu
 
   const restaurant = restaurants.find((r) => r.id === selectedId) ?? restaurants[0]
   const series = useSalesSeries(restaurant ?? null)
+
+  const orders = useRestaurantOrders(restaurant?.id ?? '')
+  const dishes = useMemo(() => buildDishBreakdown(orders), [orders])
+  const timing = useMemo(
+    () =>
+      series && restaurant
+        ? buildDailyTiming({
+            restaurantId: restaurant.id,
+            plan: restaurant.plan,
+            series,
+            orders,
+          })
+        : [],
+    [series, restaurant, orders]
+  )
 
   const points = useMemo<SalesPoint[]>(() => {
     if (!series) return []
@@ -179,6 +225,236 @@ export default function SalesTab({ focusClientId }: { focusClientId: string | nu
               </div>
             </>
           )}
+        </div>
+      </Panel>
+
+      {/* top dishes — revenue & simulated profit per dish for the selected client */}
+      <Panel>
+        <PanelHeading
+          title={t('platformMore.sales.dishesTitle')}
+          description={t('platformMore.sales.dishesNote')}
+        />
+
+        {dishes.rows.length === 0 ? (
+          <div className="mt-4">
+            <DarkEmpty
+              icon="utensils"
+              title={t('platformMore.sales.noOrders')}
+              message={t('platformMore.sales.dishesNote')}
+            />
+          </div>
+        ) : (
+          <>
+            {/* desktop table */}
+            <div className="mt-4 hidden md:block">
+              <div className="overflow-x-auto thin-scroll">
+                <table className="w-full min-w-[640px] text-start">
+                  <thead>
+                    <tr className="text-[11px] uppercase tracking-[0.14em] text-ivory/40">
+                      <th className="px-3 py-2.5 font-semibold">
+                        {t('platformMore.sales.dish')}
+                      </th>
+                      <th className="px-3 py-2.5 text-end font-semibold">
+                        {t('platformMore.sales.qty')}
+                      </th>
+                      <th className="px-3 py-2.5 text-end font-semibold">
+                        {t('common.revenue')}
+                      </th>
+                      <th className="px-3 py-2.5 text-end font-semibold">
+                        {t('platformMore.sales.profit')}
+                      </th>
+                      <th className="px-3 py-2.5 text-end font-semibold">
+                        {t('platformMore.sales.share')}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/8">
+                    {dishes.rows.slice(0, 10).map((row) => (
+                      <tr key={row.itemId} className="transition hover:bg-white/4">
+                        <td className="px-3 py-3 text-[13.5px] font-medium text-ivory">
+                          {row.name}
+                        </td>
+                        <td className="px-3 py-3 text-end text-[13px] text-ivory/65">
+                          {row.qty}
+                        </td>
+                        <td className="px-3 py-3 text-end text-[13px] font-semibold text-ivory">
+                          {money(row.revenue)}
+                        </td>
+                        <td className="px-3 py-3 text-end text-[13px] font-medium text-flame-light">
+                          {money(row.profit)}
+                        </td>
+                        <td className="px-3 py-3 text-end text-[12.5px] text-ivory/55">
+                          {row.share.toFixed(0)}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* mobile cards */}
+            <div className="mt-4 space-y-3 md:hidden">
+              {dishes.rows.slice(0, 10).map((row) => (
+                <div
+                  key={row.itemId}
+                  className="rounded-2xl border border-white/10 bg-white/4 p-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="min-w-0 break-words text-start text-[14px] font-semibold text-ivory">
+                      {row.name}
+                    </span>
+                    <span className="text-[11.5px] text-ivory/55">
+                      {t('platformMore.sales.share')} · {row.share.toFixed(0)}%
+                    </span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <span className="block text-[10.5px] uppercase tracking-[0.1em] text-ivory/40">
+                        {t('platformMore.sales.qty')}
+                      </span>
+                      <span className="mt-0.5 block text-[13px] font-semibold text-ivory">
+                        {row.qty}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-[10.5px] uppercase tracking-[0.1em] text-ivory/40">
+                        {t('common.revenue')}
+                      </span>
+                      <span className="mt-0.5 block text-[13px] font-semibold text-ivory">
+                        {money(row.revenue)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-[10.5px] uppercase tracking-[0.1em] text-ivory/40">
+                        {t('platformMore.sales.profit')}
+                      </span>
+                      <span className="mt-0.5 block text-[13px] font-semibold text-flame-light">
+                        {money(row.profit)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <DishTotalsBar totals={dishes.totals} />
+          </>
+        )}
+      </Panel>
+
+      {/* first & last orders per day — real orders, simulated where none exist */}
+      <Panel>
+        <PanelHeading
+          title={t('platformMore.sales.timingTitle')}
+          description={t('platformMore.sales.timingNote')}
+        />
+
+        {/* desktop table */}
+        <div className="mt-4 hidden md:block">
+          <div className="overflow-x-auto thin-scroll">
+            <table className="w-full min-w-[640px] text-start">
+              <thead>
+                <tr className="text-[11px] uppercase tracking-[0.14em] text-ivory/40">
+                  <th className="px-3 py-2.5 font-semibold">{t('common.date')}</th>
+                  <th className="px-3 py-2.5 text-end font-semibold">
+                    {t('platformMore.sales.firstOrder')}
+                  </th>
+                  <th className="px-3 py-2.5 text-end font-semibold">
+                    {t('platformMore.sales.lastOrder')}
+                  </th>
+                  <th className="px-3 py-2.5 text-end font-semibold">
+                    {t('dashboard.orders')}
+                  </th>
+                  <th className="px-3 py-2.5 text-end font-semibold">{t('common.revenue')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/8">
+                {timing.map((row) => (
+                  <tr key={row.date} className="transition hover:bg-white/4">
+                    <td className="px-3 py-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[13.5px] text-ivory">{formatDate(row.date)}</span>
+                        {row.simulated ? (
+                          <Badge tone="outline">{t('platformMore.sales.simulatedDay')}</Badge>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td
+                      className={cx(
+                        'px-3 py-3 text-end text-[13px]',
+                        row.simulated ? 'text-ivory/50' : 'font-medium text-ivory'
+                      )}
+                    >
+                      {row.first}
+                    </td>
+                    <td
+                      className={cx(
+                        'px-3 py-3 text-end text-[13px]',
+                        row.simulated ? 'text-ivory/50' : 'font-medium text-ivory'
+                      )}
+                    >
+                      {row.last}
+                    </td>
+                    <td className="px-3 py-3 text-end text-[13px] text-ivory/65">{row.orders}</td>
+                    <td className="px-3 py-3 text-end text-[13px] font-semibold text-ivory">
+                      {money(row.revenue)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* mobile cards */}
+        <div className="mt-4 space-y-3 md:hidden">
+          {timing.map((row) => (
+            <div key={row.date} className="rounded-2xl border border-white/10 bg-white/4 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[14px] font-semibold text-ivory">
+                  {formatDate(row.date)}
+                </span>
+                {row.simulated ? (
+                  <Badge tone="outline">{t('platformMore.sales.simulatedDay')}</Badge>
+                ) : null}
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-center">
+                <div>
+                  <span className="block text-[10.5px] uppercase tracking-[0.1em] text-ivory/40">
+                    {t('platformMore.sales.firstOrder')}
+                  </span>
+                  <span
+                    className={cx(
+                      'mt-0.5 block text-[13px] font-semibold',
+                      row.simulated ? 'text-ivory/50' : 'text-ivory'
+                    )}
+                  >
+                    {row.first}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[10.5px] uppercase tracking-[0.1em] text-ivory/40">
+                    {t('platformMore.sales.lastOrder')}
+                  </span>
+                  <span
+                    className={cx(
+                      'mt-0.5 block text-[13px] font-semibold',
+                      row.simulated ? 'text-ivory/50' : 'text-ivory'
+                    )}
+                  >
+                    {row.last}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center justify-between text-[12px] text-ivory/55">
+                <span>
+                  {t('dashboard.orders')} · {row.orders}
+                </span>
+                <span className="font-semibold text-ivory">{money(row.revenue)}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </Panel>
 
