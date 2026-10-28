@@ -21,6 +21,7 @@ const NAV: Array<{ to: string; label: TKey; icon: string; end?: boolean }> = [
   { to: '/dashboard/payments', label: 'dashboard.payments', icon: 'card' },
   { to: '/dashboard/qr-code', label: 'dashboard.qrCode', icon: 'qr' },
   { to: '/dashboard/subscription', label: 'dashboard.subscription', icon: 'tag' },
+  { to: '/dashboard/team', label: 'dashboard.team', icon: 'users' },
   { to: '/dashboard/settings', label: 'dashboard.settings', icon: 'settings' },
 ]
 
@@ -38,6 +39,7 @@ const TITLES: Record<string, { title: TKey; sub: TKey }> = {
   '/dashboard/payments': { title: 'payments.title', sub: 'dashboard.subPayments' },
   '/dashboard/qr-code': { title: 'dashboard.qrCode', sub: 'dashboard.subQr' },
   '/dashboard/subscription': { title: 'subscription.title', sub: 'dashboard.subSubscription' },
+  '/dashboard/team': { title: 'team.title', sub: 'dashboard.subTeam' },
   '/dashboard/settings': { title: 'dashboard.settings', sub: 'dashboard.subSettings' },
 }
 
@@ -68,9 +70,12 @@ export default function DashboardLayout() {
     setMoreOpen(false)
   }, [pathname])
 
-  const primary = NAV.filter((item) => MOBILE_PRIMARY.includes(item.to))
+  // team management is owner-only — hide the item for worker sessions
+  const navItems =
+    session?.role === 'worker' ? NAV.filter((item) => item.to !== '/dashboard/team') : NAV
+  const primary = navItems.filter((item) => MOBILE_PRIMARY.includes(item.to))
   const isPrimaryActive = (to: string) => pathname === to || pathname.startsWith(`${to}/`)
-  const moreActive = NAV.some(
+  const moreActive = navItems.some(
     (item) => !MOBILE_PRIMARY.includes(item.to) && (pathname === item.to || pathname.startsWith(`${item.to}/`))
   )
 
@@ -140,7 +145,7 @@ export default function DashboardLayout() {
             {t('dashboard.workspace')}
           </p>
           <ul className="space-y-0.5">
-            {NAV.map((item) => (
+            {navItems.map((item) => (
               <li key={item.to}>
                 <NavLink
                   to={item.to}
@@ -382,7 +387,7 @@ export default function DashboardLayout() {
               </div>
 
               <ul className="grid grid-cols-2 gap-2">
-                {NAV.map((item) => {
+                {navItems.map((item) => {
                   const active = pathname === item.to || pathname.startsWith(`${item.to}/`)
                   return (
                     <li key={item.to}>

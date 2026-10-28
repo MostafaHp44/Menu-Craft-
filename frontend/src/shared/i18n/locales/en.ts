@@ -114,7 +114,7 @@ export const en = {
     reports: 'Reports',
     payments: 'Payments',
     clients: 'Clients',
-    team: 'Team',
+    team: 'Team & staff',
     sales: 'Sales',
     openEditor: 'Open editor',
     viewSite: 'View site',
@@ -137,6 +137,7 @@ export const en = {
     subQr: 'Print-ready codes for tables and windows.',
     subSubscription: 'Demo plans — no payment is ever processed.',
     subSettings: 'Restaurant details, contact info and demo data.',
+    subTeam: 'Add staff who follow your orders.',
   },
 
   overviewPage: {
@@ -267,6 +268,36 @@ export const en = {
     markServed: 'Served',
     markPreparing: 'Preparing',
     markReceived: 'Received',
+  },
+
+  team: {
+    title: 'Team & staff',
+    desc: 'Add staff members who sign in and follow your orders on the kitchen board.',
+    howTitle: 'How it works:',
+    howBody:
+      'Staff sign in on the Sign in page with their email (demo magic link) or password, then open the kitchen board.',
+    addTitle: 'Add staff member',
+    namePlaceholder: 'e.g. Sara Ahmed',
+    emailPlaceholder: 'sara@restaurant.com',
+    passwordPlaceholder: 'Password for sign-in',
+    passwordOptional: 'Leave empty — staff can still use the email link',
+    addBtn: 'Add staff member',
+    errName: 'Please enter the staff member’s name',
+    errEmail: 'Please enter a valid email address',
+    errDuplicate: 'An account with this email already exists',
+    added: '{name} can now sign in and follow orders.',
+    staffTitle: 'Kitchen staff',
+    staffCount: '{n} members',
+    empty: 'No staff yet',
+    emptySub: 'Add your first staff member to share the kitchen board.',
+    signInAs: 'View as {name}',
+    viewAsNote: 'Demo preview: “View as” signs you in as that staff member and opens the kitchen board.',
+    removeConfirm: 'Remove {name} from your kitchen staff?',
+    removeBody: 'This only affects the demo account stored in this browser.',
+    badgePassword: 'Password set',
+    badgeLink: 'Email sign-in',
+    owner: 'Owner',
+    joined: 'joined {date}',
   },
 
   admin: {

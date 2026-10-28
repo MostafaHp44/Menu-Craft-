@@ -7,7 +7,7 @@ import { LanguageSwitcher } from '../../shared/ui/LanguageSwitcher.tsx'
 import { useI18n, type TKey } from '../../shared/i18n'
 import { cx, money, timeAgo } from '../../shared/lib/utils.ts'
 import { useOrderedOrders, useOrdersStore } from '../../shared/store/useOrders.ts'
-import { useActiveRestaurant } from '../../shared/store/useStore.ts'
+import { useActiveRestaurant, useStore } from '../../shared/store/useStore.ts'
 import { useAuthStore } from '../../shared/store/useAuth.ts'
 import type { Order, OrderStatus } from '../../shared/lib/types.ts'
 
@@ -206,7 +206,14 @@ function BoardColumn({
 export default function WorkerBoard() {
   const { t, lang } = useI18n()
   const navigate = useNavigate()
-  const restaurant = useActiveRestaurant()
+  const activeRestaurant = useActiveRestaurant()
+  const session = useAuthStore((s) => s.session)
+  const restaurants = useStore((s) => s.restaurants)
+  // a signed-in worker always follows THEIR restaurant's kitchen — not the active one
+  const restaurant =
+    session?.role === 'worker' && session.restaurantId
+      ? restaurants.find((r) => r.id === session.restaurantId) ?? activeRestaurant
+      : activeRestaurant
   const signOut = useAuthStore((s) => s.signOut)
   const orders = useOrderedOrders(restaurant.id)
 

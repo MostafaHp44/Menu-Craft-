@@ -59,7 +59,14 @@ interface AuthState {
   ) => { ok: boolean; reason?: 'empty' | 'noAccount' | 'suspended'; account?: UserAccount }
   signOut: () => void
 
-  addAccount: (input: { name: string; email: string; role: Role; restaurantId?: string }) => UserAccount
+  addAccount: (input: {
+    name: string
+    email: string
+    role: Role
+    restaurantId?: string
+    /** optional demo password — goes to the `passwords` vault, never on UserAccount */
+    password?: string
+  }) => UserAccount
   updateAccount: (id: string, recipe: (account: UserAccount) => void) => void
   removeAccount: (id: string) => void
 }
@@ -259,17 +266,25 @@ export const useAuthStore = create<AuthState>()(
       signOut: () => set({ session: null }),
 
       addAccount: (input) => {
+        const normalizedEmail = input.email.trim().toLowerCase()
         const account: UserAccount = {
           id: `u-${Date.now().toString(36)}-${accountCounter++}`,
           name: input.name.trim() || 'Team member',
-          email: input.email.trim().toLowerCase(),
+          email: normalizedEmail,
           role: input.role,
           restaurantId: input.restaurantId,
           permissions: input.role === 'admin' ? ['clients'] : undefined,
           status: 'active',
           createdAt: new Date().toISOString(),
         }
-        set((s) => ({ accounts: [...s.accounts, account] }))
+        // optional password — mirrors signUp: kept in the vault, never on UserAccount
+        const password = input.password?.trim()
+        set((s) => ({
+          accounts: [...s.accounts, account],
+          passwords: password
+            ? { ...s.passwords, [normalizedEmail]: encodePassword(password) }
+            : s.passwords,
+        }))
         return account
       },
 

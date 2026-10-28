@@ -116,7 +116,7 @@ export const ar: Dict = {
     reports: 'التقارير',
     payments: 'وسائل الدفع',
     clients: 'الكلاينتس',
-    team: 'الفريق',
+    team: 'الفريق والموظفون',
     sales: 'المبيعات',
     openEditor: 'افتح المحرر',
     viewSite: 'شاهد الموقع',
@@ -139,6 +139,7 @@ export const ar: Dict = {
     subQr: 'أكواد جاهزة للطباعة للطاولات والنوافذ.',
     subSubscription: 'باقات تجريبية — لا تتم أي دفعات.',
     subSettings: 'بيانات المطعم ومعلومات التواصل والبيانات التجريبية.',
+    subTeam: 'أضف موظفين يتابعون أورداتك.',
   },
 
   overviewPage: {
@@ -269,6 +270,36 @@ export const ar: Dict = {
     markServed: 'تم التقديم',
     markPreparing: 'قيد التحضير',
     markReceived: 'قيد الاستلام',
+  },
+
+  team: {
+    title: 'الفريق والموظفون',
+    desc: 'أضف موظفين يسجّلون الدخول ويتابعون الأوردات على شاشة المطبخ.',
+    howTitle: 'كيف تعمل:',
+    howBody:
+      'يسجّل الموظفون الدخول من صفحة تسجيل الدخول بالبريد الإلكتروني (رابط تجريبي) أو بكلمة المرور، ثم يفتحون شاشة المطبخ.',
+    addTitle: 'إضافة موظف',
+    namePlaceholder: 'مثال: سارة أحمد',
+    emailPlaceholder: 'sara@restaurant.com',
+    passwordPlaceholder: 'كلمة المرور للدخول',
+    passwordOptional: 'اتركها فارغة — يمكن استخدام رابط البريد',
+    addBtn: 'إضافة الموظف',
+    errName: 'يرجى إدخال اسم الموظف',
+    errEmail: 'يرجى إدخال بريد إلكتروني صحيح',
+    errDuplicate: 'يوجد حساب بهذا البريد الإلكتروني بالفعل',
+    added: 'أصبح {name} قادرًا على الدخول ومتابعة الأوردات.',
+    staffTitle: 'موظفو المطبخ',
+    staffCount: '{n} موظفين',
+    empty: 'لا يوجد موظفون بعد',
+    emptySub: 'أضف أول موظف لمشاركة شاشة المطبخ.',
+    signInAs: 'عرض كـ {name}',
+    viewAsNote: 'معاينة تجريبية: «عرض كـ» يسجّل الدخول باسم ذلك الموظف ويفتح شاشة المطبخ.',
+    removeConfirm: 'إزالة {name} من موظفي المطبخ؟',
+    removeBody: 'هذا يؤثر فقط على حساب التجربة المخزّن في متصفحك.',
+    badgePassword: 'كلمة مرور محددة',
+    badgeLink: 'دخول بالبريد',
+    owner: 'المالك',
+    joined: 'انضم {date}',
   },
 
   admin: {

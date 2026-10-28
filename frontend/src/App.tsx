@@ -13,6 +13,7 @@ import PaymentsPage from './features/client/PaymentsPage.tsx'
 import ReportsPage from './features/client/ReportsPage.tsx'
 import QrCodePage from './features/client/QrCodePage.tsx'
 import SettingsPage from './features/client/SettingsPage.tsx'
+import TeamPage from './features/client/TeamPage.tsx'
 import DashboardTemplates from './features/client/TemplatesPage.tsx'
 import SubscriptionPage from './features/client/SubscriptionPage.tsx'
 import Editor from './features/client/Editor.tsx'
@@ -65,6 +66,7 @@ export default function App() {
             <Route path="qr-code" element={<QrCodePage />} />
             <Route path="subscription" element={<SubscriptionPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="team" element={<TeamPage />} />
           </Route>
           <Route path="/menu-demo" element={<MenuDemo />} />
           <Route path="/worker" element={<WorkerBoard />} />

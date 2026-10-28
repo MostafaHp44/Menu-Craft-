@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useI18n } from '../../shared/i18n'
 import type { TKey } from '../../shared/i18n'
@@ -41,6 +41,8 @@ export default function Admin() {
   const { t } = useI18n()
   const session = useAuthStore((s) => s.session)
   const signInAs = useAuthStore((s) => s.signInAs)
+  const signOut = useAuthStore((s) => s.signOut)
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const authorized = isPlatformAdmin(session) && session?.status === 'active'
@@ -58,6 +60,11 @@ export default function Admin() {
     next.set('tab', id)
     if (client) next.set('client', client)
     setSearchParams(next, { replace: true })
+  }
+
+  const handleSignOut = () => {
+    signOut()
+    navigate('/')
   }
 
   return (
@@ -86,6 +93,17 @@ export default function Admin() {
             <LanguageSwitcher tone="dark" />
             <Button to="/dashboard" size="sm" variant="light" icon="home">
               {t('nav.dashboard')}
+            </Button>
+            <Button
+              size="sm"
+              variant="light"
+              icon="logout"
+              className="max-sm:gap-0"
+              onClick={handleSignOut}
+              aria-label={t('dashboard.signOut')}
+              title={t('dashboard.signOut')}
+            >
+              <span className="hidden sm:inline">{t('dashboard.signOut')}</span>
             </Button>
           </div>
         </div>
