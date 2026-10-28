@@ -1,4 +1,4 @@
-﻿import { useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
+﻿import { useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
 import type {
   InlineTextStyle,
   MenuCategory,
@@ -9,6 +9,7 @@ import type {
 import { fontStack } from '../data/fonts.ts'
 import { getTemplate } from '../data/templates.ts'
 import { cx, mix, money, readableOn } from '../../shared/lib/utils.ts'
+import { resolveVideoSrc } from '../../shared/lib/heroVideo.ts'
 import { Icon } from '../../shared/ui/icons.tsx'
 import { useI18n, type TKey } from '../../shared/i18n/index.tsx'
 import {
@@ -252,6 +253,47 @@ function SiteHeader({
 
 /* ---------------------------------- hero ---------------------------------- */
 
+/**
+ * Ambient hero video — decorative layer over the hero photo.
+ * `idb:` refs resolve to object URLs (revoked on cleanup); until resolved
+ * nothing renders, so the photo/poster stays visible underneath. Always
+ * pointer-events-none: taps must reach the inline-editable image below.
+ */
+function HeroVideo({ src, poster, className }: { src: string; poster: string; className?: string }) {
+  const [resolved, setResolved] = useState<string | null>(null)
+
+  useEffect(() => {
+    let objectUrl: string | null = null
+    let cancelled = false
+    resolveVideoSrc(src).then((url) => {
+      if (cancelled) {
+        if (url?.startsWith('blob:')) URL.revokeObjectURL(url)
+        return
+      }
+      if (url?.startsWith('blob:')) objectUrl = url
+      setResolved(url)
+    })
+    return () => {
+      cancelled = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+      setResolved(null)
+    }
+  }, [src])
+
+  if (!resolved) return null
+  return (
+    <video
+      autoPlay
+      muted
+      loop
+      playsInline
+      src={resolved}
+      poster={poster}
+      className={cx('rs-hero__video', className)}
+    />
+  )
+}
+
 function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string }) {
   const style = r.design.layout.hero
   const firstHours = r.hours[0]
@@ -322,7 +364,9 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
               ? () => inline.select({ path: 'heroImage', kind: 'image', label: 'editor.inline.f.heroPhoto' })
               : undefined
           }
-        />
+        >
+          {r.heroVideo ? <HeroVideo src={r.heroVideo} poster={r.heroImage} /> : null}
+        </div>
         <div className="rs-hero__overlay" />
         <div className="rs-hero__inner">
           <span className="rs-chip">
@@ -394,6 +438,7 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
               eager
               label="editor.inline.f.photo"
             />
+            {r.heroVideo ? <HeroVideo src={r.heroVideo} poster={r.heroImage} /> : null}
             <figcaption className="rs-hero__float">
               <Icon name="utensils" size={15} />
               <Ed path="name" label="editor.inline.f.name" />
@@ -424,6 +469,7 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
             eager
             label="editor.inline.f.photo"
           />
+          {r.heroVideo ? <HeroVideo src={r.heroVideo} poster={r.heroImage} /> : null}
         </figure>
       </div>
     </section>

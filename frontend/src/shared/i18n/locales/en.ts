@@ -482,6 +482,12 @@ export const en = {
     urlInvalid: 'Enter a valid link starting with http:// or https://',
     current: 'Current',
     selected: 'Selected',
+    upload: 'Upload image',
+    uploads: 'Uploads',
+    uploadFailed: "Couldn't add this image",
+    uploadTooLarge: 'This image is too large (max 12MB)',
+    uploadTypeError: 'Choose an image file',
+    deleteUpload: 'Remove upload',
   },
 }
 

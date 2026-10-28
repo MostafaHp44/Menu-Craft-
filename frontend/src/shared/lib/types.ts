@@ -115,6 +115,8 @@ export interface Restaurant {
   logoText: string
   logoStyle: LogoStyle
   heroImage: string
+  /** ambient hero clip — ''/absent = none · `https://…mp4` = remote URL · `idb:<uuid>` = uploaded blob in IndexedDB */
+  heroVideo?: string
   gallery: string[]
   phone: string
   email: string

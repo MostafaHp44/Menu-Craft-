@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useI18n, type TKey } from '../i18n/index.tsx'
 import { IMAGE_LIBRARY, type LibraryImage } from '../lib/images.ts'
+import { ImageUploadError, fileToDataUrl } from '../lib/imageUpload.ts'
+import { useUploads } from '../store/useUploads.ts'
 import { cx } from '../lib/utils.ts'
 import { Button, Img, Input } from './ui.tsx'
 import { Icon } from './icons.tsx'
 
 /**
  * Shared image picker — search + category chips over the bundled library,
- * with an optional "paste image URL" escape hatch (no uploads in this app).
+ * plus browser uploads (kept in the `useUploads` store) and an optional
+ * "paste image URL" escape hatch.
  *
  * Single mode: `value: string` + `onSelect(src)`.
  * Multi mode:  `value: string[]` + `onToggle(src)` (+ optional `max` cap).
@@ -93,10 +96,15 @@ export interface ImagePickerProps {
 export function ImagePicker({ value, onSelect, onToggle, max, className }: ImagePickerProps) {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
-  const [category, setCategory] = useState<CategoryId | 'all'>('all')
+  const [category, setCategory] = useState<CategoryId | 'all' | 'uploads'>('all')
   const [urlDraft, setUrlDraft] = useState('')
   const [urlError, setUrlError] = useState(false)
+  const [uploadError, setUploadError] = useState<TKey | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const uploads = useUploads((s) => s.items)
+  const addUpload = useUploads((s) => s.add)
+  const removeUpload = useUploads((s) => s.remove)
 
   const multi = Array.isArray(value)
   const selected = useMemo(
@@ -104,6 +112,7 @@ export function ImagePicker({ value, onSelect, onToggle, max, className }: Image
     [value]
   )
   const librarySrcs = useMemo(() => new Set(IMAGE_LIBRARY.map((image) => image.src)), [])
+  const uploadSrcs = useMemo(() => new Set(uploads), [uploads])
   /** custom URL selections (multi mode) — kept visible & removable at the top */
   const extras = useMemo(
     () => (Array.isArray(value) ? value.filter((src) => !librarySrcs.has(src)) : []),
@@ -157,8 +166,34 @@ export function ImagePicker({ value, onSelect, onToggle, max, className }: Image
     pick(raw)
   }
 
-  const chips: Array<{ id: CategoryId | 'all'; label: string }> = [
+  const onFileChosen = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setUploadError(null)
+    try {
+      const dataURL = await fileToDataUrl(file)
+      const result = addUpload(dataURL)
+      if (!result.ok) {
+        setUploadError('images.uploadFailed')
+        return
+      }
+      // the upload is selected immediately — no hunting for it in a grid
+      pick(dataURL)
+    } catch (error) {
+      setUploadError(
+        error instanceof ImageUploadError && error.code === 'tooLarge'
+          ? 'images.uploadTooLarge'
+          : error instanceof ImageUploadError && error.code === 'type'
+            ? 'images.uploadTypeError'
+            : 'images.uploadFailed'
+      )
+    }
+  }
+
+  const chips: Array<{ id: CategoryId | 'all' | 'uploads'; label: string }> = [
     { id: 'all', label: t('images.all') },
+    { id: 'uploads', label: t('images.uploads') },
     ...CATEGORY_ORDER.map((id) => ({ id, label: t(`images.categories.${id}` as TKey) })),
   ]
 
@@ -216,7 +251,39 @@ export function ImagePicker({ value, onSelect, onToggle, max, className }: Image
 
       {/* grid — height-capped so it works inline and inside modals */}
       <div ref={scrollRef} className="thin-scroll max-h-[45vh] overflow-y-auto">
-        {filtered.length === 0 && extras.length === 0 ? (
+        {category === 'uploads' ? (
+          uploads.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-stone bg-cream/40 px-4 py-8 text-center text-[13px] text-umber">
+              {t('images.empty')}
+            </p>
+          ) : (
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {uploads.map((src) => (
+                <div key={src} className="relative">
+                  <Thumb
+                    src={src}
+                    label={t('images.uploads')}
+                    selected={selected.has(src)}
+                    disabled={atCap && !selected.has(src)}
+                    stateLabel={multi ? t('images.selected') : t('images.current')}
+                    onClick={() => pick(src)}
+                  />
+                  <button
+                    type="button"
+                    aria-label={t('images.deleteUpload')}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      removeUpload(src)
+                    }}
+                    className="absolute end-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-charcoal/70 text-white shadow transition hover:bg-charcoal"
+                  >
+                    <Icon name="x" size={12} strokeWidth={2.5} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )
+        ) : filtered.length === 0 && extras.length === 0 ? (
           <p className="rounded-xl border border-dashed border-stone bg-cream/40 px-4 py-8 text-center text-[13px] text-umber">
             {t('images.empty')}
           </p>
@@ -226,7 +293,7 @@ export function ImagePicker({ value, onSelect, onToggle, max, className }: Image
               <Thumb
                 key={src}
                 src={src}
-                label={t('images.useUrl')}
+                label={uploadSrcs.has(src) ? t('images.uploads') : t('images.useUrl')}
                 selected={selected.has(src)}
                 disabled={atCap && !selected.has(src)}
                 stateLabel={multi ? t('images.selected') : t('images.current')}
@@ -248,8 +315,12 @@ export function ImagePicker({ value, onSelect, onToggle, max, className }: Image
         )}
       </div>
 
-      {/* bring-your-own image — the only path without uploads */}
+      {/* bring-your-own image — uploads or a pasted URL */}
       <div className="space-y-1.5 border-t border-sand/70 pt-2.5">
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFileChosen} />
+        <Button size="sm" variant="outline" icon="plus" full onClick={() => fileRef.current?.click()}>
+          {t('images.upload')}
+        </Button>
         <div className="flex items-center gap-2">
           <Input
             value={urlDraft}
@@ -278,7 +349,12 @@ export function ImagePicker({ value, onSelect, onToggle, max, className }: Image
             {t('common.apply')}
           </Button>
         </div>
-        {urlError ? (
+        {uploadError ? (
+          <p className="flex items-center gap-1.5 text-[12px] text-rose">
+            <Icon name="alert" size={13} />
+            {t(uploadError)}
+          </p>
+        ) : urlError ? (
           <p className="flex items-center gap-1.5 text-[12px] text-rose">
             <Icon name="alert" size={13} />
             {t('images.urlInvalid')}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from '../../../shared/ui/icons.tsx'
 import { Badge, Button, ChoiceCard, ColorField, Field, IconButton, Img, Input, SliderField, Toggle } from '../../../shared/ui/ui.tsx'
 import { ImagePicker } from '../../../shared/ui/ImagePicker.tsx'
@@ -7,6 +7,14 @@ import { FONTS, fontName } from '../../../templates/data/fonts.ts'
 import { PALETTE_PRESETS, THEME_OPTIONS, THEME_SURFACES } from '../../../templates/data/palettes.ts'
 import { getTemplate } from '../../../templates/data/templates.ts'
 import type { ColorSet, FontId, ImageAspect, LogoStyle, Restaurant, SectionId } from '../../../shared/lib/types.ts'
+import {
+  HeroVideoError,
+  SAMPLE_HERO_VIDEO,
+  deleteVideo,
+  isRemoteVideoUrl,
+  resolveVideoSrc,
+  saveVideo,
+} from '../../../shared/lib/heroVideo.ts'
 import { cx, slugify } from '../../../shared/lib/utils.ts'
 import { useStore } from '../../../shared/store/useStore.ts'
 import { useI18n, type TKey } from '../../../shared/i18n'
@@ -160,6 +168,10 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
         ) : null}
       </PanelBlock>
 
+      <PanelBlock title={t('design.heroVideoGroup')} description={t('design.heroVideoNote')}>
+        <HeroVideoBlock draft={draft} />
+      </PanelBlock>
+
       <PanelBlock
         title={t('design.gallery')}
         description={t('design.galleryDesc', { count: draft.gallery.length })}
@@ -216,6 +228,167 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
           />
         </Field>
       </PanelBlock>
+    </div>
+  )
+}
+
+/* ------------------------------- hero video ------------------------------- */
+
+function HeroVideoBlock({ draft }: { draft: Restaurant }) {
+  const { t } = useI18n()
+  const updateDraft = useStore((s) => s.updateDraft)
+  const [preview, setPreview] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [urlDraft, setUrlDraft] = useState('')
+  const [urlError, setUrlError] = useState(false)
+  const [uploadError, setUploadError] = useState<'tooLarge' | 'failed' | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const ref = draft.heroVideo
+
+  const set = (value: string) =>
+    updateDraft((d) => {
+      d.heroVideo = value
+    })
+
+  /* resolve `idb:` refs to object URLs for the preview — revoked on cleanup */
+  useEffect(() => {
+    let objectUrl: string | null = null
+    let cancelled = false
+    resolveVideoSrc(ref).then((url) => {
+      if (cancelled) {
+        if (url?.startsWith('blob:')) URL.revokeObjectURL(url)
+        return
+      }
+      if (url?.startsWith('blob:')) objectUrl = url
+      setPreview(url)
+    })
+    return () => {
+      cancelled = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [ref])
+
+  const applyUrl = () => {
+    const raw = urlDraft.trim()
+    if (!isRemoteVideoUrl(raw)) {
+      setUrlError(true)
+      return
+    }
+    setUrlError(false)
+    setUrlDraft('')
+    set(raw)
+  }
+
+  const onFileChosen = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setUrlError(false)
+    setUploadError(null)
+    setBusy(true)
+    try {
+      set(await saveVideo(file))
+    } catch (error) {
+      setUploadError(error instanceof HeroVideoError && error.code === 'tooLarge' ? 'tooLarge' : 'failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const remove = async () => {
+    setBusy(true)
+    try {
+      await deleteVideo(ref)
+      set('')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!ref) {
+    return (
+      <div className="space-y-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={onFileChosen} />
+          <Button size="sm" variant="outline" icon="plus" disabled={busy} onClick={() => fileRef.current?.click()}>
+            {busy ? t('design.heroVideoSaving') : t('design.heroVideoUpload')}
+          </Button>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={() => set(SAMPLE_HERO_VIDEO)}>
+            {t('design.heroVideoSample')}
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <Input
+            value={urlDraft}
+            onChange={(e) => {
+              setUrlDraft(e.target.value)
+              setUrlError(false)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                applyUrl()
+              }
+            }}
+            placeholder={t('design.heroVideoUrl')}
+            aria-label={t('design.heroVideoUrl')}
+            className="text-[13px]"
+            dir="ltr"
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0"
+            disabled={!urlDraft.trim() || busy}
+            onClick={applyUrl}
+          >
+            {t('common.apply')}
+          </Button>
+        </div>
+        {urlError ? (
+          <p className="flex items-center gap-1.5 text-[12px] text-rose">
+            <Icon name="alert" size={13} />
+            {t('design.heroVideoInvalidUrl')}
+          </p>
+        ) : null}
+        {uploadError ? (
+          <p className="flex items-center gap-1.5 text-[12px] text-rose">
+            <Icon name="alert" size={13} />
+            {t(uploadError === 'tooLarge' ? 'design.heroVideoTooLarge' : 'images.uploadFailed')}
+          </p>
+        ) : null}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2.5">
+      {preview ? (
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          poster={draft.heroImage}
+          src={preview}
+          className="h-36 w-full rounded-xl object-cover"
+        />
+      ) : null}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Badge tone="neutral">
+          {ref.startsWith('idb:') ? (
+            t('design.heroVideoUploaded')
+          ) : (
+            <span dir="ltr" className="max-w-[190px] truncate">
+              {ref}
+            </span>
+          )}
+        </Badge>
+        <Button size="sm" variant="outline" icon="trash" loading={busy} onClick={remove}>
+          {t('design.heroVideoRemove')}
+        </Button>
+      </div>
     </div>
   )
 }

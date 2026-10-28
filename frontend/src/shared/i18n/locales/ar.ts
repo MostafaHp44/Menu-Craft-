@@ -483,5 +483,11 @@ export const ar: Dict = {
     urlInvalid: 'أدخل رابطاً صحيحاً يبدأ بـ http:// أو https://',
     current: 'الحالية',
     selected: 'مختارة',
+    upload: 'رفع صورة',
+    uploads: 'المرفوعات',
+    uploadFailed: 'تعذّرت إضافة هذه الصورة',
+    uploadTooLarge: 'هذه الصورة كبيرة جداً (بحد أقصى 12 م.ب)',
+    uploadTypeError: 'اختر ملف صورة',
+    deleteUpload: 'إزالة الصورة المرفوعة',
   },
 }

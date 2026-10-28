@@ -483,5 +483,11 @@ export const ku: Dict = {
     urlInvalid: 'بەستەرێکی دروست بنووسە کە بە http:// یان https:// دەست پێبکات',
     current: 'ئێستا',
     selected: 'هەڵبژێردراوە',
+    upload: 'بارکردنی وێنە',
+    uploads: 'بارکراوەکان',
+    uploadFailed: 'زیادکردنی ئەم وێنەیە سەرکەوتوو نەبوو',
+    uploadTooLarge: 'ئەم وێنەیە زۆر گەورەیە (زۆرترین 12 م.ب)',
+    uploadTypeError: 'فایلێکی وێنە هەڵبژێرە',
+    deleteUpload: 'سڕینەوەی وێنەی بارکراو',
   },
 }
