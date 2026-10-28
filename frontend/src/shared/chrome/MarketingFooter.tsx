@@ -1,37 +1,41 @@
 import { Link } from 'react-router-dom'
 import { Icon, LogoMark } from '../ui/icons.tsx'
+import { useI18n, type TKey } from '../i18n'
 
-const COLUMNS: Array<{ title: string; links: Array<{ label: string; to: string }> }> = [
+type FooterLink = { to: string; label: TKey } | { to: string; name: string }
+
+const COLUMNS: Array<{ title: TKey; links: FooterLink[] }> = [
   {
-    title: 'Product',
+    title: 'web.footer.product',
     links: [
-      { label: 'Visual editor', to: '/dashboard/editor' },
-      { label: 'Restaurant dashboard', to: '/dashboard' },
-      { label: 'QR code generator', to: '/dashboard/qr-code' },
-      { label: 'Published menu', to: '/menu-demo' },
+      { label: 'web.footer.visualEditor', to: '/dashboard/editor' },
+      { label: 'web.footer.restaurantDashboard', to: '/dashboard' },
+      { label: 'web.footer.qrGenerator', to: '/dashboard/qr-code' },
+      { label: 'web.footer.publishedMenu', to: '/menu-demo' },
     ],
   },
   {
-    title: 'Templates',
+    title: 'nav.templates',
     links: [
-      { label: 'All templates', to: '/templates' },
-      { label: 'The Royal', to: '/templates/the-royal' },
-      { label: 'Bella Italia', to: '/templates/bella-italia' },
-      { label: 'Urban Cafe', to: '/templates/urban-cafe' },
+      { label: 'web.footer.allTemplates', to: '/templates' },
+      { name: 'The Royal', to: '/templates/the-royal' },
+      { name: 'Bella Italia', to: '/templates/bella-italia' },
+      { name: 'Urban Cafe', to: '/templates/urban-cafe' },
     ],
   },
   {
-    title: 'Demo',
+    title: 'web.footer.demo',
     links: [
-      { label: 'Platform admin', to: '/admin' },
-      { label: 'Sign in', to: '/signin' },
-      { label: 'Pricing', to: '/#pricing' },
-      { label: 'How it works', to: '/#how' },
+      { label: 'web.footer.platformAdmin', to: '/admin' },
+      { label: 'nav.signIn', to: '/signin' },
+      { label: 'nav.pricing', to: '/#pricing' },
+      { label: 'nav.howItWorks', to: '/#how' },
     ],
   },
 ]
 
 export function MarketingFooter() {
+  const { t } = useI18n()
   const year = new Date().getFullYear()
 
   return (
@@ -46,8 +50,7 @@ export function MarketingFooter() {
               </span>
             </span>
             <p className="mt-4 text-[15px] leading-relaxed text-ivory/60">
-              Digital menu websites for restaurants, cafés and bakeries. Pick a design, make it
-              yours, publish it — no code, no plugins, no waiting.
+              {t('web.footer.tagline')}
             </p>
             <div className="mt-6 flex items-center gap-2.5">
               <span className="inline-flex items-center gap-2 rounded-full border border-ivory/15 px-3 py-1.5 text-[12.5px] text-ivory/70">
@@ -56,7 +59,7 @@ export function MarketingFooter() {
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-ivory/15 px-3 py-1.5 text-[12.5px] text-ivory/70">
                 <span className="h-1.5 w-1.5 rounded-full bg-moss anim-pulse-dot" />
-                Demo online
+                {t('web.footer.demoOnline')}
               </span>
             </div>
           </div>
@@ -64,16 +67,16 @@ export function MarketingFooter() {
           {COLUMNS.map((column) => (
             <div key={column.title}>
               <h3 className="text-[12px] font-semibold uppercase tracking-[0.18em] text-ivory/45">
-                {column.title}
+                {t(column.title)}
               </h3>
               <ul className="mt-4 space-y-2.5">
                 {column.links.map((link) => (
-                  <li key={link.label}>
+                  <li key={link.to}>
                     <Link
                       to={link.to}
                       className="text-[14.5px] text-ivory/70 transition hover:text-flame"
                     >
-                      {link.label}
+                      {'label' in link ? t(link.label) : link.name}
                     </Link>
                   </li>
                 ))}
@@ -83,13 +86,13 @@ export function MarketingFooter() {
         </div>
 
         <div className="mt-14 flex flex-col gap-4 border-t border-ivory/10 pt-7 text-[13px] text-ivory/45 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {year} MenuCraft. Interactive product demo — all data, prices and sites are simulated.</p>
+          <p>{t('web.footer.legal', { year })}</p>
           <div className="flex items-center gap-5">
             <a href="#top" className="transition hover:text-ivory">
-              Back to top
+              {t('web.footer.backToTop')}
             </a>
             <span className="text-ivory/25">·</span>
-            <span>Made for food businesses</span>
+            <span>{t('web.footer.madeFor')}</span>
           </div>
         </div>
       </div>

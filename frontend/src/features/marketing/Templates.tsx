@@ -8,11 +8,13 @@ import { useCustomize } from '../../shared/lib/hooks.ts'
 import { TEMPLATE_CATEGORIES } from '../../templates/data/templates.ts'
 import { useTemplateList } from '../../templates/data/useTemplateList.ts'
 import { cx } from '../../shared/lib/utils.ts'
+import { useI18n } from '../../shared/i18n'
 import type { TemplateCategory } from '../../shared/lib/types.ts'
 
 type SortId = 'featured' | 'az' | 'category'
 
 export default function Templates() {
+  const { t } = useI18n()
   const customize = useCustomize()
   const templates = useTemplateList()
   const [query, setQuery] = useState('')
@@ -63,17 +65,16 @@ export default function Templates() {
           <div className="max-w-3xl">
             <span className="eyebrow flex items-center gap-2">
               <span className="h-px w-6 bg-current opacity-50" />
-              Template gallery
+              {t('web.templates.eyebrow')}
               <span className="h-px w-6 bg-current opacity-50" />
             </span>
             <h1 className="display-serif mt-4 text-[clamp(38px,5.6vw,68px)] leading-[1.04] text-charcoal">
-              Eight complete designs.
+              {t('web.templates.headlineCount', { count: templates.length })}
               <br />
-              Every one is editable.
+              {t('web.templates.headlineEditable')}
             </h1>
             <p className="mt-5 max-w-xl text-[16.5px] leading-relaxed text-espresso/85">
-              Each template ships with its own palette, typography, layout and sample menu. Preview it as a
-              real scrolling site, then take it into the editor and make it yours.
+              {t('web.templates.sub')}
             </p>
           </div>
 
@@ -87,14 +88,14 @@ export default function Templates() {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search “fine dining”, “dark”, “bakery”…"
-                aria-label="Search templates"
+                placeholder={t('web.templates.searchPh')}
+                aria-label={t('web.templates.searchAria')}
                 className="h-12 w-full rounded-full border border-sand bg-paper ps-11 pe-11 text-[14.5px] text-charcoal shadow-[0_14px_36px_-30px_rgba(27,23,20,0.9)] transition placeholder:text-clay focus:border-flame focus:outline-none focus:ring-4 focus:ring-flame/12"
               />
               {query ? (
                 <button
                   type="button"
-                  aria-label="Clear search"
+                  aria-label={t('web.templates.clearAria')}
                   onClick={() => setQuery('')}
                   className="absolute end-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-umber transition hover:bg-cream"
                 >
@@ -105,17 +106,17 @@ export default function Templates() {
 
             <div className="flex flex-wrap items-center gap-2">
               <span className="me-1 text-[12.5px] text-clay">
-                {results.length} of {templates.length}
+                {t('web.templates.resultsOf', { shown: results.length, total: templates.length })}
               </span>
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as SortId)}
-                aria-label="Sort templates"
+                aria-label={t('web.templates.sortAria')}
                 className="h-10 rounded-full border border-sand bg-paper px-4 text-[13px] font-medium text-espresso transition hover:border-clay focus:border-flame focus:outline-none"
               >
-                <option value="featured">Featured first</option>
-                <option value="az">A → Z</option>
-                <option value="category">By category</option>
+                <option value="featured">{t('web.templates.sortFeatured')}</option>
+                <option value="az">{t('web.templates.sortAz')}</option>
+                <option value="category">{t('web.templates.sortCategory')}</option>
               </select>
             </div>
           </div>
@@ -126,7 +127,7 @@ export default function Templates() {
               const count =
                 item === 'All'
                   ? templates.length
-                  : templates.filter((t) => t.category === (item as TemplateCategory)).length
+                  : templates.filter((tpl) => tpl.category === (item as TemplateCategory)).length
               return (
                 <button
                   key={item}
@@ -154,11 +155,15 @@ export default function Templates() {
         {results.length === 0 ? (
           <EmptyState
             icon="search"
-            title="No templates match that search"
-            message={`Nothing found for “${query}”${category !== 'All' ? ` in ${category}` : ''}. Try a broader term or clear the filters.`}
+            title={t('web.templates.emptyTitle')}
+            message={
+              category !== 'All'
+                ? t('web.templates.emptyMsgCategory', { query, category })
+                : t('web.templates.emptyMsg', { query })
+            }
             action={
               <Button icon="refresh" onClick={reset}>
-                Clear filters
+                {t('web.templates.clearFilters')}
               </Button>
             }
           />
@@ -174,11 +179,11 @@ export default function Templates() {
                 <Link
                   to={`/templates/${template.id}`}
                   className="relative block aspect-[16/11] overflow-hidden bg-cream"
-                  aria-label={`Preview ${template.name}`}
+                  aria-label={t('web.templates.previewAria', { name: template.name })}
                 >
                   <Img
                     src={template.previewImage}
-                    alt={`${template.name} template preview`}
+                    alt={t('web.templates.previewAlt', { name: template.name })}
                     className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.05]"
                   />
                   <Img
@@ -191,12 +196,12 @@ export default function Templates() {
                   <span className="absolute start-4 top-4 flex flex-wrap gap-2">
                     {template.custom ? (
                       <Badge tone="dark" className="bg-gold text-ink">
-                        New
+                        {t('web.templates.badgeNew')}
                       </Badge>
                     ) : null}
                     {template.featured ? (
                       <Badge tone="dark" className="bg-flame text-white" icon="star">
-                        Featured
+                        {t('web.templates.badgeFeatured')}
                       </Badge>
                     ) : null}
                     <Badge tone="dark">{template.category}</Badge>
@@ -240,22 +245,24 @@ export default function Templates() {
                   <div className="mt-4 flex items-center gap-4 border-t border-sand/70 pt-3.5 text-[12px] text-clay">
                     <span className="flex items-center gap-1.5">
                       <Icon name="utensils" size={13} />
-                      {template.sampleMenu.length} sections
+                      {t('web.templates.sectionsCount', { count: template.sampleMenu.length })}
                     </span>
                     <span className="flex items-center gap-1.5">
                       <Icon name="users" size={13} />
                       {template.custom
-                        ? 'just added'
-                        : `${template.usageCount.toLocaleString()} uses`}
+                        ? t('web.templates.justAdded')
+                        : t('web.templates.usesCount', {
+                            count: template.usageCount.toLocaleString(),
+                          })}
                     </span>
                   </div>
 
                   <div className="mt-4 flex gap-2">
                     <Button to={`/templates/${template.id}`} variant="outline" size="sm" icon="eye" full>
-                      Preview
+                      {t('common.preview')}
                     </Button>
                     <Button size="sm" variant="dark" icon="arrowRight" full onClick={() => customize(template.id)}>
-                      Customize
+                      {t('web.customize')}
                     </Button>
                   </div>
                 </div>
@@ -268,19 +275,19 @@ export default function Templates() {
       {/* -------------------------------- CTA --------------------------------- */}
       <section className="relative overflow-hidden bg-ink py-16 text-ivory lg:py-20">
         <div className="page relative text-center">
-          <span className="eyebrow text-ivory/50">Not sure yet?</span>
+          <span className="eyebrow text-ivory/50">{t('web.templates.ctaEyebrow')}</span>
           <h2 className="display-serif mx-auto mt-4 max-w-2xl text-[clamp(28px,4vw,46px)] leading-[1.06]">
-            Start with any template — switching later keeps your menu.
+            {t('web.templates.ctaHeadline')}
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-[15.5px] leading-relaxed text-ivory/65">
-            Dishes, prices, photos and contact details never change when you change the design.
+            {t('web.templates.ctaSub')}
           </p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <Button to="/dashboard/editor" size="lg" variant="accent" icon="layout">
-              Open the editor
+              {t('web.templates.ctaEditor')}
             </Button>
             <Button to="/dashboard" size="lg" variant="light" icon="home">
-              Go to dashboard
+              {t('web.templates.ctaDashboard')}
             </Button>
           </div>
         </div>

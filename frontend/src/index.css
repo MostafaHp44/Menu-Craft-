@@ -259,3 +259,26 @@ div[id] {
     background: #fff;
   }
 }
+
+/* Range sliders: `appearance-none` (SliderField) hides the native thumb — draw our own */
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--color-flame, #e8571f);
+  border: 3px solid #fff;
+  box-shadow: 0 1px 5px rgba(27, 23, 20, 0.3);
+  cursor: pointer;
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--color-flame, #e8571f);
+  border: 3px solid #fff;
+  box-shadow: 0 1px 5px rgba(27, 23, 20, 0.3);
+  cursor: pointer;
+}

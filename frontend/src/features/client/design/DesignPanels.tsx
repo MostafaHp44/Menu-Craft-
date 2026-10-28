@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Icon } from '../../../shared/ui/icons.tsx'
-import { Badge, Button, ChoiceCard, ColorField, Field, IconButton, Img, Input, Segmented, SliderField, Toggle } from '../../../shared/ui/ui.tsx'
+import { Badge, Button, ChoiceCard, ColorField, Field, IconButton, Img, Input, SliderField, Toggle } from '../../../shared/ui/ui.tsx'
+import { TouchSegmented } from './TouchSegmented.tsx'
 import { FONTS, fontName } from '../../../templates/data/fonts.ts'
 import { IMAGE_LIBRARY } from '../../../shared/lib/images.ts'
 import { PALETTE_PRESETS, THEME_OPTIONS, THEME_SURFACES } from '../../../templates/data/palettes.ts'
@@ -8,6 +9,7 @@ import { getTemplate } from '../../../templates/data/templates.ts'
 import type { ColorSet, FontId, ImageAspect, LogoStyle, Restaurant, SectionId } from '../../../shared/lib/types.ts'
 import { cx, slugify } from '../../../shared/lib/utils.ts'
 import { useStore } from '../../../shared/store/useStore.ts'
+import { useI18n, type TKey } from '../../../shared/i18n'
 
 /* ------------------------------------------------------------------ *
  * Design control panels — one implementation shared by the visual
@@ -30,7 +32,7 @@ export function PanelBlock({
   return (
     <section className="space-y-3">
       <div>
-        <h3 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-umber">{title}</h3>
+        <h3 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-umber rtl:tracking-normal">{title}</h3>
         {description ? <p className="mt-1 text-[12.5px] leading-relaxed text-clay">{description}</p> : null}
       </div>
       {children}
@@ -41,11 +43,12 @@ export function PanelBlock({
 /* -------------------------------- branding -------------------------------- */
 
 export function BrandingPanel({ compact = false }: { compact?: boolean }) {
+  const { t } = useI18n()
   const draft = useStore((s) => s.draft)
   const updateDraft = useStore((s) => s.updateDraft)
   const [heroOpen, setHeroOpen] = useState(false)
 
-  if (!draft) return <PanelNote>Loading the working copy…</PanelNote>
+  if (!draft) return <PanelNote>{t('design.loading')}</PanelNote>
 
   const set = <K extends keyof Restaurant>(key: K, value: Restaurant[K]) =>
     updateDraft((d) => {
@@ -54,15 +57,15 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
 
   return (
     <div className={cx('space-y-6', compact && 'space-y-5')}>
-      <PanelBlock title="Identity" description="What guests read at the very top of the site.">
+      <PanelBlock title={t('design.identity')} description={t('design.identityDesc')}>
         <div className="space-y-3">
-          <Field label="Restaurant name">
+          <Field label={t('design.restaurantName')}>
             <Input value={draft.name} onChange={(e) => set('name', e.target.value)} />
           </Field>
-          <Field label="Tagline">
+          <Field label={t('design.tagline')}>
             <Input value={draft.tagline} onChange={(e) => set('tagline', e.target.value)} />
           </Field>
-          <Field label="Short description" hint={`${draft.description.length} chars`}>
+          <Field label={t('design.shortDescription')} hint={t('design.chars', { count: draft.description.length })}>
             <textarea
               value={draft.description}
               rows={3}
@@ -79,12 +82,12 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
               }
               className="flex w-full items-center justify-between gap-3 text-start"
             >
-              <span>
-                <span className="block text-[12.5px] font-medium text-espresso">Public address</span>
+              <span className="min-w-0">
+                <span className="block text-[12.5px] font-medium text-espresso">{t('design.publicAddress')}</span>
                 <span className="block font-mono text-[12.5px] text-umber">{draft.slug}.menucraft.com</span>
               </span>
               <span className="shrink-0 text-end text-[11.5px] font-medium text-flame">
-                Sync with name
+                {t('design.syncWithName')}
                 <span className="block font-mono font-normal text-umber">
                   {slugify(draft.name) || draft.slug}
                 </span>
@@ -94,7 +97,7 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
         </div>
       </PanelBlock>
 
-      <PanelBlock title="Logo" description="How the wordmark is rendered in the header.">
+      <PanelBlock title={t('design.logo')} description={t('design.logoDesc')}>
         <div className="flex items-center gap-3">
           <span
             className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-[15px] font-semibold text-white shadow-inner"
@@ -103,7 +106,7 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
             {draft.logoText.slice(0, 2).toUpperCase()}
           </span>
           <div className="min-w-0 flex-1 space-y-2.5">
-            <Field label="Logo text" hint="2–3 characters">
+            <Field label={t('design.logoText')} hint={t('design.logoTextHint')}>
               <Input
                 value={draft.logoText}
                 maxLength={3}
@@ -112,29 +115,30 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
             </Field>
           </div>
         </div>
-        <Segmented<LogoStyle>
+        <TouchSegmented<LogoStyle>
           full
           size="sm"
-          ariaLabel="Logo style"
+          ariaLabel={t('design.logoStyle')}
           value={draft.logoStyle}
           onChange={(v) => set('logoStyle', v)}
           options={[
-            { value: 'monogram', label: 'Monogram' },
-            { value: 'wordmark', label: 'Wordmark' },
-            { value: 'badge', label: 'Badge' },
+            { value: 'monogram', label: t('design.logoMonogram') },
+            { value: 'wordmark', label: t('design.logoWordmark') },
+            { value: 'badge', label: t('design.logoBadge') },
           ]}
         />
       </PanelBlock>
 
-      <PanelBlock title="Hero image" description="The first photograph guests see.">
+      <PanelBlock title={t('design.heroImage')} description={t('design.heroDesc')}>
         <button
           type="button"
           onClick={() => setHeroOpen((v) => !v)}
+          aria-expanded={heroOpen}
           className="group relative block w-full overflow-hidden rounded-xl border border-sand"
         >
-          <Img src={draft.heroImage} alt="Current hero" className="h-36 w-full object-cover transition group-hover:scale-[1.02]" />
+          <Img src={draft.heroImage} alt={t('design.currentHero')} className="h-36 w-full object-cover transition group-hover:scale-[1.02]" />
           <span className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 to-transparent px-3 pb-2.5 pt-8 text-[12px] font-medium text-white">
-            Change hero photo
+            {t('design.changeHero')}
             <Icon name={heroOpen ? 'chevronUp' : 'chevronDown'} size={14} />
           </span>
         </button>
@@ -146,7 +150,7 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
                   key={image.src}
                   type="button"
                   title={image.label}
-                  aria-label={`Use ${image.label}`}
+                  aria-label={t('design.useImage', { label: image.label })}
                   onClick={() => {
                     set('heroImage', image.src)
                     setHeroOpen(false)
@@ -164,7 +168,10 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
         ) : null}
       </PanelBlock>
 
-      <PanelBlock title="Gallery" description={`${draft.gallery.length} photos selected · shown in the Gallery section.`}>
+      <PanelBlock
+        title={t('design.gallery')}
+        description={t('design.galleryDesc', { count: draft.gallery.length })}
+      >
         <div className="grid grid-cols-3 gap-2">
           {IMAGE_LIBRARY.slice(0, 15).map((image) => {
             const active = draft.gallery.includes(image.src)
@@ -197,16 +204,16 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
         </div>
       </PanelBlock>
 
-      <PanelBlock title="Contact details" description="Shown in the Contact and footer sections.">
+      <PanelBlock title={t('design.contactDetails')} description={t('design.contactDesc')}>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Phone">
+          <Field label={t('design.phone')}>
             <Input value={draft.phone} onChange={(e) => set('phone', e.target.value)} />
           </Field>
-          <Field label="Email">
+          <Field label={t('design.email')}>
             <Input value={draft.email} onChange={(e) => set('email', e.target.value)} />
           </Field>
         </div>
-        <Field label="Address">
+        <Field label={t('design.address')}>
           <Input value={draft.address} onChange={(e) => set('address', e.target.value)} />
         </Field>
       </PanelBlock>
@@ -216,21 +223,22 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
 
 /* --------------------------------- colors --------------------------------- */
 
-const COLOR_LABELS: Array<{ key: keyof ColorSet; label: string; note: string }> = [
-  { key: 'primary', label: 'Primary', note: 'Logo, headings, key surfaces' },
-  { key: 'accent', label: 'Accent', note: 'Highlights & small details' },
-  { key: 'button', label: 'Button', note: 'Calls to action' },
-  { key: 'background', label: 'Background', note: 'Page canvas' },
-  { key: 'card', label: 'Card', note: 'Menu cards & panels' },
-  { key: 'text', label: 'Text', note: 'Body copy' },
-  { key: 'secondary', label: 'Secondary', note: 'Muted labels' },
+const COLOR_LABELS: Array<{ key: keyof ColorSet; labelKey: TKey; noteKey: TKey }> = [
+  { key: 'primary', labelKey: 'design.colorPrimary', noteKey: 'design.colorPrimaryNote' },
+  { key: 'accent', labelKey: 'design.colorAccent', noteKey: 'design.colorAccentNote' },
+  { key: 'button', labelKey: 'design.colorButton', noteKey: 'design.colorButtonNote' },
+  { key: 'background', labelKey: 'design.colorBackground', noteKey: 'design.colorBackgroundNote' },
+  { key: 'card', labelKey: 'design.colorCard', noteKey: 'design.colorCardNote' },
+  { key: 'text', labelKey: 'design.colorText', noteKey: 'design.colorTextNote' },
+  { key: 'secondary', labelKey: 'design.colorSecondary', noteKey: 'design.colorSecondaryNote' },
 ]
 
 export function ColorPanel() {
+  const { t } = useI18n()
   const draft = useStore((s) => s.draft)
   const updateDraft = useStore((s) => s.updateDraft)
 
-  if (!draft) return <PanelNote>Loading the working copy…</PanelNote>
+  if (!draft) return <PanelNote>{t('design.loading')}</PanelNote>
 
   const template = getTemplate(draft.templateId)
   const activePreset = PALETTE_PRESETS.find((p) =>
@@ -239,7 +247,7 @@ export function ColorPanel() {
 
   return (
     <div className="space-y-6">
-      <PanelBlock title="Palettes" description="Balanced starting points — everything stays editable.">
+      <PanelBlock title={t('design.palettes')} description={t('design.palettesDesc')}>
         <div className="grid gap-2 sm:grid-cols-2">
           {PALETTE_PRESETS.map((preset) => {
             const active = activePreset?.id === preset.id
@@ -280,12 +288,12 @@ export function ColorPanel() {
         </div>
       </PanelBlock>
 
-      <PanelBlock title="Custom colors" description="Seven slots, HEX entry included.">
+      <PanelBlock title={t('design.customColors')} description={t('design.customColorsDesc')}>
         <div className="grid gap-2.5 sm:grid-cols-2">
           {COLOR_LABELS.map((row) => (
             <ColorField
               key={row.key}
-              label={row.label}
+              label={t(row.labelKey)}
               value={draft.design.colors[row.key]}
               onChange={(hex) =>
                 updateDraft((d) => {
@@ -298,14 +306,15 @@ export function ColorPanel() {
             />
           ))}
         </div>
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-sand bg-cream/50 px-3.5 py-2.5">
-          <span className="text-[12.5px] text-umber">
-            Reset restores <strong className="font-semibold text-espresso">{template.name}</strong> defaults.
+        <div className="flex flex-col items-start gap-3 rounded-xl border border-sand bg-cream/50 px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-[12.5px] leading-relaxed text-umber">
+            {t('design.resetColorsNote', { name: template.name })}
           </span>
           <Button
             size="sm"
             variant="outline"
             icon="refresh"
+            className="min-h-10 shrink-0 sm:min-h-9"
             onClick={() =>
               updateDraft((d) => {
                 d.design.colors = { ...template.defaultDesign.colors }
@@ -313,7 +322,7 @@ export function ColorPanel() {
               })
             }
           >
-            Reset colors
+            {t('design.resetColors')}
           </Button>
         </div>
       </PanelBlock>
@@ -324,39 +333,40 @@ export function ColorPanel() {
 /* ------------------------------- typography ------------------------------- */
 
 export function TypographyPanel() {
+  const { t } = useI18n()
   const draft = useStore((s) => s.draft)
   const updateDraft = useStore((s) => s.updateDraft)
 
   const presets = useMemo(
     () => [
-      { name: 'Editorial', heading: 'playfair' as FontId, body: 'inter' as FontId, weight: 600, scale: 1.05 },
-      { name: 'Modern', heading: 'inter' as FontId, body: 'inter' as FontId, weight: 700, scale: 1 },
-      { name: 'Bold', heading: 'montserrat' as FontId, body: 'poppins' as FontId, weight: 700, scale: 1.1 },
-      { name: 'Literary', heading: 'lora' as FontId, body: 'dm-sans' as FontId, weight: 600, scale: 1.02 },
+      { nameKey: 'design.presetEditorial' as TKey, heading: 'playfair' as FontId, body: 'inter' as FontId, weight: 600, scale: 1.05 },
+      { nameKey: 'design.presetModern' as TKey, heading: 'inter' as FontId, body: 'inter' as FontId, weight: 700, scale: 1 },
+      { nameKey: 'design.presetBold' as TKey, heading: 'montserrat' as FontId, body: 'poppins' as FontId, weight: 700, scale: 1.1 },
+      { nameKey: 'design.presetLiterary' as TKey, heading: 'lora' as FontId, body: 'dm-sans' as FontId, weight: 600, scale: 1.02 },
     ],
     []
   )
 
-  if (!draft) return <PanelNote>Loading the working copy…</PanelNote>
-  const t = draft.design.typography
+  if (!draft) return <PanelNote>{t('design.loading')}</PanelNote>
+  const t2 = draft.design.typography
 
-  const apply = (patch: Partial<typeof t>) =>
+  const apply = (patch: Partial<typeof t2>) =>
     updateDraft((d) => {
       Object.assign(d.design.typography, patch)
     })
 
-  const fontGroup = (label: string, key: 'heading' | 'body' | 'menu') => (
+  const fontGroup = (labelKey: TKey, key: 'heading' | 'body' | 'menu') => (
     <div>
-      <div className="mb-2 text-[12.5px] font-medium text-espresso">{label}</div>
+      <div className="mb-2 text-[12.5px] font-medium text-espresso">{t(labelKey)}</div>
       <div className="grid grid-cols-2 gap-2">
         {FONTS.map((font) => {
-          const active = t[key] === font.id
+          const active = t2[key] === font.id
           return (
             <button
               key={font.id}
               type="button"
               aria-pressed={active}
-              onClick={() => apply({ [key]: font.id } as Partial<typeof t>)}
+              onClick={() => apply({ [key]: font.id } as Partial<typeof t2>)}
               className={cx(
                 'rounded-xl border px-3 py-2 text-start transition',
                 active
@@ -377,16 +387,16 @@ export function TypographyPanel() {
 
   return (
     <div className="space-y-6">
-      <PanelBlock title="Presets" description="Four hand-picked pairings.">
+      <PanelBlock title={t('design.presets')} description={t('design.presetsDesc')}>
         <div className="grid grid-cols-2 gap-2">
           {presets.map((preset) => (
             <button
-              key={preset.name}
+              key={preset.nameKey}
               type="button"
               onClick={() => apply({ heading: preset.heading, body: preset.body, headingWeight: preset.weight, headingScale: preset.scale })}
               className="rounded-xl border border-sand bg-cream/50 px-3 py-2.5 text-start transition hover:border-clay hover:bg-cream"
             >
-              <span className="block text-[13px] font-semibold text-charcoal">{preset.name}</span>
+              <span className="block text-[13px] font-semibold text-charcoal">{t(preset.nameKey)}</span>
               <span className="line-clamp-1 text-[11.5px] text-umber">
                 {fontName(preset.heading)} · {fontName(preset.body)}
               </span>
@@ -395,19 +405,19 @@ export function TypographyPanel() {
         </div>
       </PanelBlock>
 
-      <PanelBlock title="Font families" description="Loaded from Google Fonts and applied live.">
+      <PanelBlock title={t('design.fontFamilies')} description={t('design.fontFamiliesDesc')}>
         <div className="space-y-4">
-          {fontGroup('Headings', 'heading')}
-          {fontGroup('Body copy', 'body')}
-          {fontGroup('Menu items', 'menu')}
+          {fontGroup('design.headings', 'heading')}
+          {fontGroup('design.bodyCopy', 'body')}
+          {fontGroup('design.menuItems', 'menu')}
         </div>
       </PanelBlock>
 
-      <PanelBlock title="Scale & rhythm">
+      <PanelBlock title={t('design.scaleRhythm')}>
         <div className="space-y-4">
           <SliderField
-            label="Headline size"
-            value={t.headingScale}
+            label={t('design.headlineSize')}
+            value={t2.headingScale}
             min={0.85}
             max={1.3}
             step={0.01}
@@ -415,8 +425,8 @@ export function TypographyPanel() {
             onChange={(v) => apply({ headingScale: v })}
           />
           <SliderField
-            label="Body size"
-            value={t.bodyScale}
+            label={t('design.bodySize')}
+            value={t2.bodyScale}
             min={0.9}
             max={1.2}
             step={0.01}
@@ -424,16 +434,16 @@ export function TypographyPanel() {
             onChange={(v) => apply({ bodyScale: v })}
           />
           <SliderField
-            label="Headline weight"
-            value={t.headingWeight}
+            label={t('design.headlineWeight')}
+            value={t2.headingWeight}
             min={400}
             max={800}
             step={100}
             onChange={(v) => apply({ headingWeight: v })}
           />
           <SliderField
-            label="Line height"
-            value={t.lineHeight}
+            label={t('design.lineHeight')}
+            value={t2.lineHeight}
             min={1.3}
             max={1.9}
             step={0.05}
@@ -447,18 +457,19 @@ export function TypographyPanel() {
 
 /* --------------------------------- layout --------------------------------- */
 
-const ASPECTS: Array<{ value: ImageAspect; label: string }> = [
-  { value: 'square', label: 'Square' },
-  { value: 'portrait', label: 'Portrait' },
-  { value: 'landscape', label: 'Landscape' },
-  { value: 'wide', label: 'Wide' },
+const ASPECTS: Array<{ value: ImageAspect; labelKey: TKey }> = [
+  { value: 'square', labelKey: 'design.aspectSquare' },
+  { value: 'portrait', labelKey: 'design.aspectPortrait' },
+  { value: 'landscape', labelKey: 'design.aspectLandscape' },
+  { value: 'wide', labelKey: 'design.aspectWide' },
 ]
 
 export function LayoutPanel() {
+  const { t } = useI18n()
   const draft = useStore((s) => s.draft)
   const updateDraft = useStore((s) => s.updateDraft)
 
-  if (!draft) return <PanelNote>Loading the working copy…</PanelNote>
+  if (!draft) return <PanelNote>{t('design.loading')}</PanelNote>
   const l = draft.design.layout
 
   const apply = (patch: Partial<typeof l>) =>
@@ -468,7 +479,7 @@ export function LayoutPanel() {
 
   return (
     <div className="space-y-6">
-      <PanelBlock title="Theme" description="Swaps the surface triplet while keeping your accents.">
+      <PanelBlock title={t('design.theme')} description={t('design.themeDesc')}>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {THEME_OPTIONS.map((option) => (
             <button
@@ -521,41 +532,47 @@ export function LayoutPanel() {
               <span className="h-5 w-5 rounded-md border border-black/10" style={{ backgroundColor: draft.design.colors.background }} />
               <span className="h-5 w-5 rounded-md border border-black/10" style={{ backgroundColor: draft.design.colors.text }} />
             </span>
-            <span className="mt-1.5 block text-[12.5px] font-semibold text-charcoal">Custom</span>
-            <span className="block text-[11px] text-umber">Your own colors</span>
+            <span className="mt-1.5 block text-[12.5px] font-semibold text-charcoal">{t('design.customTheme')}</span>
+            <span className="block text-[11px] text-umber">{t('design.customThemeNote')}</span>
           </button>
         </div>
       </PanelBlock>
 
-      <PanelBlock title="Header style">
+      <PanelBlock title={t('design.headerStyle')}>
         <div className="grid gap-2">
           <ChoiceCard
-            label="Split"
-            note="Logo left · links centre · CTA right"
+            label={t('design.headerSplit')}
+            note={t('design.headerSplitNote')}
             active={l.header === 'split'}
             onClick={() => apply({ header: 'split' })}
           />
           <ChoiceCard
-            label="Centered"
-            note="Logo stacked above centred links"
+            label={t('design.headerCentered')}
+            note={t('design.headerCenteredNote')}
             active={l.header === 'centered'}
             onClick={() => apply({ header: 'centered' })}
           />
           <ChoiceCard
-            label="Minimal"
-            note="Logo left · compact link row"
+            label={t('design.headerMinimal')}
+            note={t('design.headerMinimalNote')}
             active={l.header === 'minimal'}
             onClick={() => apply({ header: 'minimal' })}
           />
         </div>
       </PanelBlock>
 
-      <PanelBlock title="Hero style">
+      <PanelBlock title={t('design.heroStyle')}>
         <div className="grid grid-cols-3 gap-2">
           {(['fullscreen', 'split', 'editorial'] as const).map((value) => (
             <ChoiceCard
               key={value}
-              label={value === 'fullscreen' ? 'Full' : value === 'split' ? 'Split' : 'Editorial'}
+              label={
+                value === 'fullscreen'
+                  ? t('design.heroFull')
+                  : value === 'split'
+                    ? t('design.heroSplit')
+                    : t('design.heroEditorial')
+              }
               active={l.hero === value}
               onClick={() => apply({ hero: value })}
               preview={
@@ -577,29 +594,29 @@ export function LayoutPanel() {
         </div>
       </PanelBlock>
 
-      <PanelBlock title="Menu layout">
-        <Segmented
+      <PanelBlock title={t('design.menuLayout')}>
+        <TouchSegmented
           full
           value={l.menuLayout}
           onChange={(v) => apply({ menuLayout: v })}
           options={[
-            { value: 'grid', label: 'Grid cards', icon: 'grid' },
-            { value: 'list', label: 'Classic list', icon: 'list' },
+            { value: 'grid', label: t('design.menuGrid'), icon: 'grid' },
+            { value: 'list', label: t('design.menuList'), icon: 'list' },
           ]}
         />
-        <Segmented
+        <TouchSegmented
           full
           value={l.card}
           onChange={(v) => apply({ card: v })}
           options={[
-            { value: 'bordered', label: 'Bordered' },
-            { value: 'elevated', label: 'Elevated' },
-            { value: 'flat', label: 'Flat' },
+            { value: 'bordered', label: t('design.cardBordered') },
+            { value: 'elevated', label: t('design.cardElevated') },
+            { value: 'flat', label: t('design.cardFlat') },
           ]}
         />
       </PanelBlock>
 
-      <PanelBlock title="Images">
+      <PanelBlock title={t('design.imagesBlock')}>
         <div className="grid grid-cols-4 gap-2">
           {ASPECTS.map((aspect) => (
             <button
@@ -626,25 +643,25 @@ export function LayoutPanel() {
                   }}
                 />
               </span>
-              <span className="mt-1 block text-center text-[11px] font-medium text-umber">{aspect.label}</span>
+              <span className="mt-1 block text-center text-[11px] font-medium text-umber">{t(aspect.labelKey)}</span>
             </button>
           ))}
         </div>
       </PanelBlock>
 
-      <PanelBlock title="Shape & spacing">
+      <PanelBlock title={t('design.shapeSpacing')}>
         <div className="space-y-4">
-          <SliderField label="Corner radius" value={l.radius} min={0} max={24} suffix="px" onChange={(v) => apply({ radius: v })} />
+          <SliderField label={t('design.cornerRadius')} value={l.radius} min={0} max={24} suffix="px" onChange={(v) => apply({ radius: v })} />
           <div>
-            <div className="mb-1.5 text-[13px] font-medium text-espresso">Section spacing</div>
-            <Segmented
+            <div className="mb-1.5 text-[13px] font-medium text-espresso">{t('design.sectionSpacing')}</div>
+            <TouchSegmented
               full
               value={String(l.spacing)}
               onChange={(v) => apply({ spacing: Number(v) as 0 | 1 | 2 })}
               options={[
-                { value: '0', label: 'Compact' },
-                { value: '1', label: 'Balanced' },
-                { value: '2', label: 'Airy' },
+                { value: '0', label: t('design.spacingCompact') },
+                { value: '1', label: t('design.spacingBalanced') },
+                { value: '2', label: t('design.spacingAiry') },
               ]}
             />
           </div>
@@ -656,20 +673,21 @@ export function LayoutPanel() {
 
 /* -------------------------------- sections -------------------------------- */
 
-const SECTION_META: Record<SectionId, { label: string; note: string; icon: string }> = {
-  featured: { label: 'Featured dishes', note: 'Hand-picked highlights', icon: 'star' },
-  menu: { label: 'Menu', note: 'The full menu by category', icon: 'utensils' },
-  about: { label: 'Our story', note: 'Description + hero photo', icon: 'book' },
-  gallery: { label: 'Gallery', note: 'Photo grid from your library', icon: 'image' },
-  hours: { label: 'Opening hours', note: 'Weekly schedule table', icon: 'clock' },
-  contact: { label: 'Contact', note: 'Address, phone, map link', icon: 'mapPin' },
+const SECTION_META: Record<SectionId, { labelKey: TKey; noteKey: TKey; icon: string }> = {
+  featured: { labelKey: 'design.sectionFeatured', noteKey: 'design.sectionFeaturedNote', icon: 'star' },
+  menu: { labelKey: 'design.sectionMenu', noteKey: 'design.sectionMenuNote', icon: 'utensils' },
+  about: { labelKey: 'design.sectionAbout', noteKey: 'design.sectionAboutNote', icon: 'book' },
+  gallery: { labelKey: 'design.sectionGallery', noteKey: 'design.sectionGalleryNote', icon: 'image' },
+  hours: { labelKey: 'design.sectionHours', noteKey: 'design.sectionHoursNote', icon: 'clock' },
+  contact: { labelKey: 'design.sectionContact', noteKey: 'design.sectionContactNote', icon: 'mapPin' },
 }
 
 export function SectionsPanel() {
+  const { t } = useI18n()
   const draft = useStore((s) => s.draft)
   const updateDraft = useStore((s) => s.updateDraft)
 
-  if (!draft) return <PanelNote>Loading the working copy…</PanelNote>
+  if (!draft) return <PanelNote>{t('design.loading')}</PanelNote>
   const sections = draft.design.sections
 
   const toggle = (id: SectionId) =>
@@ -691,9 +709,9 @@ export function SectionsPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <PanelNote>Sections render top to bottom on the public menu.</PanelNote>
-        <Badge tone="neutral">{enabledCount} of {sections.length} on</Badge>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <PanelNote>{t('design.sectionsNote')}</PanelNote>
+        <Badge tone="neutral">{t('design.sectionsOn', { enabled: enabledCount, total: sections.length })}</Badge>
       </div>
 
       <ul className="space-y-2">
@@ -716,14 +734,20 @@ export function SectionsPanel() {
                 <Icon name={meta.icon} size={16} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="line-clamp-1 text-[13.5px] font-medium text-charcoal">{meta.label}</span>
-                <span className="line-clamp-1 text-[12px] text-umber">{meta.note}</span>
+                <span className="line-clamp-1 text-[13.5px] font-medium text-charcoal">{t(meta.labelKey)}</span>
+                <span className="line-clamp-1 text-[12px] text-umber">{t(meta.noteKey)}</span>
               </span>
               <span className="flex shrink-0 items-center gap-0.5">
-                <IconButton icon="chevronUp" label={`Move ${meta.label} up`} size={14} disabled={index === 0} onClick={() => move(section.id, -1)} />
+                <IconButton
+                  icon="chevronUp"
+                  label={t('design.moveUp', { name: t(meta.labelKey) })}
+                  size={14}
+                  disabled={index === 0}
+                  onClick={() => move(section.id, -1)}
+                />
                 <IconButton
                   icon="chevronDown"
-                  label={`Move ${meta.label} down`}
+                  label={t('design.moveDown', { name: t(meta.labelKey) })}
                   size={14}
                   disabled={index === sections.length - 1}
                   onClick={() => move(section.id, 1)}

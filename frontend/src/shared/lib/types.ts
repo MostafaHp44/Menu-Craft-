@@ -231,6 +231,8 @@ export interface InlineTextStyle {
   color?: string
   fontWeight?: number
   align?: 'start' | 'center' | 'end'
+  /** per-element typeface — absent means "inherit the template's own font" */
+  fontFamily?: FontId
   letterSpacing?: string
   /** applied to the element while it is being edited in place */
   whiteSpace?: 'pre-line'

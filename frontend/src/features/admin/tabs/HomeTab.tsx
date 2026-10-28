@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { useI18n } from '../../../shared/i18n'
+import { LANGS, useI18n } from '../../../shared/i18n'
 import type { TKey } from '../../../shared/i18n'
 import { Icon } from '../../../shared/ui/icons.tsx'
 import { Badge, Button, IconButton, Img, Input, Modal, TextArea } from '../../../shared/ui/ui.tsx'
@@ -41,6 +41,11 @@ const SECTION_ICONS: Record<SectionKey, string> = {
 const MAX_BULLETS = 6
 const MAX_STEPS = 5
 const MAX_HIGHLIGHTS = 6
+
+/** an empty field displays the active language's seed, so the admin never faces blanks */
+function shown(value: string | undefined, seedValue: string | undefined): string {
+  return value && value.trim() ? value : (seedValue ?? '')
+}
 
 /* ------------------------------ dark-shell fields ----------------------------- */
 
@@ -372,11 +377,17 @@ function ImagePicker({ value, onChange }: { value: string; onChange: (src: strin
 /* ---------------------------------- the tab ---------------------------------- */
 
 export default function HomeTab() {
-  const { t } = useI18n()
-  const content = useHomeContent()
+  const { t, lang } = useI18n()
+  const content = useHomeContent(lang)
+  const updatedAt = useHomeContentStore((s) => s.updatedAt)
   const update = useHomeContentStore((s) => s.update)
+  const resetSectionToSeed = useHomeContentStore((s) => s.resetSection)
   const resetHome = useHomeContentStore((s) => s.resetHome)
   const showToast = useStore((s) => s.showToast)
+
+  /** native language name — needs no translation ("English", "العربية", "کوردی") */
+  const nativeLang = LANGS.find((option) => option.id === lang)?.native ?? 'English'
+  const seed = HOME_SEED[lang]
 
   const [openSection, setOpenSection] = useState<SectionKey | null>('hero')
   const [confirmReset, setConfirmReset] = useState(false)
@@ -386,24 +397,25 @@ export default function HomeTab() {
     setPulse(true)
     const timer = window.setTimeout(() => setPulse(false), 1600)
     return () => window.clearTimeout(timer)
-  }, [content.updatedAt])
+  }, [updatedAt])
 
   const toggleOpen = (key: SectionKey) =>
     setOpenSection((current) => (current === key ? null : key))
 
   const setEnabled = (key: SectionKey, next: boolean) =>
-    update((draft) => {
+    update(lang, (draft) => {
       draft[key].enabled = next
     })
 
   const resetSection = (key: SectionKey) => {
-    update((draft) => {
-      Object.assign(draft, { [key]: structuredClone(HOME_SEED[key]) })
-    })
+    resetSectionToSeed(lang, key)
     showToast({
       tone: 'info',
       title: t('toast.updated'),
-      message: t('platformMore.home.sectionResetMsg', { section: t(SECTION_KEYS[key]) }),
+      message: t('platformMore.home.sectionResetMsg', {
+        section: t(SECTION_KEYS[key]),
+        lang: nativeLang,
+      }),
     })
   }
 
@@ -434,6 +446,9 @@ export default function HomeTab() {
           description={t('platformMore.home.subtitle')}
           actions={
             <>
+              <span className="inline-flex items-center rounded-full border border-flame/30 bg-flame/10 px-2.5 py-1 text-[11.5px] font-medium text-flame-light">
+                {t('platformMore.home.editingLang', { lang: nativeLang })}
+              </span>
               <span
                 aria-hidden={!pulse}
                 className={cx(
@@ -460,9 +475,9 @@ export default function HomeTab() {
         <>
           <TextField
             label={t('platformMore.home.eyebrow')}
-            value={content.hero.eyebrow}
+            value={shown(content.hero.eyebrow, seed.hero.eyebrow)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.hero.eyebrow = value
               })
             }
@@ -471,9 +486,9 @@ export default function HomeTab() {
             area
             label={t('platformMore.home.title')}
             hint={t('platformMore.home.accentHint')}
-            value={content.hero.title}
+            value={shown(content.hero.title, seed.hero.title)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.hero.title = value
               })
             }
@@ -481,9 +496,9 @@ export default function HomeTab() {
           <TextField
             area
             label={t('common.description')}
-            value={content.hero.sub}
+            value={shown(content.hero.sub, seed.hero.sub)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.hero.sub = value
               })
             }
@@ -491,18 +506,18 @@ export default function HomeTab() {
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField
               label={t('platformMore.home.cta')}
-              value={content.hero.cta}
+              value={shown(content.hero.cta, seed.hero.cta)}
               onChange={(value) =>
-                update((draft) => {
+                update(lang, (draft) => {
                   draft.hero.cta = value
                 })
               }
             />
             <TextField
               label={t('platformMore.home.ctaSecondary')}
-              value={content.hero.secondaryCta}
+              value={shown(content.hero.secondaryCta, seed.hero.secondaryCta)}
               onChange={(value) =>
-                update((draft) => {
+                update(lang, (draft) => {
                   draft.hero.secondaryCta = value
                 })
               }
@@ -511,9 +526,9 @@ export default function HomeTab() {
           <TextField
             area
             label={t('platformMore.home.note')}
-            value={content.hero.note}
+            value={shown(content.hero.note, seed.hero.note)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.hero.note = value
               })
             }
@@ -521,7 +536,7 @@ export default function HomeTab() {
           <ImagePicker
             value={content.hero.image}
             onChange={(src) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.hero.image = src
               })
             }
@@ -535,9 +550,9 @@ export default function HomeTab() {
         <>
           <TextField
             label={t('platformMore.home.eyebrow')}
-            value={content.templates.eyebrow ?? ''}
+            value={shown(content.templates.eyebrow, seed.templates.eyebrow)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.templates.eyebrow = value
               })
             }
@@ -546,9 +561,9 @@ export default function HomeTab() {
             area
             label={t('platformMore.home.title')}
             hint={t('platformMore.home.accentHint')}
-            value={content.templates.title}
+            value={shown(content.templates.title, seed.templates.title)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.templates.title = value
               })
             }
@@ -556,9 +571,9 @@ export default function HomeTab() {
           <TextField
             area
             label={t('common.description')}
-            value={content.templates.sub ?? ''}
+            value={shown(content.templates.sub, seed.templates.sub)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.templates.sub = value
               })
             }
@@ -572,9 +587,9 @@ export default function HomeTab() {
         <>
           <TextField
             label={t('platformMore.home.eyebrow')}
-            value={content.editorShowcase.eyebrow}
+            value={shown(content.editorShowcase.eyebrow, seed.editorShowcase.eyebrow)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.editorShowcase.eyebrow = value
               })
             }
@@ -583,9 +598,9 @@ export default function HomeTab() {
             area
             label={t('platformMore.home.title')}
             hint={t('platformMore.home.accentHint')}
-            value={content.editorShowcase.title}
+            value={shown(content.editorShowcase.title, seed.editorShowcase.title)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.editorShowcase.title = value
               })
             }
@@ -593,9 +608,9 @@ export default function HomeTab() {
           <TextField
             area
             label={t('common.description')}
-            value={content.editorShowcase.sub}
+            value={shown(content.editorShowcase.sub, seed.editorShowcase.sub)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.editorShowcase.sub = value
               })
             }
@@ -607,7 +622,7 @@ export default function HomeTab() {
             max={MAX_BULLETS}
             labelFor={(index) => t('platformMore.home.bulletField', { n: index + 1 })}
             onChange={(next) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.editorShowcase.bullets = next
               })
             }
@@ -621,9 +636,9 @@ export default function HomeTab() {
         <>
           <TextField
             label={t('platformMore.home.eyebrow')}
-            value={content.workflow.eyebrow ?? ''}
+            value={shown(content.workflow.eyebrow, seed.workflow.eyebrow)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.workflow.eyebrow = value
               })
             }
@@ -632,9 +647,9 @@ export default function HomeTab() {
             area
             label={t('platformMore.home.title')}
             hint={t('platformMore.home.accentHint')}
-            value={content.workflow.title}
+            value={shown(content.workflow.title, seed.workflow.title)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.workflow.title = value
               })
             }
@@ -642,9 +657,9 @@ export default function HomeTab() {
           <TextField
             area
             label={t('common.description')}
-            value={content.workflow.sub ?? ''}
+            value={shown(content.workflow.sub, seed.workflow.sub)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.workflow.sub = value
               })
             }
@@ -658,7 +673,7 @@ export default function HomeTab() {
             max={MAX_STEPS}
             labelFor={(index) => t('platformMore.home.stepField', { n: index + 1 })}
             onChange={(next) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.workflow.steps = next
               })
             }
@@ -678,7 +693,7 @@ export default function HomeTab() {
           max={MAX_HIGHLIGHTS}
           labelFor={(index) => t('platformMore.home.highlightField', { n: index + 1 })}
           onChange={(next) =>
-            update((draft) => {
+            update(lang, (draft) => {
               draft.highlights.items = next
             })
           }
@@ -691,9 +706,9 @@ export default function HomeTab() {
         <>
           <TextField
             label={t('platformMore.home.eyebrow')}
-            value={content.showcase.eyebrow ?? ''}
+            value={shown(content.showcase.eyebrow, seed.showcase.eyebrow)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.showcase.eyebrow = value
               })
             }
@@ -702,9 +717,9 @@ export default function HomeTab() {
             area
             label={t('platformMore.home.title')}
             hint={t('platformMore.home.accentHint')}
-            value={content.showcase.title}
+            value={shown(content.showcase.title, seed.showcase.title)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.showcase.title = value
               })
             }
@@ -712,9 +727,9 @@ export default function HomeTab() {
           <TextField
             area
             label={t('common.description')}
-            value={content.showcase.sub ?? ''}
+            value={shown(content.showcase.sub, seed.showcase.sub)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.showcase.sub = value
               })
             }
@@ -728,9 +743,9 @@ export default function HomeTab() {
         <>
           <TextField
             label={t('platformMore.home.eyebrow')}
-            value={content.pricing.eyebrow ?? ''}
+            value={shown(content.pricing.eyebrow, seed.pricing.eyebrow)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.pricing.eyebrow = value
               })
             }
@@ -739,9 +754,9 @@ export default function HomeTab() {
             area
             label={t('platformMore.home.title')}
             hint={t('platformMore.home.accentHint')}
-            value={content.pricing.title}
+            value={shown(content.pricing.title, seed.pricing.title)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.pricing.title = value
               })
             }
@@ -749,9 +764,9 @@ export default function HomeTab() {
           <TextField
             area
             label={t('common.description')}
-            value={content.pricing.sub ?? ''}
+            value={shown(content.pricing.sub, seed.pricing.sub)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.pricing.sub = value
               })
             }
@@ -759,9 +774,9 @@ export default function HomeTab() {
           <TextField
             area
             label={t('platformMore.home.note')}
-            value={content.pricing.note}
+            value={shown(content.pricing.note, seed.pricing.note)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.pricing.note = value
               })
             }
@@ -777,9 +792,9 @@ export default function HomeTab() {
             area
             label={t('platformMore.home.title')}
             hint={t('platformMore.home.accentHint')}
-            value={content.finalCta.title}
+            value={shown(content.finalCta.title, seed.finalCta.title)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.finalCta.title = value
               })
             }
@@ -787,18 +802,18 @@ export default function HomeTab() {
           <TextField
             area
             label={t('common.description')}
-            value={content.finalCta.sub}
+            value={shown(content.finalCta.sub, seed.finalCta.sub)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.finalCta.sub = value
               })
             }
           />
           <TextField
             label={t('platformMore.home.cta')}
-            value={content.finalCta.cta}
+            value={shown(content.finalCta.cta, seed.finalCta.cta)}
             onChange={(value) =>
-              update((draft) => {
+              update(lang, (draft) => {
                 draft.finalCta.cta = value
               })
             }

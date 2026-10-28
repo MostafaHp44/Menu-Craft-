@@ -53,8 +53,8 @@ export default function MenuDemo() {
           <Link
             to="/dashboard"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ivory/70 transition hover:bg-white/10 hover:text-ivory"
-            aria-label="Back to dashboard"
-            title="Back to dashboard"
+            aria-label={t('web.demo.backDashAria')}
+            title={t('web.demo.backDashAria')}
           >
             <Icon name="arrowLeft" size={17} />
           </Link>
@@ -66,7 +66,7 @@ export default function MenuDemo() {
             </svg>
             <span className="line-clamp-1 font-mono text-[12.5px] text-ivory/85">{publicUrl(r.slug)}</span>
             <span className="hidden shrink-0 rounded-full bg-gold/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold sm:inline">
-              simulated
+              {t('flow.simulated')}
             </span>
           </div>
 
@@ -83,10 +83,10 @@ export default function MenuDemo() {
               className="hidden h-9 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium text-ivory/70 transition hover:bg-white/10 hover:text-ivory md:flex"
             >
               <Icon name="home" size={15} />
-              Dashboard
+              {t('nav.dashboard')}
             </Link>
             <Button to="/dashboard/editor" size="sm" variant="accent" icon="pencil">
-              <span className="hidden sm:inline">Edit menu</span>
+              <span className="hidden sm:inline">{t('web.demo.editMenu')}</span>
             </Button>
           </div>
         </div>
@@ -96,18 +96,18 @@ export default function MenuDemo() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gold/25 bg-gold/12 px-4 py-2">
             <span className="flex items-center gap-2 text-[12.5px] font-medium text-gold">
               <Icon name="alert" size={14} />
-              You have unpublished changes — the public page below still shows the saved version.
+              {t('web.demo.dirtyNotice')}
             </span>
             <div className="flex gap-2">
               <Link to="/dashboard/editor" className="rounded-full bg-white/10 px-3 py-1 text-[12px] font-medium text-ivory transition hover:bg-white/20">
-                Open editor
+                {t('dashboard.openEditor')}
               </Link>
               <button
                 type="button"
                 onClick={() => publishDemo()}
                 className="rounded-full bg-gold px-3 py-1 text-[12px] font-semibold text-ink transition hover:brightness-105"
               >
-                Publish now
+                {t('web.demo.publishNow')}
               </button>
             </div>
           </div>
@@ -117,14 +117,14 @@ export default function MenuDemo() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-white/6 px-4 py-2">
             <span className="flex items-center gap-2 text-[12.5px] text-ivory/75">
               <Icon name="info" size={14} />
-              This menu is saved as a draft. Publishing makes it the shared version.
+              {t('web.demo.draftNotice')}
             </span>
             <button
               type="button"
               onClick={() => publishDemo()}
               className="rounded-full bg-flame px-3 py-1 text-[12px] font-semibold text-white transition hover:bg-flame-dark"
             >
-              Publish demo
+              {t('web.demo.publishDemo')}
             </button>
           </div>
         ) : null}
@@ -138,7 +138,7 @@ export default function MenuDemo() {
         <span className="pointer-events-auto hidden rounded-full border border-sand bg-paper/90 px-3.5 py-2 text-[11.5px] font-medium text-umber shadow-[0_18px_40px_-30px_rgba(15,13,11,0.8)] backdrop-blur sm:inline-flex">
           <span className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-moss anim-pulse-dot" />
-            Rendered from your saved MenuCraft configuration
+            {t('web.demo.renderedNote')}
           </span>
         </span>
         <span className="pointer-events-auto ms-auto flex gap-2">

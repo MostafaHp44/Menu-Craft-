@@ -23,7 +23,7 @@ import { cx } from '../../shared/lib/utils.ts'
 import { useStore } from '../../shared/store/useStore.ts'
 import { useAuthStore } from '../../shared/store/useAuth.ts'
 import { useSubscription } from '../../shared/store/usePlatform.ts'
-import { useI18n } from '../../shared/i18n'
+import { useI18n, type TKey } from '../../shared/i18n'
 import { PricingBubble } from './billing/PricingBubble.tsx'
 import { SubscribeModal } from './billing/SubscribeModal.tsx'
 import { AuthModal } from './billing/AuthModal.tsx'
@@ -31,14 +31,14 @@ import { AuthModal } from './billing/AuthModal.tsx'
 type PanelId = 'content' | 'menu' | 'colors' | 'type' | 'layout' | 'sections' | 'settings'
 type Device = 'desktop' | 'phone'
 
-const PANELS: Array<{ id: PanelId; label: string; icon: string; note: string }> = [
-  { id: 'content', label: 'Content', icon: 'pencil', note: 'Name, story, photos & contact' },
-  { id: 'menu', label: 'Menu', icon: 'utensils', note: 'Categories, dishes & prices' },
-  { id: 'colors', label: 'Colors', icon: 'palette', note: 'Palettes and 7 custom slots' },
-  { id: 'type', label: 'Typography', icon: 'type', note: 'Six fonts, scale & rhythm' },
-  { id: 'layout', label: 'Layout', icon: 'layout', note: 'Header, hero, cards, spacing' },
-  { id: 'sections', label: 'Sections', icon: 'sections', note: 'Show, hide & reorder blocks' },
-  { id: 'settings', label: 'Settings', icon: 'settings', note: 'Address & publish state' },
+const PANELS: Array<{ id: PanelId; labelKey: TKey; icon: string; noteKey: TKey }> = [
+  { id: 'content', labelKey: 'editor.content', icon: 'pencil', noteKey: 'editor.panels.contentNote' },
+  { id: 'menu', labelKey: 'editor.panels.menu', icon: 'utensils', noteKey: 'editor.panels.menuNote' },
+  { id: 'colors', labelKey: 'editor.colors', icon: 'palette', noteKey: 'editor.panels.colorsNote' },
+  { id: 'type', labelKey: 'editor.typography', icon: 'type', noteKey: 'editor.panels.typographyNote' },
+  { id: 'layout', labelKey: 'editor.layout', icon: 'layout', noteKey: 'editor.panels.layoutNote' },
+  { id: 'sections', labelKey: 'editor.sections', icon: 'sections', noteKey: 'editor.panels.sectionsNote' },
+  { id: 'settings', labelKey: 'editor.panels.settings', icon: 'settings', noteKey: 'editor.panels.settingsNote' },
 ]
 
 export default function Editor() {
@@ -156,7 +156,7 @@ export default function Editor() {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4 bg-ivory">
         <span className="h-9 w-9 animate-spin rounded-full border-[3px] border-sand border-t-flame" />
-        <p className="text-[14px] text-umber">Preparing your editor…</p>
+        <p className="text-[14px] text-umber">{t('editor.preparing')}</p>
       </div>
     )
   }
@@ -172,26 +172,33 @@ export default function Editor() {
           size="sm"
           value={device}
           onChange={setDevice}
-          ariaLabel="Preview device"
+          ariaLabel={t('editor.previewDevice')}
           options={[
-            { value: 'desktop', label: 'Desktop', icon: 'monitor' },
-            { value: 'phone', label: 'Phone', icon: 'smartphone' },
+            { value: 'desktop', label: t('editor.desktop'), icon: 'monitor' },
+            { value: 'phone', label: t('editor.phone'), icon: 'smartphone' },
           ]}
         />
         <span className="hidden min-w-0 items-center gap-2 rounded-full border border-sand bg-cream px-3 py-1.5 md:flex">
           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-moss anim-pulse-dot" />
           <span className="line-clamp-1 font-mono text-[11.5px] text-umber">{publicUrl(draft.slug)}</span>
-          <span className="shrink-0 text-[10.5px] uppercase tracking-wider text-clay">simulated</span>
+          <span className="shrink-0 text-[10.5px] uppercase tracking-wider text-clay">
+            {t('editor.simulated')}
+          </span>
         </span>
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <span className="hidden text-[11.5px] text-clay lg:inline">
-          {width}px · {dirty ? 'unsaved' : 'saved'}
+          {width}px · {t(dirty ? 'editor.unsavedShort' : 'editor.saved')}
         </span>
-        <IconButton icon="external" label="Open published menu" size={16} onClick={() => navigate('/menu-demo')} />
+        <IconButton
+          icon="external"
+          label={t('editor.openPublished')}
+          size={16}
+          onClick={() => navigate('/menu-demo')}
+        />
         <IconButton
           icon={expanded ? 'minimize' : 'maximize'}
-          label={expanded ? 'Exit full preview' : 'Expand preview'}
+          label={expanded ? t('editor.collapse') : t('editor.expand')}
           size={16}
           onClick={() => setExpanded((v) => !v)}
         />
@@ -202,7 +209,7 @@ export default function Editor() {
   const previewBody = (
     <div className="min-h-0 flex-1 overflow-y-auto bg-cream/60 p-3 thin-scroll sm:p-5">
       {device === 'desktop' ? (
-        <BrowserFrame url={`${draft.slug}.menucraft.com`} badge="Live">
+        <BrowserFrame url={`${draft.slug}.menucraft.com`} badge={t('editor.liveBadge')}>
           <ScaledFrame width={width}>
             <RestaurantSite
               restaurant={draft}
@@ -236,8 +243,12 @@ export default function Editor() {
       {/* -------------------------------- top bar ------------------------------- */}
       <header className="z-40 shrink-0 border-b border-sand bg-paper">
         <div className="flex h-[62px] items-center gap-3 px-3 sm:px-4">
-          <IconButton icon="arrowLeft" label="Back to dashboard" onClick={() => navigate('/dashboard')} />
-          <button type="button" onClick={() => navigate('/')} className="hidden shrink-0 md:block" aria-label="MenuCraft home">
+          <IconButton
+            icon="arrowLeft"
+            label={t('web.demo.backDashAria')}
+            onClick={() => navigate('/dashboard')}
+          />
+          <button type="button" onClick={() => navigate('/')} className="hidden shrink-0 md:block" aria-label={t('web.header.homeAria')}>
             <Wordmark markSize={26} />
           </button>
 
@@ -251,23 +262,23 @@ export default function Editor() {
               </Badge>
               {dirty ? (
                 <Badge tone="gold" icon="pencil">
-                  <span className="hidden sm:inline">Unsaved changes</span>
-                  <span className="sm:hidden">Unsaved</span>
+                  <span className="hidden sm:inline">{t('editor.unsaved')}</span>
+                  <span className="sm:hidden">{t('editor.unsavedShort')}</span>
                 </Badge>
               ) : (
                 <Badge tone="moss" icon="check" className="hidden sm:inline-flex">
-                  Saved
+                  {t('editor.saved')}
                 </Badge>
               )}
             </div>
             <p className="hidden text-[11.5px] text-clay sm:line-clamp-1">
-              Edits are local until you save or publish · ⌘S save · ⌘Z undo
+              {t('editor.localHint')}
             </p>
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
-            <IconButton icon="undo" label="Undo" size={16} className="hidden lg:inline-flex" disabled={past.length === 0} onClick={undo} />
-            <IconButton icon="redo" label="Redo" size={16} className="hidden lg:inline-flex" disabled={future.length === 0} onClick={redo} />
+            <IconButton icon="undo" label={t('editor.undo')} size={16} className="hidden lg:inline-flex" disabled={past.length === 0} onClick={undo} />
+            <IconButton icon="redo" label={t('editor.redo')} size={16} className="hidden lg:inline-flex" disabled={future.length === 0} onClick={redo} />
             <span className="mx-1 hidden h-7 w-px bg-sand sm:block" />
             <Button
               size="sm"
@@ -276,7 +287,7 @@ export default function Editor() {
               icon="refresh"
               onClick={() => resetDesign()}
             >
-              Reset design
+              {t('editor.reset')}
             </Button>
             <Button
               size="sm"
@@ -285,13 +296,19 @@ export default function Editor() {
               disabled={!dirty}
               onClick={() => saveDraft()}
             >
-              Save draft
+              {t('editor.saveDraft')}
             </Button>
             <Button size="sm" variant="accent" icon="send" onClick={() => requestPublish()}>
-              <span className="hidden sm:inline">Publish demo</span>
-              <span className="sm:hidden">Publish</span>
+              <span className="hidden sm:inline">{t('web.demo.publishDemo')}</span>
+              <span className="sm:hidden">{t('editor.publishShort')}</span>
             </Button>
-            <IconButton icon="trash" label="Discard unsaved changes" size={16} disabled={!dirty} onClick={() => discardDraft()} />
+            <IconButton
+              icon="trash"
+              label={t('editor.discard')}
+              size={16}
+              disabled={!dirty}
+              onClick={() => discardDraft()}
+            />
           </div>
         </div>
 
@@ -301,15 +318,15 @@ export default function Editor() {
             size="sm"
             value={mobileView}
             onChange={setMobileView}
-            ariaLabel="Editor view"
+            ariaLabel={t('editor.editorView')}
             options={[
-              { value: 'controls', label: 'Controls', icon: 'settings' },
-              { value: 'preview', label: 'Preview', icon: 'eye' },
+              { value: 'controls', label: t('editor.controls'), icon: 'settings' },
+              { value: 'preview', label: t('editor.preview'), icon: 'eye' },
             ]}
           />
           <div className="flex items-center gap-1.5 text-[11.5px] text-clay">
-            <IconButton icon="undo" label="Undo" size={14} disabled={past.length === 0} onClick={undo} />
-            <IconButton icon="redo" label="Redo" size={14} disabled={future.length === 0} onClick={redo} />
+            <IconButton icon="undo" label={t('editor.undo')} size={14} disabled={past.length === 0} onClick={undo} />
+            <IconButton icon="redo" label={t('editor.redo')} size={14} disabled={future.length === 0} onClick={redo} />
           </div>
         </div>
       </header>
@@ -332,10 +349,12 @@ export default function Editor() {
         {/* structure rail */}
         <nav
           className="hidden w-[228px] shrink-0 flex-col border-e border-sand bg-paper lg:flex"
-          aria-label="Editor sections"
+          aria-label={t('editor.railAria')}
         >
           <div className="px-4 pb-2 pt-4">
-            <span className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-clay">Editor</span>
+            <span className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-clay">
+              {t('editor.railTitle')}
+            </span>
           </div>
           <ul className="flex-1 space-y-1 overflow-y-auto px-2.5 pb-4 thin-scroll">
             {PANELS.map((item) => {
@@ -357,9 +376,9 @@ export default function Editor() {
                       <Icon name={item.icon} size={16} />
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-[13.5px] font-medium">{item.label}</span>
+                      <span className="block text-[13.5px] font-medium">{t(item.labelKey)}</span>
                       <span className={cx('block text-[11.5px] leading-snug', active ? 'text-ivory/60' : 'text-clay')}>
-                        {item.note}
+                        {t(item.noteKey)}
                       </span>
                     </span>
                   </button>
@@ -372,10 +391,10 @@ export default function Editor() {
             <div className="rounded-xl bg-cream/70 p-3">
               <div className="flex items-center gap-2 text-[12px] font-medium text-espresso">
                 <Icon name="info" size={13} className="text-flame" />
-                Demo workspace
+                {t('editor.demoWorkspace')}
               </div>
               <p className="mt-1 text-[11.5px] leading-relaxed text-umber">
-                Changes stay in this browser. Nothing is deployed to a real domain.
+                {t('editor.demoWorkspaceNote')}
               </p>
             </div>
           </div>
@@ -388,7 +407,7 @@ export default function Editor() {
             mobileView === 'controls' ? 'flex' : 'hidden',
             'lg:flex'
           )}
-          aria-label={`${activeMeta.label} controls`}
+          aria-label={t('editor.panelControls', { panel: t(activeMeta.labelKey) })}
         >
           <div className="shrink-0 border-b border-sand/80 px-4 py-3">
             <div className="flex items-center gap-2">
@@ -396,8 +415,10 @@ export default function Editor() {
                 <Icon name={activeMeta.icon} size={16} />
               </span>
               <div className="min-w-0">
-                <div className="line-clamp-1 text-[14px] font-semibold text-charcoal">{activeMeta.label}</div>
-                <div className="line-clamp-1 text-[11.5px] text-clay">{activeMeta.note}</div>
+                <div className="line-clamp-1 text-[14px] font-semibold text-charcoal">
+                  {t(activeMeta.labelKey)}
+                </div>
+                <div className="line-clamp-1 text-[11.5px] text-clay">{t(activeMeta.noteKey)}</div>
               </div>
             </div>
 
@@ -417,7 +438,7 @@ export default function Editor() {
                   )}
                 >
                   <Icon name={item.icon} size={13} />
-                  {item.label}
+                  {t(item.labelKey)}
                 </button>
               ))}
             </div>
@@ -443,20 +464,20 @@ export default function Editor() {
             mobileView === 'preview' ? 'flex' : 'hidden',
             'lg:flex'
           )}
-          aria-label="Live preview"
+          aria-label={t('editor.livePreview')}
         >
           {previewToolbar}
           {previewBody}
           <div className="flex shrink-0 items-center justify-between gap-3 border-t border-sand bg-paper px-4 py-2.5">
             <span className="hidden text-[11.5px] text-clay sm:inline">
-              Preview updates as you type · same renderer as the published page
+              {t('editor.previewHint')}
             </span>
             <div className="flex gap-2">
               <Button size="sm" variant="ghost" icon="refresh" onClick={() => resetDesign()}>
-                Reset design
+                {t('editor.reset')}
               </Button>
               <Button size="sm" variant="outline" icon="save" disabled={!dirty} onClick={() => saveDraft()}>
-                Save draft
+                {t('editor.saveDraft')}
               </Button>
             </div>
           </div>
@@ -478,18 +499,18 @@ export default function Editor() {
                 size="sm"
                 value={device}
                 onChange={setDevice}
-                ariaLabel="Preview device"
+                ariaLabel={t('editor.previewDevice')}
                 options={[
-                  { value: 'desktop', label: 'Desktop', icon: 'monitor' },
-                  { value: 'phone', label: 'Phone', icon: 'smartphone' },
+                  { value: 'desktop', label: t('editor.desktop'), icon: 'monitor' },
+                  { value: 'phone', label: t('editor.phone'), icon: 'smartphone' },
                 ]}
               />
               <button
                 type="button"
                 onClick={() => setExpanded(false)}
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-ivory transition hover:bg-white/20"
-                aria-label="Close full preview"
-                title="Close full preview"
+                aria-label={t('editor.collapse')}
+                title={t('editor.collapse')}
               >
                 <Icon name="x" size={17} />
               </button>
@@ -577,19 +598,27 @@ function EditorSettings({
   const showToast = useStore((s) => s.showToast)
   const [value, setValue] = useState(draft?.slug ?? '')
 
-  if (!draft) return <PanelNote>Loading the working copy…</PanelNote>
+  if (!draft) return <PanelNote>{t('editor.settings.loading')}</PanelNote>
 
   const valid = /^[a-z0-9-]{3,32}$/.test(value)
 
   return (
     <div className="space-y-6">
-      <PanelBlock title="Public address" description="Simulated subdomain — DNS is never provisioned.">
-        <Field label="Slug" hint={valid ? 'available' : '3–32 lowercase chars'}>
+      <PanelBlock
+        title={t('editor.publicAddress')}
+        description={t('editor.settings.publicDesc')}
+      >
+        <Field
+          label={t('editor.settings.slug')}
+          hint={valid ? t('editor.settings.slugOk') : t('editor.settings.slugHint')}
+        >
           <Input value={value} spellCheck={false} onChange={(e) => setValue(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} />
         </Field>
         <div className="rounded-xl border border-sand bg-cream/60 px-3.5 py-3">
           <span className="block font-mono text-[13px] text-charcoal">{value || draft.slug}.menucraft.com</span>
-          <span className="mt-0.5 block text-[11.5px] text-clay">Label only — the domain does not resolve.</span>
+          <span className="mt-0.5 block text-[11.5px] text-clay">
+            {t('editor.settings.domainNote')}
+          </span>
         </div>
         <Button
           size="sm"
@@ -599,17 +628,21 @@ function EditorSettings({
             updateDraft((d) => {
               d.slug = value
             })
-            showToast({ title: 'Address updated', message: `${value}.menucraft.com`, tone: 'success' })
+            showToast({
+              title: t('editor.settings.addressUpdated'),
+              message: `${value}.menucraft.com`,
+              tone: 'success',
+            })
           }}
         >
-          Apply address
+          {t('editor.settings.applyAddress')}
         </Button>
       </PanelBlock>
 
-      <PanelBlock title="Publish state">
+      <PanelBlock title={t('editor.settings.publishState')}>
         <Toggle
-          label="Published"
-          description="Published menus appear on the public demo page"
+          label={t('editor.settings.published')}
+          description={t('editor.settings.publishedDesc')}
           checked={draft.status === 'published'}
           onChange={(v) => {
             // publishing is gated the same way as the top-bar button:
@@ -630,35 +663,37 @@ function EditorSettings({
           </p>
         ) : null}
         <div className="rounded-xl border border-sand bg-cream/50 p-3.5">
-          <div className="text-[12.5px] font-medium text-espresso">Template in use</div>
+          <div className="text-[12.5px] font-medium text-espresso">
+            {t('editor.settings.templateUse')}
+          </div>
           <div className="mt-0.5 text-[13px] text-charcoal">{getTemplate(draft.templateId).name}</div>
           <p className="mt-1.5 text-[11.5px] leading-relaxed text-umber">
-            Applying another template replaces the design but keeps the menu and content.
+            {t('editor.settings.templateKeep')}
           </p>
           <Button size="sm" variant="ghost" icon="layers" className="mt-2" to="/dashboard/templates">
-            Browse templates
+            {t('editor.settings.browseTemplates')}
           </Button>
         </div>
       </PanelBlock>
 
-      <PanelBlock title="Quick facts">
+      <PanelBlock title={t('editor.settings.quickFacts')}>
         <ul className="space-y-2 text-[12.5px] text-umber">
           <li className="flex items-center justify-between gap-3 rounded-lg border border-sand px-3 py-2">
-            <span>Categories</span>
+            <span>{t('editor.settings.factCategories')}</span>
             <strong className="text-charcoal">{draft.menu.length}</strong>
           </li>
           <li className="flex items-center justify-between gap-3 rounded-lg border border-sand px-3 py-2">
-            <span>Dishes</span>
+            <span>{t('editor.settings.factDishes')}</span>
             <strong className="text-charcoal">{draft.menu.reduce((s, c) => s + c.items.length, 0)}</strong>
           </li>
           <li className="flex items-center justify-between gap-3 rounded-lg border border-sand px-3 py-2">
-            <span>Sections enabled</span>
+            <span>{t('editor.settings.factSections')}</span>
             <strong className="text-charcoal">
               {draft.design.sections.filter((s) => s.enabled).length}/{draft.design.sections.length}
             </strong>
           </li>
           <li className="flex items-center justify-between gap-3 rounded-lg border border-sand px-3 py-2">
-            <span>Plan</span>
+            <span>{t('editor.settings.factPlan')}</span>
             <strong className="capitalize text-charcoal">{draft.plan}</strong>
           </li>
         </ul>

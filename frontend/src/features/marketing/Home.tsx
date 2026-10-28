@@ -14,9 +14,11 @@ import { TEMPLATES } from '../../templates/data/templates.ts'
 import type { ColorSet, FontId } from '../../shared/lib/types.ts'
 import { cx } from '../../shared/lib/utils.ts'
 import type { Restaurant } from '../../shared/lib/types.ts'
+import { useI18n } from '../../shared/i18n'
+import type { TKey, Lang } from '../../shared/i18n'
 import { useActiveRestaurant } from '../../shared/store/useStore.ts'
-import { HOME_SEED, useHomeContent } from '../../shared/store/useHomeContent.ts'
-import type { HomeContent } from '../../shared/store/useHomeContent.ts'
+import { HOME_SEED, useHomeContentByLang } from '../../shared/store/useHomeContent.ts'
+import type { HomeContent, HomeContentByLang } from '../../shared/store/useHomeContent.ts'
 
 /* ------------------------- store copy → rendered copy ------------------------ */
 
@@ -45,65 +47,91 @@ function AccentText({ text, accentClass = 'text-flame' }: { text: string; accent
   )
 }
 
-/** an emptied field falls back to the seed, so the page can never look broken */
-function txt(value: string | undefined, seed: string): string {
-  return value && value.trim() ? value : seed
+/** an emptied field falls back to the next candidate, so the page can never look broken */
+function firstText(...candidates: (string | undefined)[]): string {
+  for (const candidate of candidates) {
+    if (candidate && candidate.trim()) return candidate
+  }
+  return ''
 }
 
-function safeCopy(content: HomeContent): HomeContent {
-  const seed = HOME_SEED
+/** an emptied list falls back to the next candidate list */
+function firstList<T>(...candidates: (T[] | undefined)[]): T[] {
+  for (const candidate of candidates) {
+    if (candidate && candidate.length > 0) return candidate
+  }
+  return []
+}
+
+/**
+ * Reads the copy for the active language, with a per-field fallback chain:
+ * active language → English page → the active language's seed.
+ */
+function safeCopy(content: HomeContentByLang, lang: Lang): HomeContent {
+  const active = content[lang]
+  const en = content.en
+  const seed = HOME_SEED[lang]
   return {
-    ...content,
+    ...active,
     hero: {
-      ...content.hero,
-      eyebrow: txt(content.hero.eyebrow, seed.hero.eyebrow),
-      title: txt(content.hero.title, seed.hero.title),
-      sub: txt(content.hero.sub, seed.hero.sub),
-      cta: txt(content.hero.cta, seed.hero.cta),
-      secondaryCta: txt(content.hero.secondaryCta, seed.hero.secondaryCta),
-      note: txt(content.hero.note, seed.hero.note),
+      ...active.hero,
+      eyebrow: firstText(active.hero.eyebrow, en.hero.eyebrow, seed.hero.eyebrow),
+      title: firstText(active.hero.title, en.hero.title, seed.hero.title),
+      sub: firstText(active.hero.sub, en.hero.sub, seed.hero.sub),
+      cta: firstText(active.hero.cta, en.hero.cta, seed.hero.cta),
+      secondaryCta: firstText(active.hero.secondaryCta, en.hero.secondaryCta, seed.hero.secondaryCta),
+      note: firstText(active.hero.note, en.hero.note, seed.hero.note),
     },
     templates: {
-      ...content.templates,
-      eyebrow: txt(content.templates.eyebrow, seed.templates.eyebrow ?? ''),
-      title: txt(content.templates.title, seed.templates.title),
-      sub: txt(content.templates.sub, seed.templates.sub ?? ''),
+      ...active.templates,
+      eyebrow: firstText(active.templates.eyebrow, en.templates.eyebrow, seed.templates.eyebrow ?? ''),
+      title: firstText(active.templates.title, en.templates.title, seed.templates.title),
+      sub: firstText(active.templates.sub, en.templates.sub, seed.templates.sub ?? ''),
     },
     editorShowcase: {
-      ...content.editorShowcase,
-      eyebrow: txt(content.editorShowcase.eyebrow, seed.editorShowcase.eyebrow),
-      title: txt(content.editorShowcase.title, seed.editorShowcase.title),
-      sub: txt(content.editorShowcase.sub, seed.editorShowcase.sub),
+      ...active.editorShowcase,
+      eyebrow: firstText(
+        active.editorShowcase.eyebrow,
+        en.editorShowcase.eyebrow,
+        seed.editorShowcase.eyebrow
+      ),
+      title: firstText(active.editorShowcase.title, en.editorShowcase.title, seed.editorShowcase.title),
+      sub: firstText(active.editorShowcase.sub, en.editorShowcase.sub, seed.editorShowcase.sub),
+      bullets: firstList(
+        active.editorShowcase.bullets,
+        en.editorShowcase.bullets,
+        seed.editorShowcase.bullets
+      ),
     },
     workflow: {
-      ...content.workflow,
-      eyebrow: txt(content.workflow.eyebrow, seed.workflow.eyebrow),
-      title: txt(content.workflow.title, seed.workflow.title),
-      sub: txt(content.workflow.sub, seed.workflow.sub),
-      steps: content.workflow.steps.length > 0 ? content.workflow.steps : seed.workflow.steps,
+      ...active.workflow,
+      eyebrow: firstText(active.workflow.eyebrow, en.workflow.eyebrow, seed.workflow.eyebrow),
+      title: firstText(active.workflow.title, en.workflow.title, seed.workflow.title),
+      sub: firstText(active.workflow.sub, en.workflow.sub, seed.workflow.sub),
+      steps: firstList(active.workflow.steps, en.workflow.steps, seed.workflow.steps),
     },
     highlights: {
-      ...content.highlights,
-      items: content.highlights.items.length > 0 ? content.highlights.items : seed.highlights.items,
+      ...active.highlights,
+      items: firstList(active.highlights.items, en.highlights.items, seed.highlights.items),
     },
     showcase: {
-      ...content.showcase,
-      eyebrow: txt(content.showcase.eyebrow, seed.showcase.eyebrow ?? ''),
-      title: txt(content.showcase.title, seed.showcase.title),
-      sub: txt(content.showcase.sub, seed.showcase.sub ?? ''),
+      ...active.showcase,
+      eyebrow: firstText(active.showcase.eyebrow, en.showcase.eyebrow, seed.showcase.eyebrow ?? ''),
+      title: firstText(active.showcase.title, en.showcase.title, seed.showcase.title),
+      sub: firstText(active.showcase.sub, en.showcase.sub, seed.showcase.sub ?? ''),
     },
     pricing: {
-      ...content.pricing,
-      eyebrow: txt(content.pricing.eyebrow, seed.pricing.eyebrow ?? ''),
-      title: txt(content.pricing.title, seed.pricing.title),
-      sub: txt(content.pricing.sub, seed.pricing.sub ?? ''),
-      note: txt(content.pricing.note, seed.pricing.note),
+      ...active.pricing,
+      eyebrow: firstText(active.pricing.eyebrow, en.pricing.eyebrow, seed.pricing.eyebrow ?? ''),
+      title: firstText(active.pricing.title, en.pricing.title, seed.pricing.title),
+      sub: firstText(active.pricing.sub, en.pricing.sub, seed.pricing.sub ?? ''),
+      note: firstText(active.pricing.note, en.pricing.note, seed.pricing.note),
     },
     finalCta: {
-      ...content.finalCta,
-      title: txt(content.finalCta.title, seed.finalCta.title),
-      sub: txt(content.finalCta.sub, seed.finalCta.sub),
-      cta: txt(content.finalCta.cta, seed.finalCta.cta),
+      ...active.finalCta,
+      title: firstText(active.finalCta.title, en.finalCta.title, seed.finalCta.title),
+      sub: firstText(active.finalCta.sub, en.finalCta.sub, seed.finalCta.sub),
+      cta: firstText(active.finalCta.cta, en.finalCta.cta, seed.finalCta.cta),
     },
   }
 }
@@ -111,8 +139,9 @@ function safeCopy(content: HomeContent): HomeContent {
 export default function Home() {
   const restaurant = useActiveRestaurant()
   const customize = useCustomize()
-  const content = useHomeContent()
-  const copy = useMemo(() => safeCopy(content), [content])
+  const { lang } = useI18n()
+  const contentByLang = useHomeContentByLang()
+  const copy = useMemo(() => safeCopy(contentByLang, lang), [contentByLang, lang])
 
   return (
     <div className="min-h-screen bg-ivory">
@@ -139,6 +168,8 @@ export default function Home() {
 /* ---------------------------------- hero ---------------------------------- */
 
 function Hero({ restaurant, hero }: { restaurant: Restaurant; hero: HomeContent['hero'] }) {
+  const { t } = useI18n()
+
   return (
     <section className="relative overflow-hidden pb-28 pt-[118px] lg:pt-[142px]">
       <div
@@ -182,7 +213,11 @@ function Hero({ restaurant, hero }: { restaurant: Restaurant; hero: HomeContent[
           </div>
 
           <ul className="mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13.5px] text-umber">
-            {['No coding required', '8 designer templates', 'Publish in minutes'].map((point) => (
+            {[
+              t('home.hero.bulletNoCoding'),
+              t('home.hero.bulletTemplates', { count: TEMPLATES.length }),
+              t('home.hero.bulletPublish'),
+            ].map((point) => (
               <li key={point} className="flex items-center gap-1.5">
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-moss/12 text-moss">
                   <Icon name="check" size={11} strokeWidth={3} />
@@ -195,7 +230,7 @@ function Hero({ restaurant, hero }: { restaurant: Restaurant; hero: HomeContent[
 
         {/* ------------------------- product composition ------------------------ */}
         <div className="relative mx-auto mt-14 w-full max-w-[1100px] lg:mt-16">
-          <BrowserFrame url="bella.menucraft.com" badge="Live demo">
+          <BrowserFrame url="bella.menucraft.com" badge={t('home.hero.liveBadge')}>
             <ScaledFrame width={1440} maxHeight={540}>
               <RestaurantSite
                 restaurant={restaurant}
@@ -209,7 +244,7 @@ function Hero({ restaurant, hero }: { restaurant: Restaurant; hero: HomeContent[
           {/* floating analytics card */}
           <div className="absolute -start-6 top-8 hidden w-[196px] rounded-2xl border border-sand bg-paper p-3.5 shadow-[0_30px_60px_-40px_rgba(15,13,11,0.8)] lg:block xl:-start-14">
             <div className="flex items-center justify-between">
-              <span className="text-[11.5px] font-medium text-umber">Menu views</span>
+              <span className="text-[11.5px] font-medium text-umber">{t('home.hero.viewsLabel')}</span>
               <Badge tone="moss" icon="trendUp">
                 +18%
               </Badge>
@@ -229,13 +264,15 @@ function Hero({ restaurant, hero }: { restaurant: Restaurant; hero: HomeContent[
                 <QRCodeSVG value={`https://${restaurant.slug}.menucraft.com`} size={54} level="M" />
               </span>
               <span className="min-w-0">
-                <span className="block text-[12.5px] font-semibold text-charcoal">Table QR ready</span>
+                <span className="block text-[12.5px] font-semibold text-charcoal">
+                  {t('home.hero.qrTitle')}
+                </span>
                 <span className="line-clamp-1 text-[11.5px] text-umber">
                   {restaurant.slug}.menucraft.com
                 </span>
                 <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-moss">
                   <span className="h-1.5 w-1.5 rounded-full bg-moss anim-pulse-dot" />
-                  1,284 scans
+                  {t('home.hero.scans', { count: '1,284' })}
                 </span>
               </span>
             </div>
@@ -271,7 +308,8 @@ function FeaturedTemplates({
   onCustomize: (id: string) => void
   section: HomeContent['templates']
 }) {
-  const featured = TEMPLATES.filter((t) => t.featured).slice(0, 3)
+  const { t } = useI18n()
+  const featured = TEMPLATES.filter((item) => item.featured).slice(0, 3)
 
   return (
     <section className="border-t border-sand bg-paper py-20 lg:py-28" id="templates">
@@ -291,7 +329,7 @@ function FeaturedTemplates({
               <Link to={`/templates/${template.id}`} className="relative block aspect-[4/3] overflow-hidden">
                 <img
                   src={template.previewImage}
-                  alt={`${template.name} preview`}
+                  alt={t('home.templates.previewAlt', { name: template.name })}
                   loading="lazy"
                   className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.06]"
                 />
@@ -307,7 +345,7 @@ function FeaturedTemplates({
                 <span className="absolute inset-x-4 bottom-4 flex justify-center opacity-0 transition duration-300 group-hover:opacity-100">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-paper px-3.5 py-1.5 text-[12.5px] font-semibold text-charcoal">
                     <Icon name="eye" size={14} />
-                    Preview template
+                    {t('home.templates.previewChip')}
                   </span>
                 </span>
               </Link>
@@ -335,10 +373,10 @@ function FeaturedTemplates({
                     icon="eye"
                     className="flex-1"
                   >
-                    Preview
+                    {t('home.templates.preview')}
                   </Button>
                   <Button size="sm" onClick={() => onCustomize(template.id)} className="flex-1">
-                    Customize
+                    {t('home.templates.customize')}
                   </Button>
                 </div>
               </div>
@@ -348,7 +386,7 @@ function FeaturedTemplates({
 
         <div className="mt-10 flex justify-center">
           <Button to="/templates" size="lg" variant="outline" icon="grid" iconRight="arrowRight">
-            Browse all 8 templates
+            {t('home.templates.browseAll', { count: TEMPLATES.length })}
           </Button>
         </div>
       </div>
@@ -373,6 +411,7 @@ function EditorShowcase({
   restaurant: Restaurant
   section: HomeContent['editorShowcase']
 }) {
+  const { t } = useI18n()
   const [palette, setPalette] = useState(0)
   const [headingFont, setHeadingFont] = useState<FontId>('playfair')
   const [menuLayout, setMenuLayout] = useState<'grid' | 'list'>('list')
@@ -414,7 +453,7 @@ function EditorShowcase({
             <div className="mt-8 space-y-6">
               <div>
                 <div className="mb-2.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-ivory/45">
-                  Palette
+                  {t('home.editor.palette')}
                 </div>
                 <div className="flex flex-wrap gap-2.5">
                   {SHOWCASE_PALETTE_NAMES.map((name, index) => (
@@ -450,7 +489,7 @@ function EditorShowcase({
 
               <div>
                 <div className="mb-2.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-ivory/45">
-                  Heading font
+                  {t('home.editor.headingFont')}
                 </div>
                 <div className="flex flex-wrap gap-2.5">
                   {(['playfair', 'inter', 'montserrat'] as FontId[]).map((font) => (
@@ -485,7 +524,7 @@ function EditorShowcase({
 
               <div>
                 <div className="mb-2.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-ivory/45">
-                  Menu layout
+                  {t('home.editor.layout')}
                 </div>
                 <div className="inline-flex rounded-full border border-ivory/15 p-1">
                   {(['grid', 'list'] as const).map((option) => (
@@ -502,7 +541,7 @@ function EditorShowcase({
                       )}
                     >
                       <Icon name={option === 'grid' ? 'grid' : 'list'} size={14} />
-                      {option} menu
+                      {option === 'grid' ? t('home.editor.grid') : t('home.editor.list')}
                     </button>
                   ))}
                 </div>
@@ -511,16 +550,19 @@ function EditorShowcase({
 
             <div className="mt-9 flex flex-wrap gap-3">
               <Button to="/dashboard/editor" variant="accent" icon="arrowRight">
-                Open the full editor
+                {t('home.editor.openEditor')}
               </Button>
               <Button to="/templates" variant="light">
-                See all templates
+                {t('home.editor.seeAll')}
               </Button>
             </div>
           </div>
 
           <div className="relative">
-            <BrowserFrame url={`${restaurant.slug}.menucraft.com/preview`} badge="Live preview">
+            <BrowserFrame
+              url={`${restaurant.slug}.menucraft.com/preview`}
+              badge={t('home.editor.liveBadge')}
+            >
               <ScaledFrame width={1440} maxHeight={560}>
                 <RestaurantSite
                   restaurant={preview}
@@ -533,7 +575,7 @@ function EditorShowcase({
             <div className="absolute -bottom-5 start-6 hidden rounded-full border border-ivory/15 bg-smoke px-3.5 py-2 text-[12px] text-ivory/70 shadow-xl sm:block">
               <span className="flex items-center gap-2">
                 <Icon name="sparkles" size={13} className="text-flame" />
-                Applied instantly — same controls as the real editor
+                {t('home.editor.appliedNote')}
               </span>
             </div>
           </div>
@@ -546,13 +588,17 @@ function EditorShowcase({
 /* -------------------------------- workflow -------------------------------- */
 
 /** step number, icon, link and CTA label stay structural — only copy is editable */
-const STEP_META = [
-  { icon: 'layers', to: '/templates', cta: 'Browse templates' },
-  { icon: 'palette', to: '/dashboard/editor', cta: 'Try the editor' },
-  { icon: 'send', to: '/menu-demo', cta: 'See a published site' },
+const STEP_META: { icon: string; to: string; cta: TKey }[] = [
+  { icon: 'layers', to: '/templates', cta: 'home.workflow.browseTemplates' },
+  { icon: 'palette', to: '/dashboard/editor', cta: 'home.workflow.tryEditor' },
+  { icon: 'send', to: '/menu-demo', cta: 'home.workflow.seePublished' },
 ]
 
-const STEP_META_FALLBACK = { icon: 'sparkles', to: '/templates', cta: 'Learn more' }
+const STEP_META_FALLBACK: { icon: string; to: string; cta: TKey } = {
+  icon: 'sparkles',
+  to: '/templates',
+  cta: 'home.workflow.learnMore',
+}
 
 function Workflow({
   onCustomize,
@@ -561,6 +607,8 @@ function Workflow({
   onCustomize: (id: string) => void
   section: HomeContent['workflow']
 }) {
+  const { t } = useI18n()
+
   return (
     <section className="bg-ivory py-20 lg:py-28" id="how">
       <div className="page">
@@ -595,7 +643,7 @@ function Workflow({
                 <h3 className="display-serif mt-5 text-[25px] text-charcoal">{step.title}</h3>
                 <p className="mt-2.5 text-[14.5px] leading-relaxed text-umber">{step.body}</p>
                 <span className="mt-5 inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-charcoal">
-                  {meta.cta}
+                  {t(meta.cta)}
                   <Icon
                     name="arrowRight"
                     size={15}
@@ -609,7 +657,7 @@ function Workflow({
 
         <div className="mt-8 flex justify-center">
           <Button onClick={() => onCustomize('bella-italia')} variant="outline" icon="sparkles">
-            Start with Bella Italia
+            {t('home.workflow.startWith', { name: 'Bella Italia' })}
           </Button>
         </div>
       </div>
@@ -632,14 +680,15 @@ const HIGHLIGHT_META_FALLBACK = { icon: 'sparkles', wide: false }
 
 function FeatureHighlights({ section }: { section: HomeContent['highlights'] }) {
   const restaurant = useActiveRestaurant()
+  const { t } = useI18n()
 
   return (
     <section className="border-y border-sand bg-paper py-20 lg:py-28">
       <div className="page">
         <SectionHeading
-          eyebrow="Everything included"
-          title="The details that make it feel premium"
-          description="Not a page builder with food plugins — a focused system for how restaurants actually present food."
+          eyebrow={t('home.highlights.eyebrow')}
+          title={t('home.highlights.title')}
+          description={t('home.highlights.sub')}
         />
 
         <div className="mt-12 grid gap-5 lg:grid-cols-3">
@@ -667,7 +716,7 @@ function FeatureHighlights({ section }: { section: HomeContent['highlights'] }) 
                   </div>
                 </div>
 
-                <div className="mt-6">{highlightVisual(index, restaurant)}</div>
+                <div className="mt-6">{highlightVisual(index, restaurant, t)}</div>
               </article>
             )
           })}
@@ -677,7 +726,11 @@ function FeatureHighlights({ section }: { section: HomeContent['highlights'] }) 
   )
 }
 
-function highlightVisual(index: number, restaurant: Restaurant) {
+function highlightVisual(
+  index: number,
+  restaurant: Restaurant,
+  t: ReturnType<typeof useI18n>['t']
+) {
   switch (index) {
     case 0:
       return (
@@ -731,7 +784,7 @@ function highlightVisual(index: number, restaurant: Restaurant) {
             <QRCodeSVG value={`https://${restaurant.slug}.menucraft.com`} size={72} level="M" />
           </span>
           <span className="text-[13px] leading-relaxed text-umber">
-            Scans straight to
+            {t('home.highlights.scansTo')}
             <br />
             <span className="font-medium text-charcoal">{restaurant.slug}.menucraft.com</span>
           </span>
@@ -749,9 +802,14 @@ function highlightVisual(index: number, restaurant: Restaurant) {
             </span>
           </span>
           <span className="text-[13px] leading-relaxed text-umber">
-            Phone-first layouts,
-            <br />
-            tested from 320px up.
+            {t('home.highlights.mobileFirst')
+              .split('\n')
+              .map((line, lineIndex, lines) => (
+                <Fragment key={lineIndex}>
+                  {line}
+                  {lineIndex < lines.length - 1 ? <br /> : null}
+                </Fragment>
+              ))}
           </span>
         </div>
       )
@@ -767,6 +825,8 @@ function ResponsiveShowcase({
   restaurant: Restaurant
   section: HomeContent['showcase']
 }) {
+  const { t } = useI18n()
+
   return (
     <section className="overflow-hidden bg-charcoal py-20 text-ivory lg:py-28">
       <div className="page-wide page">
@@ -779,9 +839,21 @@ function ResponsiveShowcase({
             <p className="mt-5 text-[16px] leading-relaxed text-ivory/65">{section.sub}</p>
             <ul className="mt-8 space-y-3.5">
               {[
-                { icon: 'monitor', title: 'Desktop', copy: 'Wide layouts, editorial heroes, three-column menus.' },
-                { icon: 'smartphone', title: 'Mobile', copy: 'Touch-friendly tabs, stacked cards, readable prices.' },
-                { icon: 'qr', title: 'At the table', copy: 'Scan-to-menu in one tap, no app install.' },
+                {
+                  icon: 'monitor',
+                  title: t('home.showcase.desktop'),
+                  copy: t('home.showcase.desktopCopy'),
+                },
+                {
+                  icon: 'smartphone',
+                  title: t('home.showcase.mobile'),
+                  copy: t('home.showcase.mobileCopy'),
+                },
+                {
+                  icon: 'qr',
+                  title: t('home.showcase.table'),
+                  copy: t('home.showcase.tableCopy'),
+                },
               ].map((point) => (
                 <li key={point.title} className="flex gap-4">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ivory/10 text-flame-light">
@@ -796,13 +868,13 @@ function ResponsiveShowcase({
             </ul>
             <div className="mt-9">
               <Button to="/menu-demo" variant="accent" icon="external">
-                Open the published menu
+                {t('home.showcase.openMenu')}
               </Button>
             </div>
           </div>
 
           <div className="relative">
-            <BrowserFrame url={`${restaurant.slug}.menucraft.com`} badge="Live">
+            <BrowserFrame url={`${restaurant.slug}.menucraft.com`} badge={t('home.showcase.liveBadge')}>
               <ScaledFrame width={1440} maxHeight={470}>
                 <RestaurantSite
                   restaurant={restaurant}
@@ -813,7 +885,7 @@ function ResponsiveShowcase({
               </ScaledFrame>
             </BrowserFrame>
             <div className="absolute -bottom-12 end-2 hidden md:block lg:-end-6">
-              <PhoneFrame width={214} screen={396} label="Mobile · 390px">
+              <PhoneFrame width={214} screen={396} label={t('home.showcase.phoneLabel', { px: '390px' })}>
                 <ScaledFrame width={390} maxHeight={396}>
                   <RestaurantSite
                     restaurant={restaurant}
@@ -840,6 +912,8 @@ function Pricing({
   onCustomize: (id: string) => void
   section: HomeContent['pricing']
 }) {
+  const { t } = useI18n()
+
   return (
     <section className="bg-ivory py-20 lg:py-28" id="pricing">
       <div className="page">
@@ -851,7 +925,7 @@ function Pricing({
 
         <div className="mt-6 flex justify-center">
           <Badge tone="gold" icon="info">
-            DEMO PRICING — no real charges
+            {t('home.pricing.demoBadge')}
           </Badge>
         </div>
 
@@ -872,14 +946,14 @@ function Pricing({
                 </h3>
                 {plan.highlight ? (
                   <span className="rounded-full bg-flame px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white">
-                    Most popular
+                    {t('home.pricing.mostPopular')}
                   </span>
                 ) : null}
               </div>
 
               <div className="mt-5 flex items-end gap-2">
                 <span className="display-serif text-[52px] leading-none">
-                  {plan.price === 0 ? 'Free' : `$${plan.price}`}
+                  {plan.price === 0 ? t('home.pricing.free') : `$${plan.price}`}
                 </span>
                 <span
                   className={cx(
@@ -887,7 +961,7 @@ function Pricing({
                     plan.highlight ? 'text-ivory/55' : 'text-umber'
                   )}
                 >
-                  {plan.period === 'forever' ? 'forever' : '/ month'}
+                  {plan.period === 'forever' ? t('home.pricing.forever') : t('home.pricing.perMonth')}
                 </span>
               </div>
 
@@ -930,7 +1004,9 @@ function Pricing({
                   variant={plan.highlight ? 'accent' : 'outline'}
                   onClick={() => onCustomize('bella-italia')}
                 >
-                  {plan.price === 0 ? 'Start free demo' : `Choose ${plan.name}`}
+                  {plan.price === 0
+                    ? t('home.pricing.startFree')
+                    : t('home.pricing.choosePlan', { name: plan.name })}
                 </Button>
               </div>
             </div>
@@ -946,6 +1022,8 @@ function Pricing({
 /* -------------------------------- final CTA ------------------------------- */
 
 function FinalCta({ section }: { section: HomeContent['finalCta'] }) {
+  const { t } = useI18n()
+
   return (
     <section className="bg-ivory pb-24">
       <div className="page">
@@ -957,7 +1035,7 @@ function FinalCta({ section }: { section: HomeContent['finalCta'] }) {
           <div aria-hidden="true" className="grid-lines pointer-events-none absolute inset-0 opacity-30" />
 
           <div className="relative mx-auto max-w-3xl">
-            <span className="eyebrow text-flame-light">Ready when you are</span>
+            <span className="eyebrow text-flame-light">{t('home.finalCta.eyebrow')}</span>
             <h2 className="display-serif mt-4 text-[clamp(32px,5vw,58px)] leading-[1.05]">
               <AccentText text={section.title} />
             </h2>
@@ -969,15 +1047,15 @@ function FinalCta({ section }: { section: HomeContent['finalCta'] }) {
                 {section.cta}
               </Button>
               <Button to="/dashboard/editor" size="lg" variant="light">
-                Explore the Editor
+                {t('home.finalCta.secondary')}
               </Button>
             </div>
             <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[13px] text-ivory/45">
-              <span>No credit card</span>
+              <span>{t('home.finalCta.noCard')}</span>
               <span>·</span>
-              <span>No code</span>
+              <span>{t('home.finalCta.noCode')}</span>
               <span>·</span>
-              <span>Demo data only</span>
+              <span>{t('home.finalCta.demoOnly')}</span>
             </div>
           </div>
         </div>

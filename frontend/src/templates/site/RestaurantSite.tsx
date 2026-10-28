@@ -10,6 +10,7 @@ import { fontStack } from '../data/fonts.ts'
 import { getTemplate } from '../data/templates.ts'
 import { cx, mix, money, readableOn } from '../../shared/lib/utils.ts'
 import { Icon } from '../../shared/ui/icons.tsx'
+import { useI18n, type TKey } from '../../shared/i18n/index.tsx'
 import {
   Ed,
   EdImage,
@@ -28,13 +29,13 @@ const ASPECTS: Record<string, string> = {
   wide: '16 / 9',
 }
 
-const SECTION_LABELS: Record<SectionId, string> = {
-  featured: 'Featured',
-  menu: 'Menu',
-  about: 'Our Story',
-  gallery: 'Gallery',
-  hours: 'Opening Hours',
-  contact: 'Contact',
+const SECTION_LABELS: Record<SectionId, TKey> = {
+  featured: 'web.site.sections.featured',
+  menu: 'web.site.sections.menu',
+  about: 'web.site.sections.about',
+  gallery: 'web.site.sections.gallery',
+  hours: 'web.site.sections.hours',
+  contact: 'web.site.sections.contact',
 }
 
 const NAV_SECTIONS: SectionId[] = ['menu', 'about', 'gallery', 'hours', 'contact']
@@ -165,11 +166,16 @@ function SiteHeader({
   prefix: string
 }) {
   const [open, setOpen] = useState(false)
+  const { t } = useI18n()
   const category = getTemplate(r.templateId).category
 
   const links = nav.map((id) => (
     <a key={id} className="rs-nav__link" href={anchor(id)}>
-      <Ed path={`copy.nav.${id}`} fallback={SECTION_LABELS[id]} label="editor.inline.f.navLink" />
+      <Ed
+        path={`copy.nav.${id}`}
+        fallback={t(SECTION_LABELS[id])}
+        label="editor.inline.f.navLink"
+      />
     </a>
   ))
 
@@ -190,19 +196,23 @@ function SiteHeader({
           </span>
         </a>
 
-        <nav className="rs-nav" aria-label="Menu sections">
+        <nav className="rs-nav" aria-label={t('web.site.header.navAria')}>
           {links}
         </nav>
 
         <div className="rs-header__actions">
           <Ed path="phone" as="span" className="rs-header__phone" label="editor.inline.f.phone" />
           <a className="rs-btn rs-header__cta" href={anchor('contact')}>
-            <Ed path="copy.header.cta" fallback="Book a Table" label="editor.inline.f.headerBtn" />
+            <Ed
+              path="copy.header.cta"
+              fallback={t('web.site.cta.book')}
+              label="editor.inline.f.headerBtn"
+            />
           </a>
           <button
             type="button"
             className="rs-burger"
-            aria-label={open ? 'Close navigation' : 'Open navigation'}
+            aria-label={open ? t('web.site.header.closeNav') : t('web.site.header.openNav')}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
           >
@@ -220,11 +230,19 @@ function SiteHeader({
               href={anchor(id)}
               onClick={() => setOpen(false)}
             >
-              <Ed path={`copy.nav.${id}`} fallback={SECTION_LABELS[id]} label="editor.inline.f.navLink" />
+              <Ed
+                path={`copy.nav.${id}`}
+                fallback={t(SECTION_LABELS[id])}
+                label="editor.inline.f.navLink"
+              />
             </a>
           ))}
           <a className="rs-btn" href={anchor('contact')} onClick={() => setOpen(false)}>
-            <Ed path="copy.header.cta" fallback="Book a Table" label="editor.inline.f.headerBtn" />
+            <Ed
+              path="copy.header.cta"
+              fallback={t('web.site.cta.book')}
+              label="editor.inline.f.headerBtn"
+            />
           </a>
         </div>
       ) : null}
@@ -238,13 +256,14 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
   const style = r.design.layout.hero
   const firstHours = r.hours[0]
   const inline = useInlineEdit()
+  const { t } = useI18n()
 
   const body = (
     <>
       <span className="rs-chip">
         <Ed
           path="copy.hero.chip"
-          fallback={`${getTemplate(r.templateId).name} template`}
+          fallback={t('web.site.hero.chipTemplate', { name: getTemplate(r.templateId).name })}
           label="editor.inline.f.chip"
         />
       </span>
@@ -263,10 +282,18 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
       />
       <div className="rs-hero__actions">
         <a className="rs-btn rs-btn--accent" href={anchor('menu')}>
-          <Ed path="copy.hero.menuCta" fallback="View the Menu" label="editor.inline.f.heroBtn" />
+          <Ed
+            path="copy.hero.menuCta"
+            fallback={t('web.site.cta.viewMenu')}
+            label="editor.inline.f.heroBtn"
+          />
         </a>
         <a className="rs-btn rs-btn--ghost" href={anchor('contact')}>
-          <Ed path="copy.hero.bookCta" fallback="Book a Table" label="editor.inline.f.heroBtn" />
+          <Ed
+            path="copy.hero.bookCta"
+            fallback={t('web.site.cta.book')}
+            label="editor.inline.f.heroBtn"
+          />
         </a>
       </div>
     </>
@@ -275,11 +302,11 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
   const hoursMeta = firstHours ? (
     <>
       <Ed path="hours.0.day" label="editor.inline.f.hours" />
-      {' Â· '}
+      {' · '}
       <Ed path="hours.0.hours" label="editor.inline.f.hours" />
     </>
   ) : (
-    <Ed path="copy.hero.hours" fallback="Open daily" label="editor.inline.f.hours" />
+    <Ed path="copy.hero.hours" fallback={t('web.site.hero.openDaily')} label="editor.inline.f.hours" />
   )
 
   if (style === 'fullscreen') {
@@ -289,10 +316,10 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
           className="rs-hero__media"
           style={{ backgroundImage: `url(${r.heroImage})` }}
           role="img"
-          aria-label={`${r.name} ambience`}
+          aria-label={t('web.site.hero.ambienceAlt', { name: r.name })}
           onClick={
             inline?.enabled
-              ? () => inline.select({ path: 'heroImage', kind: 'image', label: 'Hero photo' })
+              ? () => inline.select({ path: 'heroImage', kind: 'image', label: 'editor.inline.f.heroPhoto' })
               : undefined
           }
         />
@@ -309,10 +336,18 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
           <Ed as="p" path="tagline" className="rs-hero__lead" multiline label="editor.inline.f.heroLead" />
           <div className="rs-hero__actions">
             <a className="rs-btn rs-btn--accent" href={anchor('menu')}>
-              <Ed path="copy.hero.menuCta" fallback="View the Menu" label="editor.inline.f.heroBtn" />
+              <Ed
+                path="copy.hero.menuCta"
+                fallback={t('web.site.cta.viewMenu')}
+                label="editor.inline.f.heroBtn"
+              />
             </a>
             <a className="rs-btn rs-btn--ghost" href={anchor('contact')}>
-              <Ed path="copy.hero.bookCta" fallback="Book a Table" label="editor.inline.f.heroBtn" />
+              <Ed
+                path="copy.hero.bookCta"
+                fallback={t('web.site.cta.book')}
+                label="editor.inline.f.heroBtn"
+              />
             </a>
           </div>
           <div className="rs-hero__meta">
@@ -343,7 +378,11 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
               </span>
               <span className="rs-hero__meta-item">
                 <Icon name="star" size={15} />
-                <Ed path="copy.hero.favourite" fallback="Guest favourite" label="editor.inline.f.heroNote" />
+                <Ed
+                  path="copy.hero.favourite"
+                  fallback={t('web.site.hero.favourite')}
+                  label="editor.inline.f.heroNote"
+                />
               </span>
             </div>
           </div>
@@ -351,7 +390,7 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
             <EdImage
               path="heroImage"
               src={r.heroImage}
-              alt={`${r.name} signature dish`}
+              alt={t('web.site.hero.signatureAlt', { name: r.name })}
               eager
               label="editor.inline.f.photo"
             />
@@ -359,7 +398,7 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
               <Icon name="utensils" size={15} />
               <Ed path="name" label="editor.inline.f.name" />
               <span>
-                {' Â· '}
+                {' · '}
                 <Ed
                   path="copy.hero.chip"
                   fallback={getTemplate(r.templateId).category}
@@ -381,7 +420,7 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
           <EdImage
             path="heroImage"
             src={r.heroImage}
-            alt={`${r.name} dining room`}
+            alt={t('web.site.hero.diningAlt', { name: r.name })}
             eager
             label="editor.inline.f.photo"
           />
@@ -474,21 +513,23 @@ function Price({ item, base }: { item: MenuItem; base?: string }) {
 }
 
 function Badges({ item }: { item: MenuItem }) {
+  const { t } = useI18n()
   if (item.available && item.featured) {
     return (
-      <span className="rs-badge">Chefâ€™s pick</span>
+      <span className="rs-badge">{t('web.site.badges.chefsPick')}</span>
     )
   }
   if (item.available && item.popular) {
-    return <span className="rs-badge rs-badge--soft">Popular</span>
+    return <span className="rs-badge rs-badge--soft">{t('web.site.badges.popular')}</span>
   }
   if (!item.available) {
-    return <span className="rs-badge rs-badge--muted">Sold out</span>
+    return <span className="rs-badge rs-badge--muted">{t('web.site.badges.soldOut')}</span>
   }
   return null
 }
 
 function FeaturedSection({ r, prefix }: { r: Restaurant; prefix: string }) {
+  const { t } = useI18n()
   const items = r.menu
     .flatMap((c, ci) =>
       c.items.map((i, ii) => ({
@@ -506,15 +547,15 @@ function FeaturedSection({ r, prefix }: { r: Restaurant; prefix: string }) {
       <div className="rs-shell">
         <SectionHead
           copyKey="featured"
-          eyebrow="Chefâ€™s selection"
-          title="Featured dishes"
-          sub="The plates we would order for you, updated with every service."
+          eyebrow={t('web.site.featured.eyebrow')}
+          title={t('web.site.featured.title')}
+          sub={t('web.site.featured.sub')}
         />
         {items.length === 0 ? (
           <p className="rs-muted" style={{ fontSize: '0.95em' }}>
             <Ed
               path="copy.featured.empty"
-              fallback="No featured dishes yet â€” ask the kitchen what is good today."
+              fallback={t('web.site.featured.empty')}
               multiline
               label="editor.inline.f.note"
             />
@@ -526,7 +567,11 @@ function FeaturedSection({ r, prefix }: { r: Restaurant; prefix: string }) {
                 <div className="rs-feature-card__media">
                   <EdImage path={`${base}.image`} src={item.image} alt={item.name} label="editor.inline.f.photo" />
                   <span className="rs-feature-card__tag rs-badge">
-                    <Ed path="copy.featured.tag" fallback="Chefâ€™s pick" label="editor.inline.f.badge" />
+                    <Ed
+                      path="copy.featured.tag"
+                      fallback={t('web.site.featured.tag')}
+                      label="editor.inline.f.badge"
+                    />
                   </span>
                 </div>
                 <div className="rs-feature-card__body">
@@ -565,6 +610,7 @@ function FeaturedSection({ r, prefix }: { r: Restaurant; prefix: string }) {
 }
 
 function MenuCard({ item, base }: { item: MenuItem; base: string }) {
+  const { t } = useI18n()
   return (
     <article className={cx('rs-item', !item.available && 'rs-item--out')}>
       <div className="rs-item__media">
@@ -585,13 +631,16 @@ function MenuCard({ item, base }: { item: MenuItem; base: string }) {
           multiline
           label="editor.inline.f.dishDesc"
         />
-        {!item.available ? <span className="rs-item__out-label">Back tomorrow</span> : null}
+        {!item.available ? (
+          <span className="rs-item__out-label">{t('web.site.availability.backTomorrow')}</span>
+        ) : null}
       </div>
     </article>
   )
 }
 
 function MenuRow({ item, base }: { item: MenuItem; base: string }) {
+  const { t } = useI18n()
   return (
     <article className={cx('rs-item', !item.available && 'rs-item--out')}>
       <div className="rs-item__media">
@@ -611,7 +660,9 @@ function MenuRow({ item, base }: { item: MenuItem; base: string }) {
         />
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.15rem' }}>
           <Badges item={item} />
-          {!item.available ? <span className="rs-item__out-label">Currently unavailable</span> : null}
+          {!item.available ? (
+            <span className="rs-item__out-label">{t('web.site.availability.unavailable')}</span>
+          ) : null}
         </div>
       </div>
     </article>
@@ -619,6 +670,7 @@ function MenuRow({ item, base }: { item: MenuItem; base: string }) {
 }
 
 function MenuSection({ r, prefix }: { r: Restaurant; prefix: string }) {
+  const { t } = useI18n()
   const categories: MenuCategory[] = r.menu.filter((c) => c.items.length > 0)
   const [selected, setSelected] = useState<string | null>(null)
   const current = categories.find((c) => c.id === selected) ?? categories[0]
@@ -630,15 +682,17 @@ function MenuSection({ r, prefix }: { r: Restaurant; prefix: string }) {
       <div className="rs-shell">
         <SectionHead
           copyKey="menu"
-          eyebrow="The menu"
-          title={current ? current.name : 'Our menu'}
+          eyebrow={t('web.site.menu.eyebrow')}
+          title={current ? current.name : t('web.site.menu.noCategory')}
           titlePath={current ? `menu.${currentIndex}.name` : undefined}
-          sub={current?.note || 'Freshly prepared, served all day.'}
+          sub={current?.note || t('web.site.menu.noteFallback')}
           subPath={current ? `menu.${currentIndex}.note` : undefined}
           split
           action={
             <span className="rs-chip" style={{ alignSelf: 'flex-start' }}>
-              {r.menu.reduce((sum, c) => sum + c.items.length, 0)} dishes
+              {t('web.site.menu.dishesCount', {
+                count: r.menu.reduce((sum, c) => sum + c.items.length, 0),
+              })}
             </span>
           }
         />
@@ -654,12 +708,16 @@ function MenuSection({ r, prefix }: { r: Restaurant; prefix: string }) {
             }}
           >
             <Icon name="book" size={26} />
-            <p style={{ marginTop: '0.7rem', fontWeight: 600 }}>The menu is being updated</p>
-            <p style={{ fontSize: '0.9em' }}>Please check back in a few minutes.</p>
+            <p style={{ marginTop: '0.7rem', fontWeight: 600 }}>{t('web.site.menu.updating')}</p>
+            <p style={{ fontSize: '0.9em' }}>{t('web.site.menu.updatingSub')}</p>
           </div>
         ) : (
           <>
-            <div className="rs-menu__tabs" role="tablist" aria-label="Menu categories">
+            <div
+              className="rs-menu__tabs"
+              role="tablist"
+              aria-label={t('web.site.menu.categoriesAria')}
+            >
               {categories.map((category) => (
                 <button
                   key={category.id}
@@ -693,6 +751,7 @@ function MenuSection({ r, prefix }: { r: Restaurant; prefix: string }) {
 }
 
 function AboutSection({ r, prefix }: { r: Restaurant; prefix: string }) {
+  const { t } = useI18n()
   const dishCount = r.menu.reduce((sum, c) => sum + c.items.length, 0)
 
   return (
@@ -702,7 +761,7 @@ function AboutSection({ r, prefix }: { r: Restaurant; prefix: string }) {
           <EdImage
             path="gallery.0"
             src={r.gallery[0] ?? r.heroImage}
-            alt={`${r.name} interior`}
+            alt={t('web.site.about.interiorAlt', { name: r.name })}
             label="editor.inline.f.photo"
           />
         </figure>
@@ -710,7 +769,7 @@ function AboutSection({ r, prefix }: { r: Restaurant; prefix: string }) {
           <Ed
             as="span"
             path="copy.about.eyebrow"
-            fallback="Our story"
+            fallback={t('web.site.about.eyebrow')}
             className="rs-eyebrow"
             label="editor.inline.f.eyebrow"
           />
@@ -725,28 +784,44 @@ function AboutSection({ r, prefix }: { r: Restaurant; prefix: string }) {
           <Ed
             as="p"
             path="copy.about.body"
-            fallback="Everything is prepared in house each morning. We work with local growers, millers and roasters, and we change the menu whenever the season tells us to."
+            fallback={t('web.site.about.body')}
             className="rs-about__text"
             multiline
             label="editor.inline.f.paragraph"
           />
           <div className="rs-about__sign">
-            <Ed path="copy.about.sign" fallback="The team at" label="editor.inline.f.sign" />
+            <Ed
+              path="copy.about.sign"
+              fallback={t('web.site.about.sign')}
+              label="editor.inline.f.sign"
+            />
             {' '}
             <Ed path="name" label="editor.inline.f.name" />
           </div>
           <div className="rs-about__facts">
             <div className="rs-about__fact">
               <strong>{dishCount}</strong>
-              <Ed path="copy.about.fact1" fallback="Dishes on the menu" label="editor.inline.f.fact" />
+              <Ed
+                path="copy.about.fact1"
+                fallback={t('web.site.about.fact1')}
+                label="editor.inline.f.fact"
+              />
             </div>
             <div className="rs-about__fact">
               <strong>{r.menu.length}</strong>
-              <Ed path="copy.about.fact2" fallback="Menu sections" label="editor.inline.f.fact" />
+              <Ed
+                path="copy.about.fact2"
+                fallback={t('web.site.about.fact2')}
+                label="editor.inline.f.fact"
+              />
             </div>
             <div className="rs-about__fact">
               <strong>100%</strong>
-              <Ed path="copy.about.fact3" fallback="Made in house" label="editor.inline.f.fact" />
+              <Ed
+                path="copy.about.fact3"
+                fallback={t('web.site.about.fact3')}
+                label="editor.inline.f.fact"
+              />
             </div>
           </div>
         </div>
@@ -756,14 +831,15 @@ function AboutSection({ r, prefix }: { r: Restaurant; prefix: string }) {
 }
 
 function GallerySection({ r, prefix }: { r: Restaurant; prefix: string }) {
+  const { t } = useI18n()
   return (
     <section className="rs-section rs-gallery" id={`${prefix}rs-gallery`}>
       <div className="rs-shell">
         <SectionHead
           copyKey="gallery"
-          eyebrow="Gallery"
-          title="Inside the room"
-          sub="A look at the plates, the pass and the people behind them."
+          eyebrow={t('web.site.gallery.eyebrow')}
+          title={t('web.site.gallery.title')}
+          sub={t('web.site.gallery.sub')}
         />
         <div className="rs-gallery__grid">
           {r.gallery.map((src, index) => (
@@ -771,8 +847,8 @@ function GallerySection({ r, prefix }: { r: Restaurant; prefix: string }) {
               <EdImage
                 path={`gallery.${index}`}
                 src={src}
-                alt={`${r.name} gallery image ${index + 1}`}
-                label="Gallery photo"
+                alt={t('web.site.gallery.imageAlt', { name: r.name, index: index + 1 })}
+                label="editor.inline.f.galleryPhoto"
               />
             </div>
           ))}
@@ -783,6 +859,7 @@ function GallerySection({ r, prefix }: { r: Restaurant; prefix: string }) {
 }
 
 function HoursSection({ r, prefix }: { r: Restaurant; prefix: string }) {
+  const { t } = useI18n()
   return (
     <section className="rs-section" id={`${prefix}rs-hours`}>
       <div className="rs-shell">
@@ -804,25 +881,25 @@ function HoursSection({ r, prefix }: { r: Restaurant; prefix: string }) {
             <Ed
               as="span"
               path="copy.hours.eyebrow"
-              fallback="Opening hours"
+              fallback={t('web.site.hours.eyebrow')}
               className="rs-eyebrow"
               label="editor.inline.f.eyebrow"
             />
             <Ed
               as="h2"
               path="copy.hours.title"
-              fallback="Come hungry, leave slow."
+              fallback={t('web.site.hours.title')}
               className="rs-hours__title"
               label="editor.inline.f.title"
             />
             <Ed
               as="p"
               path="copy.hours.body"
-              fallback="The kitchen closes 30 minutes before the listed time. Walk-ins are always welcome, reservations recommended for weekends."
+              fallback={t('web.site.hours.body')}
               className="rs-muted"
               style={{ fontSize: '0.92em' }}
               multiline
-              label="Section note"
+              label="editor.inline.f.sectionNote"
             />
             <a className="rs-btn" href={`tel:${r.phone.replace(/[^+\d]/g, '')}`}>
               <Icon name="phone" size={16} />
@@ -836,10 +913,11 @@ function HoursSection({ r, prefix }: { r: Restaurant; prefix: string }) {
 }
 
 function ContactSection({ r, prefix }: { r: Restaurant; prefix: string }) {
+  const { t } = useI18n()
   const cards = [
-    { icon: 'mapPin', label: 'Find us', value: r.address, path: 'address' },
-    { icon: 'phone', label: 'Call', value: r.phone, path: 'phone' },
-    { icon: 'mail', label: 'Email', value: r.email, path: 'email' },
+    { icon: 'mapPin', label: t('web.site.contact.findUs'), value: r.address, path: 'address' },
+    { icon: 'phone', label: t('web.site.contact.call'), value: r.phone, path: 'phone' },
+    { icon: 'mail', label: t('web.site.contact.email'), value: r.email, path: 'email' },
   ]
 
   return (
@@ -847,9 +925,9 @@ function ContactSection({ r, prefix }: { r: Restaurant; prefix: string }) {
       <div className="rs-shell">
         <SectionHead
           copyKey="contact"
-          eyebrow="Contact"
-          title="Reservations & directions"
-          sub="Tables, takeaway and private dining â€” we answer within the hour during service."
+          eyebrow={t('web.site.contact.eyebrow')}
+          title={t('web.site.contact.title')}
+          sub={t('web.site.contact.sub')}
         />
         <div className="rs-contact__grid">
           <div className="rs-contact__cards">
@@ -882,7 +960,7 @@ function ContactSection({ r, prefix }: { r: Restaurant; prefix: string }) {
             </span>
             <div className="rs-map__label">
               <Icon name="globe" size={15} />
-              {r.slug}.menucraft.com <span>Â· simulated address</span>
+              {r.slug}.menucraft.com <span>· {t('web.site.contact.simulated')}</span>
             </div>
           </div>
         </div>
@@ -904,6 +982,7 @@ function SiteFooter({
   anchor: (id: string) => string
   prefix: string
 }) {
+  const { t } = useI18n()
   const year = new Date().getFullYear()
 
   return (
@@ -932,7 +1011,7 @@ function SiteFooter({
               <a href={`#${prefix}rs-top`} aria-label="Facebook">
                 <Icon name="facebook" size={16} />
               </a>
-              <a href={`#${prefix}rs-top`} aria-label="Website">
+              <a href={`#${prefix}rs-top`} aria-label={t('web.site.footer.websiteAria')}>
                 <Icon name="globe" size={16} />
               </a>
             </div>
@@ -942,14 +1021,18 @@ function SiteFooter({
             <Ed
               as="div"
               path="copy.footer.explore"
-              fallback="Explore"
+              fallback={t('web.site.footer.explore')}
               className="rs-footer__title"
               label="editor.inline.f.footerTitle"
             />
             <div className="rs-footer__links">
               {nav.map((id) => (
                 <a key={id} href={anchor(id)}>
-                  <Ed path={`copy.nav.${id}`} fallback={SECTION_LABELS[id]} label="editor.inline.f.navLink" />
+                  <Ed
+                    path={`copy.nav.${id}`}
+                    fallback={t(SECTION_LABELS[id])}
+                    label="editor.inline.f.navLink"
+                  />
                 </a>
               ))}
             </div>
@@ -959,7 +1042,7 @@ function SiteFooter({
             <Ed
               as="div"
               path="copy.footer.visit"
-              fallback="Visit"
+              fallback={t('web.site.footer.visit')}
               className="rs-footer__title"
               label="editor.inline.f.footerTitle"
             />
@@ -969,7 +1052,7 @@ function SiteFooter({
                 <Ed path="phone" label="editor.inline.f.phone" />
               </a>
               <a href={`mailto:${r.email}`}>
-                <Ed path="email" label="Email" />
+                <Ed path="email" label="editor.inline.f.email" />
               </a>
             </div>
           </div>
@@ -978,7 +1061,7 @@ function SiteFooter({
             <Ed
               as="div"
               path="copy.footer.hours"
-              fallback="Hours"
+              fallback={t('web.site.footer.hours')}
               className="rs-footer__title"
               label="editor.inline.f.footerTitle"
             />
@@ -986,7 +1069,7 @@ function SiteFooter({
               {r.hours.map((row, index) => (
                 <span key={`${row.day}-${index}`}>
                   <Ed path={`hours.${index}.day`} label="editor.inline.f.day" />
-                  {' â€” '}
+                  {' — '}
                   <Ed path={`hours.${index}.hours`} label="editor.inline.f.hours" />
                 </span>
               ))}
@@ -996,11 +1079,15 @@ function SiteFooter({
 
         <div className="rs-footer__bottom">
           <span>
-            Â© {year} <strong><Ed path="name" label="editor.inline.f.name" /></strong>
-            <Ed path="copy.footer.rights" fallback=". All rights reserved." label="editor.inline.f.note" />
+            © {year} <strong><Ed path="name" label="editor.inline.f.name" /></strong>
+            <Ed
+              path="copy.footer.rights"
+              fallback={t('web.site.footer.rights')}
+              label="editor.inline.f.note"
+            />
           </span>
           <span>
-            Published with <strong>MenuCraft</strong> Â· {r.slug}.menucraft.com
+            {t('web.site.footer.publishedWith')} <strong>MenuCraft</strong> · {r.slug}.menucraft.com
           </span>
         </div>
       </div>

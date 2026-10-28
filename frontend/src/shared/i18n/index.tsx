@@ -14,6 +14,9 @@ import { clientTabs } from './locales/ext/clientTabs'
 import { platform } from './locales/ext/platform'
 import { kitchen } from './locales/ext/kitchen'
 import { authFlow } from './locales/ext/authFlow'
+import { marketing } from './locales/ext/marketing'
+import { homePage } from './locales/ext/homePage'
+import { designUi } from './locales/ext/design'
 
 export type Lang = 'en' | 'ar' | 'ku'
 export type Dir = 'ltr' | 'rtl'
@@ -23,7 +26,10 @@ type ExtDict =
   (typeof clientTabs)['en'] &
   (typeof platform)['en'] &
   (typeof kitchen)['en'] &
-  (typeof authFlow)['en']
+  (typeof authFlow)['en'] &
+  (typeof marketing)['en'] &
+  (typeof homePage)['en'] &
+  (typeof designUi)['en']
 
 type FullDict = Dict & ExtDict
 
@@ -39,9 +45,9 @@ type DeepKeys<T> = {
 type Vars = Record<string, string | number>
 
 const dictionaries: Record<Lang, FullDict> = {
-  en: { ...en, ...clientTabs.en, ...platform.en, ...kitchen.en, ...authFlow.en },
-  ar: { ...ar, ...clientTabs.ar, ...platform.ar, ...kitchen.ar, ...authFlow.ar },
-  ku: { ...ku, ...clientTabs.ku, ...platform.ku, ...kitchen.ku, ...authFlow.ku },
+  en: { ...en, ...clientTabs.en, ...platform.en, ...kitchen.en, ...authFlow.en, ...marketing.en, ...homePage.en, ...designUi.en },
+  ar: { ...ar, ...clientTabs.ar, ...platform.ar, ...kitchen.ar, ...authFlow.ar, ...marketing.ar, ...homePage.ar, ...designUi.ar },
+  ku: { ...ku, ...clientTabs.ku, ...platform.ku, ...kitchen.ku, ...authFlow.ku, ...marketing.ku, ...homePage.ku, ...designUi.ku },
 }
 
 export const LANGS: Array<{ id: Lang; native: string; dir: Dir }> = [

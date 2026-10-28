@@ -1,0 +1,636 @@
+/**
+ * i18n extension owned by the **public marketing site** agent.
+ * Merged into the main dictionaries by `src/shared/i18n/index.tsx` — do not import elsewhere.
+ *
+ * Rules: keep `ar` and `ku` typed as `Deep<typeof en>` so every key exists in all
+ * three languages, and only add keys under your own top-level group `web`.
+ */
+type Deep<T> = { [K in keyof T]: T[K] extends string ? string : Deep<T[K]> }
+
+const en = {
+  web: {
+    customize: 'Customize',
+
+    /* ------------------------------- header ------------------------------- */
+    header: {
+      homeAria: 'MenuCraft home',
+      primaryNav: 'Primary',
+      mobileNav: 'Mobile',
+      openMenu: 'Open menu',
+      closeMenu: 'Close menu',
+      dashboardDemo: 'Open Dashboard Demo',
+    },
+
+    /* ------------------------------- footer ------------------------------- */
+    footer: {
+      tagline:
+        'Digital menu websites for restaurants, cafés and bakeries. Pick a design, make it yours, publish it — no code, no plugins, no waiting.',
+      demoOnline: 'Demo online',
+      product: 'Product',
+      demo: 'Demo',
+      visualEditor: 'Visual editor',
+      restaurantDashboard: 'Restaurant dashboard',
+      qrGenerator: 'QR code generator',
+      publishedMenu: 'Published menu',
+      allTemplates: 'All templates',
+      platformAdmin: 'Platform admin',
+      legal: '© {year} MenuCraft. Interactive product demo — all data, prices and sites are simulated.',
+      backToTop: 'Back to top',
+      madeFor: 'Made for food businesses',
+    },
+
+    /* ---------------------------- template gallery ------------------------ */
+    templates: {
+      eyebrow: 'Template gallery',
+      headlineCount: '{count} complete designs.',
+      headlineEditable: 'Every one is editable.',
+      sub: 'Each template ships with its own palette, typography, layout and sample menu. Preview it as a real scrolling site, then take it into the editor and make it yours.',
+      searchPh: 'Search “fine dining”, “dark”, “bakery”…',
+      searchAria: 'Search templates',
+      clearAria: 'Clear search',
+      resultsOf: '{shown} of {total}',
+      sortAria: 'Sort templates',
+      sortFeatured: 'Featured first',
+      sortAz: 'A → Z',
+      sortCategory: 'By category',
+      emptyTitle: 'No templates match that search',
+      emptyMsg: 'Nothing found for “{query}”. Try a broader term or clear the filters.',
+      emptyMsgCategory: 'Nothing found for “{query}” in {category}. Try a broader term or clear the filters.',
+      clearFilters: 'Clear filters',
+      badgeNew: 'New',
+      badgeFeatured: 'Featured',
+      previewAria: 'Preview {name}',
+      previewAlt: '{name} template preview',
+      sectionsCount: '{count} sections',
+      justAdded: 'just added',
+      usesCount: '{count} uses',
+      ctaEyebrow: 'Not sure yet?',
+      ctaHeadline: 'Start with any template — switching later keeps your menu.',
+      ctaSub: 'Dishes, prices, photos and contact details never change when you change the design.',
+      ctaEditor: 'Open the editor',
+      ctaDashboard: 'Go to dashboard',
+    },
+
+    /* ----------------------------- template preview ----------------------- */
+    preview: {
+      unknownEyebrow: 'Unknown template',
+      unknownTitle: 'That design isn’t on the shelf.',
+      unknownSub: 'The template you followed doesn’t exist in this demo. The gallery has all {count}.',
+      backToGallery: 'Back to the gallery',
+      backAria: 'Back to gallery',
+      inUse: 'In use',
+      desktopAria: 'Desktop preview',
+      phoneAria: 'Phone preview',
+      liveMenu: 'See a live menu',
+      barToggle: 'toggle in the bar above',
+      liveBadge: 'Live template demo',
+      scrollHint: 'Scroll inside the device',
+      layoutMeta: '{header} header · {menu} menu',
+      aboutEyebrow: 'About this design',
+      palette: 'Palette',
+      typography: 'Typography',
+      sections: 'Sections',
+      fontHeadings: '{name} — headings',
+      fontBody: '{name} — body & menu',
+      useTemplate: 'Use this template',
+      compareOthers: 'Compare others',
+      sampleTitle: 'Sample menu included',
+      sampleCounts: '{categories} categories · {dishes} dishes',
+      itemsCount: '{count} items',
+      photoTitle: 'Preview photography',
+      bundled: 'Bundled',
+      photoAlt: '{name} photo {index}',
+      photoNote:
+        'Photos ship with the project so the demo renders identically on any machine, online or off.',
+    },
+
+    /* -------------------------------- 404 --------------------------------- */
+    notFound: {
+      eyebrow: 'Error 404',
+      title: 'This table isn’t set.',
+      sub: 'The page you were looking for has been moved, renamed or never existed in this demo.',
+      browse: 'Browse templates',
+      backHome: 'Back home',
+    },
+
+    /* -------------------------- published menu demo ----------------------- */
+    demo: {
+      backDashAria: 'Back to dashboard',
+      editMenu: 'Edit menu',
+      dirtyNotice:
+        'You have unpublished changes — the public page below still shows the saved version.',
+      publishNow: 'Publish now',
+      draftNotice: 'This menu is saved as a draft. Publishing makes it the shared version.',
+      publishDemo: 'Publish demo',
+      renderedNote: 'Rendered from your saved MenuCraft configuration',
+    },
+
+    /* --------------------- published restaurant site chrome ---------------- */
+    site: {
+      sections: {
+        featured: 'Featured',
+        menu: 'Menu',
+        about: 'Our Story',
+        gallery: 'Gallery',
+        hours: 'Opening Hours',
+        contact: 'Contact',
+      },
+      header: {
+        navAria: 'Menu sections',
+        openNav: 'Open navigation',
+        closeNav: 'Close navigation',
+      },
+      cta: {
+        book: 'Book a Table',
+        viewMenu: 'View the Menu',
+      },
+      hero: {
+        chipTemplate: '{name} template',
+        openDaily: 'Open daily',
+        favourite: 'Guest favourite',
+        ambienceAlt: '{name} ambience',
+        signatureAlt: '{name} signature dish',
+        diningAlt: '{name} dining room',
+      },
+      featured: {
+        eyebrow: 'Chef’s selection',
+        title: 'Featured dishes',
+        sub: 'The plates we would order for you, updated with every service.',
+        empty: 'No featured dishes yet — ask the kitchen what is good today.',
+        tag: 'Chef’s pick',
+      },
+      badges: {
+        chefsPick: 'Chef’s pick',
+        popular: 'Popular',
+        soldOut: 'Sold out',
+      },
+      availability: {
+        backTomorrow: 'Back tomorrow',
+        unavailable: 'Currently unavailable',
+      },
+      menu: {
+        eyebrow: 'The menu',
+        noCategory: 'Our menu',
+        noteFallback: 'Freshly prepared, served all day.',
+        dishesCount: '{count} dishes',
+        updating: 'The menu is being updated',
+        updatingSub: 'Please check back in a few minutes.',
+        categoriesAria: 'Menu categories',
+      },
+      about: {
+        eyebrow: 'Our story',
+        body:
+          'Everything is prepared in house each morning. We work with local growers, millers and roasters, and we change the menu whenever the season tells us to.',
+        sign: 'The team at',
+        fact1: 'Dishes on the menu',
+        fact2: 'Menu sections',
+        fact3: 'Made in house',
+        interiorAlt: '{name} interior',
+      },
+      gallery: {
+        eyebrow: 'Gallery',
+        title: 'Inside the room',
+        sub: 'A look at the plates, the pass and the people behind them.',
+        imageAlt: '{name} gallery image {index}',
+      },
+      hours: {
+        eyebrow: 'Opening hours',
+        title: 'Come hungry, leave slow.',
+        body:
+          'The kitchen closes 30 minutes before the listed time. Walk-ins are always welcome, reservations recommended for weekends.',
+      },
+      contact: {
+        eyebrow: 'Contact',
+        title: 'Reservations & directions',
+        sub: 'Tables, takeaway and private dining — we answer within the hour during service.',
+        findUs: 'Find us',
+        call: 'Call',
+        email: 'Email',
+        simulated: 'simulated address',
+      },
+      footer: {
+        explore: 'Explore',
+        visit: 'Visit',
+        hours: 'Hours',
+        rights: '. All rights reserved.',
+        publishedWith: 'Published with',
+        websiteAria: 'Website',
+      },
+    },
+  },
+}
+
+const ar: Deep<typeof en> = {
+  web: {
+    customize: 'خصّص',
+
+    header: {
+      homeAria: 'الصفحة الرئيسية لـ MenuCraft',
+      primaryNav: 'التنقل الرئيسي',
+      mobileNav: 'قائمة الجوال',
+      openMenu: 'فتح القائمة',
+      closeMenu: 'إغلاق القائمة',
+      dashboardDemo: 'فتح لوحة التحكم التجريبية',
+    },
+
+    footer: {
+      tagline:
+        'مواقع قوائم رقمية للمطاعم والمقاهي والمخابز. اختر تصميماً، اجعله خاصاً بك، وانشره — بلا كود، بلا إضافات، بلا انتظار.',
+      demoOnline: 'الديمو مباشر',
+      product: 'المنتج',
+      demo: 'الديمو',
+      visualEditor: 'المحرر المرئي',
+      restaurantDashboard: 'لوحة تحكم المطعم',
+      qrGenerator: 'مولّد رموز QR',
+      publishedMenu: 'القائمة المنشورة',
+      allTemplates: 'كل القوالب',
+      platformAdmin: 'إدارة المنصة',
+      legal: '© {year} MenuCraft. عرض تفاعلي للمنتج — كل البيانات والأسعار والمواقع محاكاة.',
+      backToTop: 'العودة إلى الأعلى',
+      madeFor: 'صُنع للمنشآت الغذائية',
+    },
+
+    templates: {
+      eyebrow: 'معرض القوالب',
+      headlineCount: '{count} تصميماً كاملاً.',
+      headlineEditable: 'كل واحد منها قابل للتعديل.',
+      sub: 'يأتي كل قالب بألوانه وخطوطه وتخطيطه وقائمة نموذجية. عاينه كموقع حقيقي تمرّر فيه الصفحة، ثم خُذه إلى المحرر واجعله خاصاً بك.',
+      searchPh: 'ابحث في “fine dining” أو “dark” أو “bakery”…',
+      searchAria: 'البحث في القوالب',
+      clearAria: 'مسح البحث',
+      resultsOf: '{shown} من {total}',
+      sortAria: 'ترتيب القوالب',
+      sortFeatured: 'المميّزة أولاً',
+      sortAz: 'A → Z',
+      sortCategory: 'حسب الفئة',
+      emptyTitle: 'لا توجد قوالب مطابقة لبحثك',
+      emptyMsg: 'لا نتائج لـ “{query}”. جرّب كلمة أوسع أو امسح عوامل التصفية.',
+      emptyMsgCategory: 'لا نتائج لـ “{query}” ضمن {category}. جرّب كلمة أوسع أو امسح عوامل التصفية.',
+      clearFilters: 'مسح عوامل التصفية',
+      badgeNew: 'جديد',
+      badgeFeatured: 'مميّز',
+      previewAria: 'معاينة {name}',
+      previewAlt: 'معاينة قالب {name}',
+      sectionsCount: '{count} أقسام',
+      justAdded: 'أُضيف للتو',
+      usesCount: '{count} استخدام',
+      ctaEyebrow: 'لست متأكداً بعد؟',
+      ctaHeadline: 'ابدأ بأي قالب — يمكنك التبديل لاحقاً دون أن تفقد قائمتك.',
+      ctaSub: 'الأطباق والأسعار والصور وبيانات التواصل لا تتغيّر عند تغيير التصميم.',
+      ctaEditor: 'افتح المحرر',
+      ctaDashboard: 'إلى لوحة التحكم',
+    },
+
+    preview: {
+      unknownEyebrow: 'قالب غير معروف',
+      unknownTitle: 'هذا التصميم غير متوفر.',
+      unknownSub: 'القالب الذي فتحته غير موجود في هذا العرض التجريبي. المعرض يضم {count} تصميماً.',
+      backToGallery: 'العودة إلى المعرض',
+      backAria: 'العودة إلى المعرض',
+      inUse: 'قيد الاستخدام',
+      desktopAria: 'معاينة سطح المكتب',
+      phoneAria: 'معاينة الهاتف',
+      liveMenu: 'شاهد قائمة مباشرة',
+      barToggle: 'بدّل من الشريط أعلاه',
+      liveBadge: 'عرض مباشر للقالب',
+      scrollHint: 'مرّر داخل الجهاز',
+      layoutMeta: '{header} رأس · {menu} قائمة',
+      aboutEyebrow: 'عن هذا التصميم',
+      palette: 'لوحة الألوان',
+      typography: 'الخطوط',
+      sections: 'الأقسام',
+      fontHeadings: '{name} — العناوين',
+      fontBody: '{name} — النص والقائمة',
+      useTemplate: 'استخدم هذا القالب',
+      compareOthers: 'قارن بالقوالب الأخرى',
+      sampleTitle: 'قائمة نموذجية مضمّنة',
+      sampleCounts: '{categories} أقسام · {dishes} أطباق',
+      itemsCount: '{count} أصناف',
+      photoTitle: 'صور المعاينة',
+      bundled: 'مضمّنة',
+      photoAlt: 'صورة {index} لقالب {name}',
+      photoNote:
+        'الصور تُرفق مع المشروع ليظهر العرض التجريبي بنفس الشكل على أي جهاز، متصلًا كنت أو غير متصل.',
+    },
+
+    notFound: {
+      eyebrow: 'خطأ 404',
+      title: 'لم تُجهَّز هذه الطاولة.',
+      sub: 'الصفحة التي تبحث عنها نُقلت أو تغيّر اسمها أو لم تكن موجودة في هذا العرض التجريبي.',
+      browse: 'تصفّح القوالب',
+      backHome: 'العودة إلى الرئيسية',
+    },
+
+    demo: {
+      backDashAria: 'العودة إلى لوحة التحكم',
+      editMenu: 'تعديل القائمة',
+      dirtyNotice:
+        'لديك تغييرات غير منشورة — الصفحة العامة أدناه ما زالت تعرض النسخة المحفوظة.',
+      publishNow: 'انشر الآن',
+      draftNotice: 'هذه القائمة محفوظة كمسودة. النشر يجعلها النسخة المشتركة.',
+      publishDemo: 'انشر العرض',
+      renderedNote: 'يُعرض من إعدادات MenuCraft المحفوظة',
+    },
+
+    site: {
+      sections: {
+        featured: 'المميّزة',
+        menu: 'القائمة',
+        about: 'قصتنا',
+        gallery: 'معرض الصور',
+        hours: 'ساعات العمل',
+        contact: 'تواصل معنا',
+      },
+      header: {
+        navAria: 'أقسام الموقع',
+        openNav: 'فتح قائمة التنقل',
+        closeNav: 'إغلاق قائمة التنقل',
+      },
+      cta: {
+        book: 'احجز طاولة',
+        viewMenu: 'تصفّح القائمة',
+      },
+      hero: {
+        chipTemplate: 'قالب {name}',
+        openDaily: 'مفتوح يومياً',
+        favourite: 'مفضّل الضيوف',
+        ambienceAlt: 'أجواء {name}',
+        signatureAlt: 'طبق {name} المميّز',
+        diningAlt: 'قاعة طعام {name}',
+      },
+      featured: {
+        eyebrow: 'اختيار الشيف',
+        title: 'أطباق مميّزة',
+        sub: 'الأطباق التي نوصي بها لك، تُحدَّث مع كل خدمة.',
+        empty: 'لا توجد أطباق مميّزة بعد — اسأل المطبخ عمّا هو جيد اليوم.',
+        tag: 'اختيار الشيف',
+      },
+      badges: {
+        chefsPick: 'اختيار الشيف',
+        popular: 'الأكثر طلباً',
+        soldOut: 'نفدت الكمية',
+      },
+      availability: {
+        backTomorrow: 'عد غداً',
+        unavailable: 'غير متوفر حالياً',
+      },
+      menu: {
+        eyebrow: 'القائمة',
+        noCategory: 'قائمتنا',
+        noteFallback: 'يُحضَّر طازجاً ويُقدَّم طوال اليوم.',
+        dishesCount: '{count} طبقاً',
+        updating: 'القائمة قيد التحديث',
+        updatingSub: 'يرجى العودة بعد قليل.',
+        categoriesAria: 'أقسام القائمة',
+      },
+      about: {
+        eyebrow: 'قصتنا',
+        body:
+          'كل شيء يُحضَّر في المطبخ كل صباح. نعمل مع مزارعين ومطاحن ومحامص محلية، ونغيّر القائمة كلما أخبرتنا الموسم بذلك.',
+        sign: 'فريق',
+        fact1: 'طبقاً في القائمة',
+        fact2: 'قسماً في القائمة',
+        fact3: 'يُحضَّر في المطبخ',
+        interiorAlt: 'داخلية {name}',
+      },
+      gallery: {
+        eyebrow: 'معرض الصور',
+        title: 'داخل القاعة',
+        sub: 'نظرة على الأطباق والماكس والأشخاص الذين يقفون خلفها.',
+        imageAlt: 'صورة {index} لـ {name}',
+      },
+      hours: {
+        eyebrow: 'ساعات العمل',
+        title: 'اجوع، وتعشَّ ببطء.',
+        body:
+          'يُغلق المطبخ قبل الموعد المكتوب بـ 30 دقيقة. الاستقبال مفتوح دائماً للزوار، ونوصي بالحجز في نهاية الأسبوع.',
+      },
+      contact: {
+        eyebrow: 'تواصل معنا',
+        title: 'الحجوزات والاتجاهات',
+        sub: 'الطاولات والطلبات الخارجية وتجربة الطعام الخاصة — نجيب خلال ساعة أثناء الخدمة.',
+        findUs: 'موقعنا',
+        call: 'اتصل',
+        email: 'البريد الإلكتروني',
+        simulated: 'عنوان محاكى',
+      },
+      footer: {
+        explore: 'استكشف',
+        visit: 'زُرنا',
+        hours: 'ساعات العمل',
+        rights: '. جميع الحقوق محفوظة.',
+        publishedWith: 'نُشر بواسطة',
+        websiteAria: 'الموقع',
+      },
+    },
+  },
+}
+
+const ku: Deep<typeof en> = {
+  web: {
+    customize: 'دەستکاری بکە',
+
+    header: {
+      homeAria: 'سەرەتای MenuCraft',
+      primaryNav: 'ڕێنیشاندەری سەرەکی',
+      mobileNav: 'لیستی مۆبایل',
+      openMenu: 'لیستەکە بکەرەوە',
+      closeMenu: 'لیستەکە دابخە',
+      dashboardDemo: 'داشبۆردی نموونە بکەرەوە',
+    },
+
+    footer: {
+      tagline:
+        'ماڵپەڕی مینیۆی دیجیتاڵ بۆ چێشتخانە، کافە و نانەواخانەکان. دیزاینێک هەڵبژێرە، بیکە بە شتێکی خۆت و بڵاوی بکەرەوە — بێ کۆد، بێ پلۆگین، بێ چاوەڕوانی.',
+      demoOnline: 'دیمۆ چالاکە',
+      product: 'بەرهەم',
+      demo: 'دیمۆ',
+      visualEditor: 'ڕێکخەری دیداری',
+      restaurantDashboard: 'داشبۆردی چێشتخانە',
+      qrGenerator: 'دروستکەری کۆدی QR',
+      publishedMenu: 'مینیۆی بڵاوکراوە',
+      allTemplates: 'هەموو قاڵبەکان',
+      platformAdmin: 'بەڕێوەبردنی پلاتفۆرم',
+      legal: '© {year} MenuCraft. پیشاندانی تعڕی بەرهەم — هەموو داتا، نرخ و ماڵپەڕەکان سیمولەیشنن.',
+      backToTop: 'گەڕانەوە سەرەوە',
+      madeFor: 'بۆ بیزنسی خواردن دروستکراوە',
+    },
+
+    templates: {
+      eyebrow: 'گەلەری قاڵبەکان',
+      headlineCount: '{count} دیزاینی تەواو.',
+      headlineEditable: 'هەموویان دەستکاری دەکرێن.',
+      sub: 'هەر قاڵبێک لەگەڵ شێوازی ڕەنگ، فۆنت، داڕشتە و مینیۆی نموونەی خۆتی هەڵدەگرێت. وەک ماڵپەڕێکی ڕاستەقینە پێشبینی بکە، پاشان بیبە بۆ ڕێکخەرەکە و بە شتێکی خۆتی بیکە.',
+      searchPh: 'بگەڕێ بۆ “fine dining”، “dark”، “bakery”…',
+      searchAria: 'گەڕان بە قاڵبەکان',
+      clearAria: 'سڕینەوەی گەڕان',
+      resultsOf: '{shown} لە {total}',
+      sortAria: 'ڕیزکردنی قاڵبەکان',
+      sortFeatured: 'تایبەتمەندەکان یەکەم',
+      sortAz: 'A → Z',
+      sortCategory: 'پێ حەوت',
+      emptyTitle: 'هیچ قاڵبێک بە ئەم گەڕانە ناگونجێت',
+      emptyMsg: 'هیچ شتێک بۆ “{query}” نەدۆزرایەوە. وشەیەکی فراوانتر تاقی بکەرەوە یان پاڵیستەکان بسڕەوە.',
+      emptyMsgCategory:
+        'هیچ شتێک بۆ “{query}” لە {category} نەدۆزرایەوە. وشەیەکی فراوانتر تاقی بکەرەوە یان پاڵیستەکان بسڕەوە.',
+      clearFilters: 'پاڵیستەکان بسڕەوە',
+      badgeNew: 'نوێ',
+      badgeFeatured: 'تایبەتمەند',
+      previewAria: 'پێشبینینی {name}',
+      previewAlt: 'پێشبینینی قاڵبی {name}',
+      sectionsCount: '{count} بەش',
+      justAdded: 'تەنیا زیادکرا',
+      usesCount: '{count} جار بەکارهێنرا',
+      ctaEyebrow: 'هێشتا دڵنیایت؟',
+      ctaHeadline: 'لە هەر قاڵبێک دەست پێبکە — گۆڕینی دواتر مینیۆکەت لەگەڵت دەمێنێتەوە.',
+      ctaSub: 'خواردنەکان، نرخەکان، وێنەکان و زانیاری پەیوەندی هیچ کات نەگۆڕێن کاتێک دیزاینەکەت دەگۆڕیت.',
+      ctaEditor: 'ڕێکخەرەکە بکەرەوە',
+      ctaDashboard: 'بڕۆ بۆ داشبۆرد',
+    },
+
+    preview: {
+      unknownEyebrow: 'قاڵبێکی نەناسراو',
+      unknownTitle: 'ئەم دیزاینە بەردەست نییە.',
+      unknownSub: 'قاڵبەکەی بەدواداگەڕیوەت لەم دیمۆدا نییە. گەلەرییەکە {count} دیزاینی هەیە.',
+      backToGallery: 'گەڕانەوە بۆ گەلەرییەکە',
+      backAria: 'گەڕانەوە بۆ گەلەری',
+      inUse: 'لە بەکارهێناندا',
+      desktopAria: 'پێشبینینی کۆمپیوتەر',
+      phoneAria: 'پێشبینینی مۆبایل',
+      liveMenu: 'مینیۆی ڕاستەقینە ببینە',
+      barToggle: 'بە هەڵبژێرەکەی سەرەوە بگۆڕە',
+      liveBadge: 'پیشاندانی ڕاستەقینەی قاڵب',
+      scrollHint: 'لە ناو ئامێرەکەدا بگۆڕە',
+      layoutMeta: '{header} سەرەتا · {menu} مینیۆ',
+      aboutEyebrow: 'دەربارەی ئەم دیزاینە',
+      palette: 'ڕەنگەکان',
+      typography: 'فۆنتەکان',
+      sections: 'بەشەکان',
+      fontHeadings: '{name} — سەردێڕەکان',
+      fontBody: '{name} — دەق و مینیۆ',
+      useTemplate: 'ئەم قاڵبە بەکاربهێنە',
+      compareOthers: 'لەگەڵ قاڵبەکانی تر بەراورد بکە',
+      sampleTitle: 'مینیۆی نموونە لەگەڵدایە',
+      sampleCounts: '{categories} بەش · {dishes} خواردن',
+      itemsCount: '{count} خواردن',
+      photoTitle: 'وێنەکانی پێشبینین',
+      bundled: 'لەگەڵدایە',
+      photoAlt: 'وێنەی {index}ی قاڵبی {name}',
+      photoNote:
+        'وێنەکان لەگەڵ پرۆژەکە دێن تا دیمۆکە لە هەر میشینێکدا هەمان شێوە پیشان بدرێت، مەلەوان بێت یان بێ مەلەوانی.',
+    },
+
+    notFound: {
+      eyebrow: 'هەڵە 404',
+      title: 'ئەم مێزە هێشتا ڕێکنەخوردووە.',
+      sub: 'پەڕەیەکەی بەدواداگەڕیوەت گۆڕدراوە، ناوی گۆڕدراوە یان لەم دیمۆدا نەبووە.',
+      browse: 'قاڵبەکان ببینە',
+      backHome: 'گەڕانەوە بۆ سەرەتا',
+    },
+
+    demo: {
+      backDashAria: 'گەڕانەوە بۆ داشبۆرد',
+      editMenu: 'مینیۆ دەستکاری بکە',
+      dirtyNotice:
+        'گۆڕانکارییەکانت بڵاو نەکراوەتەوە — پەڕەی گشتی خوارەکە هێشتا وشەی پاشەکەوتکراو پیشان دەدات.',
+      publishNow: 'ئێستا بڵاو بکەرەوە',
+      draftNotice: 'ئەم مینیۆیە وەک پێشنویس پاشەکەوت کراوە. بڵاوکردنەوە دەکات بێتە نۆخشەی هاوبەش.',
+      publishDemo: 'دیمۆ بڵاو بکەرەوە',
+      renderedNote: 'لە ڕێکخستنی پاشەکەوتکراوی MenuCraftەوە پیشان دەدرێت',
+    },
+
+    site: {
+      sections: {
+        featured: 'تایبەتمەندەکان',
+        menu: 'مینیۆ',
+        about: 'چیرۆکەکەمان',
+        gallery: 'وێنەکان',
+        hours: 'کاتی کارکردن',
+        contact: 'پەیوەندی',
+      },
+      header: {
+        navAria: 'بەشەکانی ماڵپەڕ',
+        openNav: 'لیستی ڕێنیشاندەری بکەرەوە',
+        closeNav: 'لیستی ڕێنیشاندەری دابخە',
+      },
+      cta: {
+        book: 'مێزێک هەڵبژێرە',
+        viewMenu: 'مینیۆ ببینە',
+      },
+      hero: {
+        chipTemplate: 'قاڵبی {name}',
+        openDaily: 'هەموو ڕۆژان کراوەیە',
+        favourite: 'دڵخوازی میوانەکان',
+        ambienceAlt: 'فیزای {name}',
+        signatureAlt: 'قایمەقی تایبەتی {name}',
+        diningAlt: 'سالۆنی خواردنی {name}',
+      },
+      featured: {
+        eyebrow: 'هەڵبژێردنی سەرآشپز',
+        title: 'خواردنە تایبەتمەندەکان',
+        sub: 'ئەو خواردنانەی بۆ تۆ دەهەڵبژێرین، لە هەر خزمەتکردنێکدا نوێ دەکرێنەوە.',
+        empty: 'هێشتا هیچ خواردنێکی تایبەتمەند نییە — لە چێشتخانەکە بپرسە چی باشە ئەمڕۆ.',
+        tag: 'هەڵبژێردنی سەرآشپز',
+      },
+      badges: {
+        chefsPick: 'هەڵبژێردنی سەرآشپز',
+        popular: 'زۆر بەکارهێنراو',
+        soldOut: 'کۆگەکە تەواوە',
+      },
+      availability: {
+        backTomorrow: 'بەڕۆژی داهاتوو دەگەڕێتەوە',
+        unavailable: 'ئێستا بەردەست نییە',
+      },
+      menu: {
+        eyebrow: 'مینیۆکە',
+        noCategory: 'مینیۆکەمان',
+        noteFallback: 'تازە دروستکراوە و ڕۆژوویی بەردەستە.',
+        dishesCount: '{count} خواردن',
+        updating: 'مینیۆکە نوێ دەکرێتەوە',
+        updatingSub: 'تکایە لە چەند خولەکێکی دووەم بگەڕێوەوە.',
+        categoriesAria: 'بەشەکانی مینیۆ',
+      },
+      about: {
+        eyebrow: 'چیرۆکەکەمان',
+        body:
+          'هەموو شتێک لە بەیانییەکان لە ناو چێشتخانەکەدا دروست دەکرێت. لەگەڵ زەمینەدار و ئەردن و باگەرییە محلییەکان کار دەکەین، و مینیۆکە دەگۆڕین کاتێک موسمەکە پێی دەڵێت.',
+        sign: 'تیمی',
+        fact1: 'خواردن لە مینیۆکەدا',
+        fact2: 'بەشی مینیۆ',
+        fact3: 'لە ناو چێشتخانەکەدا دروستکراوە',
+        interiorAlt: 'دروونی {name}',
+      },
+      gallery: {
+        eyebrow: 'وێنەکان',
+        title: 'لە ناو سالۆنەکەدا',
+        sub: 'لەبینینی خواردنەکان، پاسەکە و کەسانەکەی لە پاشیان دایە.',
+        imageAlt: 'وێنەی {index}ی {name}',
+      },
+      hours: {
+        eyebrow: 'کاتی کارکردن',
+        title: 'برسی بێنە، بە هێست بڕۆ.',
+        body:
+          'چێشتخانەکە ٣٠ خولەک پێش کاتی نووسراو دادەخێت. میوانڕێگا هەموو کات دەستگیرە، بۆ کۆتایی هەفتە ڕەتسەڕین پێشنیار کراوە.',
+      },
+      contact: {
+        eyebrow: 'پەیوەندی',
+        title: 'ڕەتسەڕین و ڕێگا',
+        sub: 'مێز، دەرکەش و خواردنی تایبەت — لە کاتی خزمەتکردندا لە ناو کاتژمێرێک دەوڵەبکەین.',
+        findUs: 'شوێنەکەمان بەدۆزەوە',
+        call: 'پەیوەندی بکە',
+        email: 'ئیمەیڵ',
+        simulated: 'ناونیشانی سیمولەیشن',
+      },
+      footer: {
+        explore: 'بەشەکان',
+        visit: 'سەردانمان بکە',
+        hours: 'کاتی کارکردن',
+        rights: '. هەموو مافەکان پارێزراون.',
+        publishedWith: 'بڵاوکراوەتەوە بە',
+        websiteAria: 'ماڵپەڕ',
+      },
+    },
+  },
+}
+
+export const marketing = { en, ar, ku }

@@ -4,6 +4,7 @@ import { Button, Modal } from '../../../shared/ui/ui.tsx'
 import { Icon } from '../../../shared/ui/icons.tsx'
 import { cx } from '../../../shared/lib/utils.ts'
 import { IMAGE_LIBRARY } from '../../../shared/lib/images.ts'
+import { FONTS, fontName, fontStack } from '../../../templates/data/fonts.ts'
 import type { ActiveField } from '../../../templates/editor/inlineEdit.tsx'
 import type { InlineTextStyle } from '../../../shared/lib/types.ts'
 
@@ -56,6 +57,8 @@ export function InlineToolbar({
   const currentSize = style?.fontSize
   const sizeIndex = Math.max(0, SIZES.indexOf(currentSize ?? ''))
   const weight = style?.fontWeight ?? 400
+  /** `undefined` → the template's own typeface (no per-element override) */
+  const currentFont = style?.fontFamily
 
   /* keeps focus (and the caret) inside the contentEditable while tapping */
   const hold = (event: ReactMouseEvent) => event.preventDefault()
@@ -123,11 +126,11 @@ export function InlineToolbar({
                 </button>
               </div>
 
-              {/* colour */}
+              {/* colour — de-duplicated: palettes may repeat a hex (e.g. button = primary) */}
               <div className="flex items-center gap-1.5 rounded-full border border-sand bg-cream px-2 py-1.5">
-                {colors.map((color) => (
+                {[...new Set(colors)].map((color, i) => (
                   <button
-                    key={color}
+                    key={`${color}-${i}`}
                     type="button"
                     onMouseDown={hold}
                     onClick={() => onStyle(field.path, { color })}
@@ -184,6 +187,52 @@ export function InlineToolbar({
                 <Icon name="refresh" size={13} />
                 {t('editor.inline.reset')}
               </button>
+
+              {/* font family — full-width pill row, each name shown in its own typeface */}
+              <div className="w-full">
+                <div className="mb-1.5 text-[12px] font-medium text-umber">
+                  {t('editor.inline.f.fontFamily')}
+                </div>
+                <div className="no-scrollbar flex gap-1.5 overflow-x-auto">
+                  <button
+                    type="button"
+                    onMouseDown={hold}
+                    onClick={() => onStyle(field.path, { fontFamily: undefined })}
+                    className={cx(
+                      'flex h-8 shrink-0 items-center rounded-full border px-3 text-[12.5px] transition',
+                      currentFont
+                        ? 'border-sand bg-cream text-umber hover:bg-white'
+                        : 'border-charcoal bg-charcoal text-ivory'
+                    )}
+                    aria-label={`${t('editor.inline.f.fontFamily')}: ${t('editor.inline.fontDefault')}`}
+                    aria-pressed={!currentFont}
+                  >
+                    {t('editor.inline.fontDefault')}
+                  </button>
+                  {FONTS.map((font) => {
+                    const active = currentFont === font.id
+                    return (
+                      <button
+                        key={font.id}
+                        type="button"
+                        onMouseDown={hold}
+                        onClick={() => onStyle(field.path, { fontFamily: font.id })}
+                        className={cx(
+                          'flex h-8 shrink-0 items-center rounded-full border px-3 text-[12.5px] transition',
+                          active
+                            ? 'border-charcoal bg-charcoal text-ivory'
+                            : 'border-sand bg-cream text-umber hover:bg-white'
+                        )}
+                        style={{ fontFamily: fontStack(font.id) }}
+                        aria-label={`${t('editor.inline.f.fontFamily')}: ${fontName(font.id)}`}
+                        aria-pressed={active}
+                      >
+                        {font.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </div>

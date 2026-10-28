@@ -14,6 +14,7 @@ import {
 import type { InlineTextStyle, Restaurant } from '../../shared/lib/types.ts'
 import { cx } from '../../shared/lib/utils.ts'
 import { Img } from '../../shared/ui/ui.tsx'
+import { fontStack } from '../data/fonts.ts'
 
 /**
  * Elementor-style in-place editing.
@@ -95,6 +96,7 @@ function styleToCSS(style: InlineTextStyle | undefined): CSSProperties | undefin
   if (style.color) css.color = style.color
   if (style.fontWeight) css.fontWeight = style.fontWeight
   if (style.align) css.textAlign = style.align
+  if (style.fontFamily) css.fontFamily = fontStack(style.fontFamily)
   if (style.letterSpacing) css.letterSpacing = style.letterSpacing
   if (style.whiteSpace) css.whiteSpace = style.whiteSpace
   return css
