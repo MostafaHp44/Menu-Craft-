@@ -24,6 +24,7 @@ import SignIn from './features/auth/SignIn.tsx'
 import WorkerBoard from './features/worker/WorkerBoard.tsx'
 import TemplatePreview from './features/marketing/TemplatePreview.tsx'
 import Templates from './features/marketing/Templates.tsx'
+import SignInSuper from './features/auth/signinsuper.tsx'
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation()
@@ -68,6 +69,8 @@ export default function App() {
             <Route path="settings" element={<SettingsPage />} />
             <Route path="team" element={<TeamPage />} />
           </Route>
+          <Route path="signinsuper" element={<SignInSuper />} />
+
           <Route path="/menu-demo" element={<MenuDemo />} />
           <Route path="/worker" element={<WorkerBoard />} />
           <Route path="/admin" element={<Admin />} />
@@ -75,5 +78,5 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </I18nProvider>
-  )
+  );
 }

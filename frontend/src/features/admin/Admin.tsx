@@ -1,4 +1,4 @@
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useI18n } from '../../shared/i18n'
 import type { TKey } from '../../shared/i18n'
@@ -75,9 +75,11 @@ export default function Admin() {
           <Wordmark tone="light" markSize={30} />
           <span className="hidden h-5 w-px bg-white/12 sm:block" />
           <div className="hidden leading-tight sm:block">
-            <div className="text-[13px] font-semibold text-ivory">{t('admin.title')}</div>
+            <div className="text-[13px] font-semibold text-ivory">
+              {t("admin.title")}
+            </div>
             <div className="text-[11px] uppercase tracking-[0.16em] text-ivory/40">
-              {t('platformMore.demoBadge')}
+              {t("platformMore.demoBadge")}
             </div>
           </div>
 
@@ -92,7 +94,7 @@ export default function Admin() {
             ) : null}
             <LanguageSwitcher tone="dark" />
             <Button to="/dashboard" size="sm" variant="light" icon="home">
-              {t('nav.dashboard')}
+              {t("nav.dashboard")}
             </Button>
             <Button
               size="sm"
@@ -100,10 +102,10 @@ export default function Admin() {
               icon="logout"
               className="max-sm:gap-0"
               onClick={handleSignOut}
-              aria-label={t('dashboard.signOut')}
-              title={t('dashboard.signOut')}
+              aria-label={t("dashboard.signOut")}
+              title={t("dashboard.signOut")}
             >
-              <span className="hidden sm:inline">{t('dashboard.signOut')}</span>
+              <span className="hidden sm:inline">{t("dashboard.signOut")}</span>
             </Button>
           </div>
         </div>
@@ -113,11 +115,11 @@ export default function Admin() {
             <div className="mx-auto max-w-[1280px] overflow-x-auto px-5 py-2.5 thin-scroll">
               <div
                 role="tablist"
-                aria-label={t('platformMore.tabsLabel')}
+                aria-label={t("platformMore.tabsLabel")}
                 className="flex w-max min-w-full items-center gap-1.5 rounded-full border border-white/10 bg-smoke p-1.5"
               >
                 {tabs.map((tab) => {
-                  const active = tab.id === activeId
+                  const active = tab.id === activeId;
                   return (
                     <button
                       key={tab.id}
@@ -126,16 +128,16 @@ export default function Admin() {
                       aria-selected={active}
                       onClick={() => goTab(tab.id)}
                       className={cx(
-                        'inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full px-4 text-[13px] font-medium transition',
+                        "inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full px-4 text-[13px] font-medium transition",
                         active
-                          ? 'bg-flame text-white shadow-[0_10px_22px_-14px_rgba(232,87,31,0.9)]'
-                          : 'text-ivory/60 hover:bg-white/8 hover:text-ivory'
+                          ? "bg-flame text-white shadow-[0_10px_22px_-14px_rgba(232,87,31,0.9)]"
+                          : "text-ivory/60 hover:bg-white/8 hover:text-ivory",
                       )}
                     >
                       <Icon name={tab.icon} size={15} />
                       {t(tab.labelKey)}
                     </button>
-                  )
+                  );
                 })}
               </div>
             </div>
@@ -151,22 +153,30 @@ export default function Admin() {
               <Icon name="settings" size={22} />
             </span>
             <h2 className="display-serif mt-4 text-[22px] leading-tight text-ivory">
-              {t('platformMore.access.signInTitle')}
+              {t("platformMore.access.signInTitle")}
             </h2>
             <p className="mx-auto mt-2 max-w-md text-[13.5px] leading-relaxed text-ivory/60">
-              {authorized ? t('platformMore.access.noPermissions') : t('platformMore.access.signInSub')}
+              {authorized
+                ? t("platformMore.access.noPermissions")
+                : t("platformMore.access.signInSub")}
             </p>
             <div className="mt-5 flex justify-center">
-              <Button variant="accent" icon="logout" onClick={() => signInAs('super_admin')}>
-                {t('platformMore.access.signInSuper')}
-              </Button>
+              <Link to="/signinsuper" className="mr-2">
+                <Button
+                  variant="accent"
+                  icon="logout"
+                  onClick={() => signInAs("super_admin")}
+                >
+                  {t("platformMore.access.signInSuper")}
+                </Button>
+              </Link>
             </div>
           </Panel>
         ) : (
           <>
-            {session?.role === 'admin' ? (
+            {session?.role === "admin" ? (
               <div className="mb-5">
-                <DemoNote>{t('platformMore.access.restrictedNote')}</DemoNote>
+                <DemoNote>{t("platformMore.access.restrictedNote")}</DemoNote>
               </div>
             ) : null}
 
@@ -176,17 +186,19 @@ export default function Admin() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.22, ease: 'easeOut' }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
               >
-                {activeId === 'clients' ? (
-                  <ClientsTab onOpenSales={(id) => goTab('sales', id)} />
+                {activeId === "clients" ? (
+                  <ClientsTab onOpenSales={(id) => goTab("sales", id)} />
                 ) : null}
-                {activeId === 'subscriptions' ? <SubscriptionsTab /> : null}
-                {activeId === 'sales' ? <SalesTab focusClientId={focusClientId} /> : null}
-                {activeId === 'templates' ? <TemplatesTab /> : null}
-                {activeId === 'home' ? <HomeTab /> : null}
-                {activeId === 'team' ? <TeamTab /> : null}
-                {activeId === 'payments' ? <PaymentsTab /> : null}
+                {activeId === "subscriptions" ? <SubscriptionsTab /> : null}
+                {activeId === "sales" ? (
+                  <SalesTab focusClientId={focusClientId} />
+                ) : null}
+                {activeId === "templates" ? <TemplatesTab /> : null}
+                {activeId === "home" ? <HomeTab /> : null}
+                {activeId === "team" ? <TeamTab /> : null}
+                {activeId === "payments" ? <PaymentsTab /> : null}
               </motion.div>
             </AnimatePresence>
           </>
@@ -194,8 +206,8 @@ export default function Admin() {
       </main>
 
       <footer className="border-t border-white/8 px-5 py-6 text-center text-[12px] text-ivory/40">
-        {t('platformMore.footerNote')}
+        {t("platformMore.footerNote")}
       </footer>
     </div>
-  )
+  );
 }
