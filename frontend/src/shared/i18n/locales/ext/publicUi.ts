@@ -1,0 +1,283 @@
+/**
+ * i18n extension owned by the **public guest site (Phase 1 Task 01)** build pass.
+ * Merged into the main dictionaries by `src/shared/i18n/index.tsx` — do not import elsewhere.
+ *
+ * Rules: keep `ar` and `ku` typed as `Deep<typeof en>` so every key exists in all
+ * three languages, and only add keys under your own top-level group `publicUi`.
+ */
+type Deep<T> = { [K in keyof T]: T[K] extends string ? string : Deep<T[K]> }
+
+const en = {
+  publicUi: {
+    /* --------------------------- loading / states -------------------------- */
+    loading: 'Loading…',
+    notFoundTitle: 'Site not found',
+    notFoundSub: 'This restaurant menu is not published.',
+    loadError: 'Something went wrong loading this menu.',
+    retry: 'Retry',
+
+    /* ------------------------------ header --------------------------------- */
+    cartBtn: 'Cart',
+    brandTag: 'Digital Menu',
+    languageAria: 'Change language',
+
+    /*--------------------------- branches / ordering ------------------------ */
+    branchLabel: 'Branch',
+    branchDefault: 'Main branch',
+    branchClosed: 'Not accepting orders',
+    branchClosedNote: 'This branch is not accepting orders right now. You can still browse the menu.',
+    orderingClosed: 'Online ordering is currently closed for this restaurant.',
+    orderHere: 'Order here',
+
+    /* ------------------------------ menu ----------------------------------- */
+    featured: 'Featured',
+    allCategories: 'All',
+    dishesCount: '{count} dishes',
+    menuUpdating: 'Menu is being updated',
+    menuUpdatingSub: 'Please check back soon.',
+    soldOut: 'Sold out',
+    add: 'Add',
+    added: 'Added',
+    addToCart: 'Add to cart',
+
+    /* --------------------------- customization ----------------------------- */
+    customize: 'Customize',
+    customizeSub: 'Select your options',
+    requiredTag: 'Required',
+    optionalTag: 'Optional',
+    confirmAdd: 'Add to cart',
+    noteLabel: 'Special requests',
+    notePh: 'Allergies, cooking preference…',
+
+    /* ------------------------------- cart ---------------------------------- */
+    cartTitle: 'Your cart',
+    cartEmpty: 'Your cart is empty',
+    cartEmptySub: 'Browse the menu and add dishes.',
+    browseMenu: 'Browse menu',
+    checkoutBtn: 'Checkout',
+    quantity: 'Quantity',
+    remove: 'Remove',
+    subtotalLabel: 'Subtotal',
+    deliveryFeeLabel: 'Delivery fee',
+    totalLabel: 'Total',
+    minOrderNote: 'Minimum order is {min} {currency}',
+    orderFromOtherTitle: 'Replace cart?',
+    orderFromOtherNote: 'Your cart has items from another restaurant ({name}). Ordering here replaces it.',
+
+    /* ----------------------------- checkout -------------------------------- */
+    checkoutTitle: 'Checkout',
+    nameLabel: 'Name',
+    namePh: 'Your name',
+    phoneLabel: 'Phone',
+    phonePh: 'Your phone number',
+    fulfillmentLabel: 'How do you want your order?',
+    delivery: 'Delivery',
+    pickup: 'Pickup',
+    dinein: 'Dine-in',
+    tableLabel: 'Table number',
+    addressLabel: 'Delivery address',
+    addressPh: 'Street, building, apartment…',
+    orderNoteLabel: 'Order note',
+    payLabel: 'Payment method',
+    placeOrder: 'Place order',
+    placing: 'Placing your order…',
+    paymentMethodUnavailable: 'This payment method is not available.',
+    orderFailed: 'Could not place the order',
+
+    /* ------------------------------ success -------------------------------- */
+    orderConfirmed: 'Order confirmed',
+    orderNumber: 'Order #{number}',
+    totalPaid: 'Total',
+    trackOrder: 'Track your order',
+    thanksNote: 'Thank you! The restaurant received your order.',
+
+    /* ----------------------------- tracking -------------------------------- */
+    trackingTitle: 'Track order',
+    statusPending: 'Pending — waiting for the restaurant to confirm',
+    statusConfirmed: 'Confirmed',
+    statusPreparing: 'Being prepared',
+    statusReady: 'Ready',
+    statusCompleted: 'Completed',
+    statusCancelled: 'Cancelled',
+    needToken: 'Open tracking from your order confirmation link.',
+    footerPowered: 'Powered by',
+  },
+}
+
+const ar: Deep<typeof en> = {
+  publicUi: {
+    loading: 'جارٍ التحميل…',
+    notFoundTitle: 'لم يُعثر على الموقع',
+    notFoundSub: 'منيو هذا المطعم غير منشور.',
+    loadError: 'حدث خطأ أثناء تحميل المنيو.',
+    retry: 'إعادة المحاولة',
+
+    cartBtn: 'السلة',
+    brandTag: 'Digital Menu',
+    languageAria: 'تغيير اللغة',
+
+    branchLabel: 'الفرع',
+    branchDefault: 'الفرع الرئيسي',
+    branchClosed: 'لا يقبل الطلبات',
+    branchClosedNote: 'هذا الفرع لا يقبل الطلبات حاليًا. يمكنك تصفح المنيو فقط.',
+    orderingClosed: 'الطلب الإلكتروني مغلق حاليًا لهذا المطعم.',
+    orderHere: 'اطلب من هنا',
+
+    featured: 'الأكثر طلبًا',
+    allCategories: 'الكل',
+    dishesCount: '{count} أطباق',
+    menuUpdating: 'يتم تحديث المنيو',
+    menuUpdatingSub: 'عد قريبًا من فضلك.',
+    soldOut: 'نفد',
+    add: 'أضف',
+    added: 'تم',
+    addToCart: 'أضف إلى السلة',
+
+    customize: 'تخصيص الطلب',
+    customizeSub: 'اختر إضافاتك',
+    requiredTag: 'إلزامي',
+    optionalTag: 'اختياري',
+    confirmAdd: 'أضف إلى السلة',
+    noteLabel: 'طلبات خاصة',
+    notePh: 'حساسية، درجة الطهي…',
+
+    cartTitle: 'سلتك',
+    cartEmpty: 'سلتك فارغة',
+    cartEmptySub: 'تصفح المنيو وأضف الأطباق.',
+    browseMenu: 'تصفح المنيو',
+    checkoutBtn: 'إتمام الطلب',
+    quantity: 'الكمية',
+    remove: 'إزالة',
+    subtotalLabel: 'المجموع',
+    deliveryFeeLabel: 'رسوم التوصيل',
+    totalLabel: 'الإجمالي',
+    minOrderNote: 'الحد الأدنى للطلب {min} {currency}',
+    orderFromOtherTitle: 'استبدال السلة؟',
+    orderFromOtherNote: 'سلتك فيها منتجات من مطعم آخر ({name}). الطلب من هنا يستبدلها.',
+
+    checkoutTitle: 'إتمام الطلب',
+    nameLabel: 'الاسم',
+    namePh: 'اسمك',
+    phoneLabel: 'رقم الهاتف',
+    phonePh: 'رقم هاتفك',
+    fulfillmentLabel: 'كيف تحب طلبك؟',
+    delivery: 'توصيل',
+    pickup: 'استلام من المطعم',
+    dinein: 'في المطعم',
+    tableLabel: 'رقم الطاولة',
+    addressLabel: 'عنوان التوصيل',
+    addressPh: 'الشارع، البناية، الشقة…',
+    orderNoteLabel: 'ملاحظة على الطلب',
+    payLabel: 'وسيلة الدفع',
+    placeOrder: 'أرسل الطلب',
+    placing: 'نرسل طلبك…',
+    paymentMethodUnavailable: 'وسيلة الدفع هذه غير متاحة.',
+    orderFailed: 'تعذر إرسال الطلب',
+
+    orderConfirmed: 'تم تأكيد طلبك',
+    orderNumber: 'طلب #{number}',
+    totalPaid: 'الإجمالي',
+    trackOrder: 'تتبع طلبك',
+    thanksNote: 'شكرًا لك! وصلكم طلبك للمطعم.',
+
+    trackingTitle: 'تتبع الطلب',
+    statusPending: 'بانتظار تأكيد المطعم',
+    statusConfirmed: 'تم التأكيد',
+    statusPreparing: 'قيد التحضير',
+    statusReady: 'جاهز',
+    statusCompleted: 'اكتمل',
+    statusCancelled: 'ملغى',
+    needToken: 'افتح صفحة التتبع من رابط تأكيد طلبك.',
+    footerPowered: 'مشغّل بواسطة',
+  },
+}
+
+const ku: Deep<typeof en> = {
+  publicUi: {
+    loading: 'بارگيرانی دەکرێت…',
+    notFoundTitle: 'ماڵپەر پەیدا نەکرا',
+    notFoundSub: 'مێنیووی ئەم چێشتخانەیە بڵاو نەکراوە.',
+    loadError: 'کێشەیەک لە بارگيرکردنی مێنیوودا ڕوویدا.',
+    retry: 'دووبارە هەوڵبدە',
+
+    cartBtn: 'بحث',
+    brandTag: 'Digital Menu',
+    languageAria: 'گۆڕینی زمان',
+
+    branchLabel: 'لقی',
+    branchDefault: 'لقی سەرەکی',
+    branchClosed: 'پێداویستی ناگێریت',
+    branchClosedNote: 'ئەم لقە ئێستا پێداویستی ناگێریت. دەتوانیت مێنیوو ببینیت.',
+    orderingClosed: 'داواکردنی ئۆنلێن لە چێشتخانە دادەکات.',
+    orderHere: 'لێرە دابەنێ',
+
+    featured: 'زۆرترین داوە',
+    allCategories: 'هەموو',
+    dishesCount: '{count} خواردن',
+    menuUpdating: 'مێنیوو نوێ دەکرێت',
+    menuUpdatingSub: 'کاتێکی تر بگەرەوە.',
+    soldOut: 'نەماوە',
+    add: 'زیادبکە',
+    added: 'کرا',
+    addToCart: 'بحث زیادبکە',
+
+    customize: 'خۆ ماستکردن',
+    customizeSub: 'ئەوە هەلبدات بژێری',
+    requiredTag: 'پێویست',
+    optionalTag: 'خەتیاری',
+    confirmAdd: 'بحث زیادبکە',
+    noteLabel: 'داواکاری تایبەت',
+    notePh: 'هەرژرسی، شێوازی چێشت…',
+
+    cartTitle: 'بەرز کردن',
+    cartEmpty: 'بحثکەت بەتاڵە',
+    cartEmptySub: 'مێنیوو ببینە و خواردنەکان زیادبکە.',
+    browseMenu: 'مێنیوو ببینە',
+    checkoutBtn: 'تەواوکردنی داوا',
+    quantity: 'بەرز',
+    remove: 'دەرهێنان',
+    subtotalLabel: 'کۆی گشتی',
+    deliveryFeeLabel: 'کرێی گەنجوپێ',
+    totalLabel: 'گشتی',
+    minOrderNote: 'کەمترین داوا {min} {currency} ئەوەی',
+    orderFromOtherTitle: 'گۆڕینی بحث؟',
+    orderFromOtherNote: 'بحثەکەت پڕە لە توخم چێشتخانەیەکی تر ({name}). داواکردن لێرە دهگۆڕێت.',
+
+    checkoutTitle: 'تەواوکردنی داوا',
+    nameLabel: 'ناو',
+    namePh: 'ناوی خۆت',
+    phoneLabel: 'ژمارەی مۆبایل',
+    phonePh: 'ژمارەی مۆبایلی خۆت',
+    fulfillmentLabel: 'داواکەت چۆنی؟',
+    delivery: 'گەنجوپێکردن',
+    pickup: 'وەگرتن',
+    dinein: 'لە ناو چێشتخانە',
+    tableLabel: 'ژمارەی مێز',
+    addressLabel: 'ناونیشانی گەنجوپێ',
+    addressPh: 'سیمەنان، باو..., لەبەر...',
+    orderNoteLabel: 'تێبینی داوا',
+    payLabel: 'ڕێگای پارەدان',
+    placeOrder: 'داوا بنێرە',
+    placing: 'داوا بۆماوەیە…',
+    paymentMethodUnavailable: 'ئەم ڕێگای پارەدانە بەردەست نییە.',
+    orderFailed: 'داوا نەدانرا',
+
+    orderConfirmed: 'داوا پەسەند کرا',
+    orderNumber: 'داوا #{number}',
+    totalPaid: 'گشتی',
+    trackOrder: 'داواکە ببینە',
+    thanksNote: 'سوپاس! داواکەت گەیشت بۆ چێشتخانە.',
+
+    trackingTitle: 'بەدواداچوونی داوا',
+    statusPending: 'چاوەرمکی پەسەندکردنی چێشتخانە',
+    statusConfirmed: 'پەسەند کرا',
+    statusPreparing: 'ئامادەکردن',
+    statusReady: 'ئامادەیی',
+    statusCompleted: 'تەواو',
+    statusCancelled: 'هەڵوەشاوە',
+    needToken: 'لە ڕێگای پەسەندکردنی داوا ئەو ژمارە بتصفح.',
+    footerPowered: 'کارگە هێزکرا لە',
+  },
+}
+
+export const publicUi = { en, ar, ku }

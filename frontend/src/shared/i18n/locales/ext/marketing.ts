@@ -13,7 +13,7 @@ const en = {
 
     /* ------------------------------- header ------------------------------- */
     header: {
-      homeAria: 'MenuCraft home',
+      homeAria: 'Digital Menu home',
       primaryNav: 'Primary',
       mobileNav: 'Mobile',
       openMenu: 'Open menu',
@@ -34,7 +34,7 @@ const en = {
       publishedMenu: 'Published menu',
       allTemplates: 'All templates',
       platformAdmin: 'Platform admin',
-      legal: '© {year} MenuCraft. Interactive product demo — all data, prices and sites are simulated.',
+      legal: '© {year} Digital Menu. Interactive product demo — all data, prices and sites are simulated.',
       backToTop: 'Back to top',
       madeFor: 'Made for food businesses',
     },
@@ -122,11 +122,12 @@ const en = {
       publishNow: 'Publish now',
       draftNotice: 'This menu is saved as a draft. Publishing makes it the shared version.',
       publishDemo: 'Publish demo',
-      renderedNote: 'Rendered from your saved MenuCraft configuration',
+      renderedNote: 'Rendered from your saved Digital Menu configuration',
     },
 
     /* --------------------- published restaurant site chrome ---------------- */
     site: {
+      cart: 'Cart',
       sections: {
         featured: 'Featured',
         menu: 'Menu',
@@ -176,6 +177,7 @@ const en = {
         updating: 'The menu is being updated',
         updatingSub: 'Please check back in a few minutes.',
         categoriesAria: 'Menu categories',
+        add: 'Add to cart',
       },
       about: {
         eyebrow: 'Our story',
@@ -225,7 +227,7 @@ const ar: Deep<typeof en> = {
     customize: 'خصّص',
 
     header: {
-      homeAria: 'الصفحة الرئيسية لـ MenuCraft',
+      homeAria: 'الصفحة الرئيسية لـ Digital Menu',
       primaryNav: 'التنقل الرئيسي',
       mobileNav: 'قائمة الجوال',
       openMenu: 'فتح القائمة',
@@ -245,7 +247,7 @@ const ar: Deep<typeof en> = {
       publishedMenu: 'القائمة المنشورة',
       allTemplates: 'كل القوالب',
       platformAdmin: 'إدارة المنصة',
-      legal: '© {year} MenuCraft. عرض تفاعلي للمنتج — كل البيانات والأسعار والمواقع محاكاة.',
+      legal: '© {year} Digital Menu. عرض تفاعلي للمنتج — كل البيانات والأسعار والمواقع محاكاة.',
       backToTop: 'العودة إلى الأعلى',
       madeFor: 'صُنع للمنشآت الغذائية',
     },
@@ -329,10 +331,11 @@ const ar: Deep<typeof en> = {
       publishNow: 'انشر الآن',
       draftNotice: 'هذه القائمة محفوظة كمسودة. النشر يجعلها النسخة المشتركة.',
       publishDemo: 'انشر العرض',
-      renderedNote: 'يُعرض من إعدادات MenuCraft المحفوظة',
+      renderedNote: 'يُعرض من إعدادات Digital Menu المحفوظة',
     },
 
     site: {
+      cart: 'السلة',
       sections: {
         featured: 'المميّزة',
         menu: 'القائمة',
@@ -382,6 +385,7 @@ const ar: Deep<typeof en> = {
         updating: 'القائمة قيد التحديث',
         updatingSub: 'يرجى العودة بعد قليل.',
         categoriesAria: 'أقسام القائمة',
+        add: 'أضف إلى السلة',
       },
       about: {
         eyebrow: 'قصتنا',
@@ -431,7 +435,7 @@ const ku: Deep<typeof en> = {
     customize: 'دەستکاری بکە',
 
     header: {
-      homeAria: 'سەرەتای MenuCraft',
+      homeAria: 'سەرەتای Digital Menu',
       primaryNav: 'ڕێنیشاندەری سەرەکی',
       mobileNav: 'لیستی مۆبایل',
       openMenu: 'لیستەکە بکەرەوە',
@@ -451,7 +455,7 @@ const ku: Deep<typeof en> = {
       publishedMenu: 'مینیۆی بڵاوکراوە',
       allTemplates: 'هەموو قاڵبەکان',
       platformAdmin: 'بەڕێوەبردنی پلاتفۆرم',
-      legal: '© {year} MenuCraft. پیشاندانی تعڕی بەرهەم — هەموو داتا، نرخ و ماڵپەڕەکان سیمولەیشنن.',
+      legal: '© {year} Digital Menu. پیشاندانی تعڕی بەرهەم — هەموو داتا، نرخ و ماڵپەڕەکان سیمولەیشنن.',
       backToTop: 'گەڕانەوە سەرەوە',
       madeFor: 'بۆ بیزنسی خواردن دروستکراوە',
     },
@@ -536,10 +540,11 @@ const ku: Deep<typeof en> = {
       publishNow: 'ئێستا بڵاو بکەرەوە',
       draftNotice: 'ئەم مینیۆیە وەک پێشنویس پاشەکەوت کراوە. بڵاوکردنەوە دەکات بێتە نۆخشەی هاوبەش.',
       publishDemo: 'دیمۆ بڵاو بکەرەوە',
-      renderedNote: 'لە ڕێکخستنی پاشەکەوتکراوی MenuCraftەوە پیشان دەدرێت',
+      renderedNote: 'لە ڕێکخستنی پاشەکەوتکراوی Digital Menuەوە پیشان دەدرێت',
     },
 
     site: {
+      cart: 'سەبەتەکە',
       sections: {
         featured: 'تایبەتمەندەکان',
         menu: 'مینیۆ',
@@ -589,6 +594,7 @@ const ku: Deep<typeof en> = {
         updating: 'مینیۆکە نوێ دەکرێتەوە',
         updatingSub: 'تکایە لە چەند خولەکێکی دووەم بگەڕێوەوە.',
         categoriesAria: 'بەشەکانی مینیۆ',
+        add: 'زیاد بکە',
       },
       about: {
         eyebrow: 'چیرۆکەکەمان',

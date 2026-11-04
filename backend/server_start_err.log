@@ -1,0 +1,2 @@
+(node:31376) [FSTWRN002] FastifyWarning: The D:\MBN Group\Test Menu\backend\src\routes\platformAdminData.routes.js plugin being registered mixes async and callback styles, which will result in an error in `fastify@5`
+(Use `node --trace-warnings ...` to show where the warning was created)

@@ -1,107 +1,83 @@
-import { useI18n } from '../../../shared/i18n'
+import { useMemo, useState } from 'react'
+import { Input, Badge } from '../../../shared/ui/ui.tsx'
+import { DarkEmpty, Panel, PanelHeading } from '../parts.tsx'
+import { useAdminData } from '../useAdminData.ts'
 import { Icon } from '../../../shared/ui/icons.tsx'
-import { Badge } from '../../../shared/ui/ui.tsx'
-import { usePlatformStore } from '../../../shared/store/usePlatform.ts'
-import { useStore } from '../../../shared/store/useStore.ts'
-import type { PaymentProviderId } from '../../../shared/lib/types.ts'
-import { DemoNote, Panel, PanelHeading, PaddedToggle } from '../parts.tsx'
 
-const PROVIDER_ICON: Record<PaymentProviderId, string> = {
-  cash: 'tag',
-  card: 'card',
-  wallet: 'smartphone',
-  bank: 'layers',
-}
+type Payment = { id: string; restaurant_id: string; amount: number; status: string; payment_method?: string; created_at: string }
 
 export default function PaymentsTab() {
-  const { t } = useI18n()
-  const providers = usePlatformStore((s) => s.providers)
-  const payments = usePlatformStore((s) => s.payments)
-  const setProviderEnabled = usePlatformStore((s) => s.setProviderEnabled)
-  const restaurants = useStore((s) => s.restaurants)
+  const { data, loading, error } = useAdminData<Payment>('/api/platform/admin/payments')
+  const [q, setQ] = useState('')
+  const rows = useMemo(() => data.filter(x => (x.id + ' ' + (x.restaurant_id || '') + ' ' + (x.status || '')).toLowerCase().includes(q.toLowerCase())), [data, q])
+
+  if (loading) return <Panel>Loading payments…</Panel>
+  if (error) return <Panel>Error: {error}</Panel>
 
   return (
-    <div className="space-y-5">
-      <Panel>
-        <PanelHeading
-          title={t('admin.payments')}
-          description={t('payments.subtitle')}
-          actions={<Badge tone="gold" icon="alert">{t('platformMore.demoBadge')}</Badge>}
-        />
-        <div className="mt-4">
-          <DemoNote>{t('payments.demoNotice')}</DemoNote>
+    <div className="space-y-6">
+      {/* Payment providers */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { name: 'Stripe', icon: 'card', active: true, desc: 'Online cards & wallets' },
+          { name: 'PayPal', icon: 'globe', active: false, desc: 'Digital wallet payments' },
+          { name: 'Cash', icon: 'banknote', active: true, desc: 'In-person cash handling' },
+          { name: 'Card', icon: 'credit', active: false, desc: 'Direct card payments' },
+        ].map(p => (
+          <div key={p.name} className="rounded-2xl border border-white/10 bg-[#14162f]/90 p-5 shadow-lg backdrop-blur-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${p.active ? 'bg-flame text-white' : 'bg-white/10 text-ivory/60'}`}><Icon name={p.icon} size={18} /></div>
+              <div><h3 className="text-sm font-bold text-ivory">{p.name}</h3><p className="text-[11px] text-ivory/40">{p.desc}</p></div>
+            </div>
+            <button disabled onClick={() => alert(p.name + ' — provider configuration endpoint not yet implemented; shown read-only')} className={`w-full rounded-lg py-2 text-xs font-bold transition ${p.active ? 'bg-flame text-white' : 'bg-white/6 text-ivory/60 cursor-not-allowed'}`}>{p.active ? 'Active (read-only)' : 'Enable (DB endpoint needed)'}</button>
+          </div>
+        ))}
+      </div>
+
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#13142b] to-[#1a1540] p-6 sm:p-8">
+        <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-flame/20 blur-[80px]" />
+        <div className="relative z-10">
+          <h1 className="text-2xl font-bold text-ivory sm:text-3xl">Payments</h1>
+          <p className="mt-1 text-sm text-ivory/50">Real payment records from the platform.</p>
         </div>
+      </div>
+
+      <Panel>
+        <PanelHeading title="Payment Records" description="Search by ID, restaurant, or status." actions={
+          <div className="relative w-full sm:w-72">
+            <Icon name="search" size={14} className="absolute left-3 top-2.5 text-ivory/40" />
+            <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Search payments…" className="pl-9 bg-white/6 border-white/10 text-ivory placeholder:text-ivory/40" />
+          </div>
+        } />
+        {rows.length ? (
+          <div className="mt-4 overflow-x-auto rounded-xl border border-white/10 bg-[#0f1220]">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/10 bg-white/5 text-[11px] uppercase tracking-wider text-ivory/40">
+                  <th className="px-4 py-3 text-left font-medium">ID</th>
+                  <th className="px-4 py-3 text-left font-medium">Restaurant</th>
+                  <th className="px-4 py-3 text-right font-medium">Amount</th>
+                  <th className="px-4 py-3 text-left font-medium">Status</th>
+                  <th className="px-4 py-3 text-left font-medium">Method</th>
+                  <th className="px-4 py-3 text-left font-medium">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(x => (
+                  <tr key={x.id} className="border-b border-white/5 hover:bg-white/5 transition">
+                    <td className="px-4 py-3 font-mono text-xs text-ivory/70">{x.id?.slice(0, 8)}</td>
+                    <td className="px-4 py-3 text-ivory/90">{x.restaurant_id || '—'}</td>
+                    <td className="px-4 py-3 text-right font-mono text-ivory">${Number(x.amount || 0).toFixed(2)}</td>
+                    <td className="px-4 py-3"><Badge tone={x.status === 'successful' ? 'moss' : x.status === 'pending' ? 'gold' : x.status === 'failed' ? 'rose' : 'outline'}>{x.status}</Badge></td>
+                    <td className="px-4 py-3 text-ivory/70">{x.payment_method || 'cash'}</td>
+                    <td className="px-4 py-3 text-ivory/50">{new Date(x.created_at).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <DarkEmpty title="No payments" message="No payment records found." />}
       </Panel>
-
-      {providers.map((provider) => {
-        const connected = restaurants.flatMap((restaurant) =>
-          (payments[restaurant.id] ?? [])
-            .filter((method) => method.provider === provider.id)
-            .map((method) => ({ restaurant, method }))
-        )
-
-        return (
-          <Panel key={provider.id}>
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="flex min-w-0 items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/8 text-flame-light">
-                  <Icon name={PROVIDER_ICON[provider.id]} size={18} />
-                </span>
-                <div className="min-w-0">
-                  <h4 className="text-[14.5px] font-semibold text-ivory">{provider.label}</h4>
-                  <p className="mt-0.5 text-[12.5px] leading-relaxed text-ivory/50">
-                    {provider.detail}
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <Badge tone="neutral">
-                      {t('platformMore.payments.fee')} · {provider.fee}
-                    </Badge>
-                    {!provider.enabled ? (
-                      <Badge tone="rose">{t('admin.disabledForAll')}</Badge>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-
-              <PaddedToggle
-                checked={provider.enabled}
-                onChange={(next) => setProviderEnabled(provider.id, next)}
-                label={t('admin.enableForAll')}
-                description={provider.enabled ? t('common.active') : t('admin.disabledForAll')}
-              />
-            </div>
-
-            <div className="mt-4 border-t border-white/8 pt-4">
-              <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-ivory/45">
-                {t('platformMore.payments.connectedClients')}
-              </span>
-
-              {connected.length === 0 ? (
-                <p className="mt-2 text-[12.5px] text-ivory/45">
-                  {t('platformMore.payments.noneConnected')}
-                </p>
-              ) : (
-                <ul className="mt-2.5 space-y-2">
-                  {connected.map(({ restaurant, method }) => (
-                    <li
-                      key={method.id}
-                      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 rounded-xl bg-white/4 px-3.5 py-2.5 text-[12.5px]"
-                    >
-                      <span className="font-medium text-ivory/90">{restaurant.name}</span>
-                      <span className="min-w-0 truncate text-ivory/50">
-                        {method.label} · {method.account}
-                      </span>
-                      <Badge tone={method.enabled ? 'moss' : 'neutral'}>
-                        {method.enabled ? t('common.active') : t('common.inactive')}
-                      </Badge>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </Panel>
-        )
-      })}
     </div>
   )
 }

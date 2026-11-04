@@ -3,6 +3,8 @@ import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { I18nProvider } from './shared/i18n'
 import { Toaster } from './shared/ui/ui.tsx'
 import Admin from './features/admin/Admin.tsx'
+import SubscriptionRequestsPage from './features/admin/SubscriptionRequestsPage.tsx'
+import RevenuePage from './features/admin/RevenuePage.tsx'
 import DashboardLayout from './features/client/DashboardLayout.tsx'
 import DesignBranding from './features/client/DesignBranding.tsx'
 import EarningsPage from './features/client/EarningsPage.tsx'
@@ -13,8 +15,10 @@ import PaymentsPage from './features/client/PaymentsPage.tsx'
 import ReportsPage from './features/client/ReportsPage.tsx'
 import QrCodePage from './features/client/QrCodePage.tsx'
 import SettingsPage from './features/client/SettingsPage.tsx'
+import BranchesPage from './features/client/BranchesPage.tsx'
 import TeamPage from './features/client/TeamPage.tsx'
 import DashboardTemplates from './features/client/TemplatesPage.tsx'
+import WebsitesPage from './features/client/WebsitesPage.tsx'
 import SubscriptionPage from './features/client/SubscriptionPage.tsx'
 import Editor from './features/client/Editor.tsx'
 import Home from './features/marketing/Home.tsx'
@@ -24,7 +28,29 @@ import SignIn from './features/auth/SignIn.tsx'
 import WorkerBoard from './features/worker/WorkerBoard.tsx'
 import TemplatePreview from './features/marketing/TemplatePreview.tsx'
 import Templates from './features/marketing/Templates.tsx'
+import LiveLayout, { RoleGate, WorkspaceHome } from './features/live/LiveLayout.tsx'
+import LiveLogin from './features/live/LiveLogin.tsx'
+import LiveOverview from './features/live/OverviewPage.tsx'
+import LiveOrders from './features/live/OrdersPage.tsx'
+import LiveBranches from './features/live/BranchesPage.tsx'
+import LiveTeam from './features/live/TeamPage.tsx'
+import LiveAudit from './features/live/AuditPage.tsx'
+import LiveKitchen from './features/live/KitchenPage.tsx'
+import LiveWaiter from './features/live/WaiterPage.tsx'
+import LiveSites from './features/live/SitesPage.tsx'
+import LiveSubscription from './features/live/SubscriptionPage.tsx'
+import LiveAccount from './features/live/AccountPage.tsx'
+import PublicSitePage from './features/public/PublicSitePage.tsx'
+import PublicTrackingPage from './features/public/OrderTrackingPage.tsx'
+import { useBackendAuth } from './shared/store/useBackendAuth.ts'
+import AdminLogin from './features/admin/AdminLogin.tsx'
 
+function BackendSessionBootstrap() {
+  useEffect(() => {
+    void useBackendAuth.getState().refresh()
+  }, [])
+  return null
+}
 function ScrollToTop() {
   const { pathname, hash } = useLocation()
   useEffect(() => {
@@ -46,6 +72,7 @@ export default function App() {
   return (
     <I18nProvider>
       <BrowserRouter>
+        <BackendSessionBootstrap />
         <ScrollToTop />
         <Toaster />
         <Routes>
@@ -54,7 +81,11 @@ export default function App() {
           <Route path="/templates/:id" element={<TemplatePreview />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/dashboard/editor" element={<Editor />} />
-          <Route path="/dashboard" element={<DashboardLayout />}>
+          {/* الموقع العام للزائر (مطعم منشور عبر slug) */}
+          <Route path="/site/:slug" element={<PublicSitePage />} />
+          {/* تتبع الطلب للضيف برمز التتبع الآمن */}
+          <Route path="/orders/:id" element={<PublicTrackingPage />} />
+<Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<Overview />} />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="earnings" element={<EarningsPage />} />
@@ -62,14 +93,96 @@ export default function App() {
             <Route path="menu" element={<MyMenu />} />
             <Route path="design" element={<DesignBranding />} />
             <Route path="templates" element={<DashboardTemplates />} />
+            <Route path="websites" element={<WebsitesPage />} />
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="qr-code" element={<QrCodePage />} />
             <Route path="subscription" element={<SubscriptionPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="team" element={<TeamPage />} />
+            <Route path="branches" element={<BranchesPage />} />
           </Route>
           <Route path="/menu-demo" element={<MenuDemo />} />
+          <Route path="/workspace/login" element={<LiveLogin />} />
+          <Route path="/admin/subscription-requests" element={<SubscriptionRequestsPage />} />
+          <Route path="/admin/revenue" element={<RevenuePage />} />
+           <Route path="/workspace" element={<LiveLayout />}>
+            <Route index element={<WorkspaceHome />} />
+            <Route
+              path="overview"
+              element={
+                <RoleGate roles={['Owner']}>
+                  <LiveOverview />
+                </RoleGate>
+              }
+            />
+            <Route
+              path="orders"
+              element={
+                <RoleGate roles={['Owner', 'Cashier']}>
+                  <LiveOrders />
+                </RoleGate>
+              }
+            />
+            <Route
+              path="branches"
+              element={
+                <RoleGate roles={['Owner']}>
+                  <LiveBranches />
+                </RoleGate>
+              }
+            />
+            <Route
+              path="team"
+              element={
+                <RoleGate roles={['Owner']}>
+                  <LiveTeam />
+                </RoleGate>
+              }
+            />
+            <Route
+              path="audit"
+              element={
+                <RoleGate roles={['Owner']}>
+                  <LiveAudit />
+                </RoleGate>
+              }
+            />
+            <Route
+              path="kitchen"
+              element={
+                <RoleGate roles={['Owner', 'Kitchen']}>
+                  <LiveKitchen />
+                </RoleGate>
+              }
+            />
+            <Route
+              path="waiter"
+              element={
+                <RoleGate roles={['Owner', 'Waiter']}>
+                  <LiveWaiter />
+                </RoleGate>
+              }
+            />
+            <Route
+              path="sites"
+              element={
+                <RoleGate roles={['Owner']}>
+                  <LiveSites />
+                </RoleGate>
+              }
+            />
+            <Route
+              path="subscription"
+              element={
+                <RoleGate roles={['Owner']}>
+                  <LiveSubscription />
+                </RoleGate>
+              }
+            />
+            <Route path="account" element={<LiveAccount />} />
+          </Route>
           <Route path="/worker" element={<WorkerBoard />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

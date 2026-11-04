@@ -35,6 +35,9 @@ export interface HomeContent {
     cta: string
     secondaryCta: string
     image: string
+    video?: string
+    videoDesktop?: string
+    videoMobile?: string
     note: string
   }
   templates: HomeSection
@@ -50,6 +53,7 @@ export interface HomeContent {
   showcase: HomeSection
   pricing: HomeSection & { note: string }
   finalCta: { enabled: boolean; title: string; sub: string; cta: string }
+  logos: { enabled: boolean; title: string; items: { name: string; image?: string }[] }
 }
 
 /** the same home page in every supported language — explicit keys, not a free Record */
@@ -62,7 +66,7 @@ export interface HomeContentByLang {
 export type HomeSectionKey = keyof HomeContent
 
 /**
- * The original MenuCraft home-page copy, per language.
+ * The original Digital Menu home-page copy, per language.
  * English is the original seed verbatim; Arabic and Kurdish are full
  * translations of every string. This is the first-load content and the
  * fallback for anything left empty.
@@ -77,7 +81,7 @@ const SEED_EN: HomeContent = {
     secondaryCta: 'Explore the Editor',
     // the hero uses the live restaurant preview as its visual — no photo today
     image: '',
-    note: 'A real MenuCraft preview — the same renderer that powers the editor and the published site.',
+    note: 'A real Digital Menu preview — the same renderer that powers the editor and the published site.',
   },
   templates: {
     enabled: true,
@@ -89,7 +93,7 @@ const SEED_EN: HomeContent = {
     enabled: true,
     eyebrow: 'The visual editor',
     title: 'Change it and watch it happen.',
-    sub: 'Colors, fonts, layout, menu content — every control in the MenuCraft editor writes to the live preview as you type. No preview button, no page reload, no guessing.',
+    sub: 'Colors, fonts, layout, menu content — every control in the Digital Menu editor writes to the live preview as you type. No preview button, no page reload, no guessing.',
     bullets: [],
   },
   workflow: {
@@ -141,7 +145,7 @@ const SEED_EN: HomeContent = {
     enabled: true,
     eyebrow: 'Responsive by default',
     title: 'One menu. Every screen.',
-    sub: 'Guests open your menu on the phone in their hand. MenuCraft templates reflow for desktop, tablet and mobile without a single extra setting — preview both sizes side by side before you publish.',
+    sub: 'Guests open your menu on the phone in their hand. Digital Menu templates reflow for desktop, tablet and mobile without a single extra setting — preview both sizes side by side before you publish.',
   },
   pricing: {
     enabled: true,
@@ -156,6 +160,18 @@ const SEED_EN: HomeContent = {
     sub: 'Pick a template, change the restaurant name, edit a price, swap the font — in under two minutes you will have a menu worth sharing.',
     cta: 'Explore Templates',
   },
+  logos: {
+    enabled: true,
+    title: 'Trusted by restaurants',
+    items: [
+      { name: 'Restaurant Name 1' },
+      { name: 'Restaurant Name 2' },
+      { name: 'Restaurant Name 3' },
+      { name: 'Restaurant Name 4' },
+      { name: 'Restaurant Name 5' },
+      { name: 'Restaurant Name 6' },
+    ],
+  },
 }
 
 const SEED_AR: HomeContent = {
@@ -167,7 +183,7 @@ const SEED_AR: HomeContent = {
     cta: 'تصفّح القوالب',
     secondaryCta: 'تصفّح المحرّر',
     image: '',
-    note: 'معاينة حقيقية من MenuCraft — نفس المحرّك الذي يعمل عليه المحرّر والموقع المنشور.',
+    note: 'معاينة حقيقية من Digital Menu — نفس المحرّك الذي يعمل عليه المحرّر والموقع المنشور.',
   },
   templates: {
     enabled: true,
@@ -179,7 +195,7 @@ const SEED_AR: HomeContent = {
     enabled: true,
     eyebrow: 'المحرّر المرئي',
     title: 'غيّرها وشاهد ما يحدث مباشرة.',
-    sub: 'الألوان والخطوط والتخطيط ومحتوى القائمة — كل عنصر تحكّم في محرّر MenuCraft يُطبَّق على المعاينة الحيّة أثناء الكتابة. لا زرّ معاينة، ولا إعادة تحميل، ولا تخمين.',
+    sub: 'الألوان والخطوط والتخطيط ومحتوى القائمة — كل عنصر تحكّم في محرّر Digital Menu يُطبَّق على المعاينة الحيّة أثناء الكتابة. لا زرّ معاينة، ولا إعادة تحميل، ولا تخمين.',
     bullets: [],
   },
   workflow: {
@@ -231,7 +247,7 @@ const SEED_AR: HomeContent = {
     enabled: true,
     eyebrow: 'متجاوب افتراضياً',
     title: 'قائمة واحدة. كل شاشة.',
-    sub: 'يفتح ضيوفك قائمتهم على الهاتف الذي في أيديهم. قوالب MenuCraft تتموضع مجدداً للحاسوب واللوح والجوال دون أي إعداد إضافي — عاين الحجمين جنباً إلى جنب قبل النشر.',
+    sub: 'يفتح ضيوفك قائمتهم على الهاتف الذي في أيديهم. قوالب Digital Menu تتموضع مجدداً للحاسوب واللوح والجوال دون أي إعداد إضافي — عاين الحجمين جنباً إلى جنب قبل النشر.',
   },
   pricing: {
     enabled: true,
@@ -246,6 +262,18 @@ const SEED_AR: HomeContent = {
     sub: 'اختر قالباً، وغيّر اسم المطعم، وعدّل سعراً، وبدّل الخط — في أقل من دقيقتين ستحصل على قائمة تستحق المشاركة.',
     cta: 'تصفّح القوالب',
   },
+  logos: {
+    enabled: true,
+    title: 'موثوق من قبل المطاعم',
+    items: [
+      { name: 'اسم المطعم ١' },
+      { name: 'اسم المطعم ٢' },
+      { name: 'اسم المطعم ٣' },
+      { name: 'اسم المطعم ٤' },
+      { name: 'اسم المطعم ٥' },
+      { name: 'اسم المطعم ٦' },
+    ],
+  },
 }
 
 const SEED_KU: HomeContent = {
@@ -257,7 +285,7 @@ const SEED_KU: HomeContent = {
     cta: 'قاڵبەکان بگەڕێ بەدوایدا',
     secondaryCta: 'دەستکارکەرەکە بگەڕێ بەدوایدا',
     image: '',
-    note: 'پێشبینینێکی ڕاستەقینەی MenuCraft — هەمان موتۆرەکەی دەستکارکەر و ماڵپەڕی بڵاوکراوەوە.',
+    note: 'پێشبینینێکی ڕاستەقینەی Digital Menu — هەمان موتۆرەکەی دەستکارکەر و ماڵپەڕی بڵاوکراوەوە.',
   },
   templates: {
     enabled: true,
@@ -269,7 +297,7 @@ const SEED_KU: HomeContent = {
     enabled: true,
     eyebrow: 'دەستکارکەری بینینی',
     title: 'بیگۆڕە و ببینە چۆن ڕاستەوخۆ دەکرێتەوە.',
-    sub: 'ڕەنگەکان، فۆنتەکان، شێوازی جێگیرکردن، ناوەڕۆکی لیستە — هەموو کۆنترۆلێک لە دەستکارکەری MenuCraft ڕاستەوخۆ لەسەر پێشبینینی ڕاستە دەنووسرێت کاتێک دەنووسیت. نییە دوگمەی پێشبینین، نییە بارکردنەوەی لاپەڕە، نییە خەمڵاندن.',
+    sub: 'ڕەنگەکان، فۆنتەکان، شێوازی جێگیرکردن، ناوەڕۆکی لیستە — هەموو کۆنترۆلێک لە دەستکارکەری Digital Menu ڕاستەوخۆ لەسەر پێشبینینی ڕاستە دەنووسرێت کاتێک دەنووسیت. نییە دوگمەی پێشبینین، نییە بارکردنەوەی لاپەڕە، نییە خەمڵاندن.',
     bullets: [],
   },
   workflow: {
@@ -321,7 +349,7 @@ const SEED_KU: HomeContent = {
     enabled: true,
     eyebrow: 'بە شێوەی بنەڕەت وەشانکراوە',
     title: 'لیستێکی یەک. هەموو شاشەیەک.',
-    sub: 'میوانەکان لیستەکەت لەسەر مۆبایلەکەیان کردنەوە. قاڵبەکانی MenuCraft بۆ کۆمپیوتەر، تابلێت و مۆبایل ڕێک دەخورن بەبێ هیچ ڕێکخستنێکی زیادە — پێش بڵاوکردنەوە هەردوو قەبارە لە ڕێگایەکەوە ببینە.',
+    sub: 'میوانەکان لیستەکەت لەسەر مۆبایلەکەیان کردنەوە. قاڵبەکانی Digital Menu بۆ کۆمپیوتەر، تابلێت و مۆبایل ڕێک دەخورن بەبێ هیچ ڕێکخستنێکی زیادە — پێش بڵاوکردنەوە هەردوو قەبارە لە ڕێگایەکەوە ببینە.',
   },
   pricing: {
     enabled: true,
@@ -335,6 +363,18 @@ const SEED_KU: HomeContent = {
     title: 'لیستەکەت شایانی شتێکی باشترە لە فایلێکی PDF.',
     sub: 'قاڵبێک هەڵبژێر، ناوی چایەخانەکە بگۆڕە، نرخێک دەستکاری بکە، فۆنتەکە بگۆڕە — لە خوارەوە دوو خولەکەکە لیستێکت هەیە کە شایانی هاوبەشکردنە.',
     cta: 'قاڵبەکان بگەڕێ بەدوایدا',
+  },
+  logos: {
+    enabled: true,
+    title: 'مەسووبل لە لایەن چایەخانەکان',
+    items: [
+      { name: 'ناوی چایەخانە ١' },
+      { name: 'ناوی چایەخانە ٢' },
+      { name: 'ناوی چایەخانە ٣' },
+      { name: 'ناوی چایەخانە ٤' },
+      { name: 'ناوی چایەخانە ٥' },
+      { name: 'ناوی چایەخانە ٦' },
+    ],
   },
 }
 
@@ -365,6 +405,7 @@ function mergeLangWithSeed(lang: Lang, stored: Partial<HomeContent> | undefined)
     showcase: { ...seed.showcase, ...partial.showcase },
     pricing: { ...seed.pricing, ...partial.pricing },
     finalCta: { ...seed.finalCta, ...partial.finalCta },
+    logos: { ...seed.logos, ...partial.logos },
   }
 }
 
@@ -378,7 +419,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Understands every payload that can sit under `menucraft-home-v1`:
+ * Understands every payload that can sit under `Digital Menu-home-v1`:
  * - version 1 (old installs): `{ content: HomeContent }` — ONE flat, possibly
  *   admin-edited English page → becomes `content.en` (edits preserved) while
  *   `ar`/`ku` start from their seeds;
@@ -455,7 +496,7 @@ export const useHomeContentStore = create<HomeContentState>()(
         set({ content: structuredClone(HOME_SEED), updatedAt: new Date().toISOString() }),
     }),
     {
-      name: 'menucraft-home-v1',
+      name: 'Digital Menu-home-v1',
       version: 2,
       partialize: (state) => ({ content: state.content, updatedAt: state.updatedAt }),
       // v1 → v2: the old flat English page becomes `content.en`, edits preserved

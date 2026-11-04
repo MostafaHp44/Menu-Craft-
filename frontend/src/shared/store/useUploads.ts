@@ -51,6 +51,17 @@ export const useUploads = create<UploadsState>()(
       name: STORAGE_KEY,
       version: 1,
       partialize: (s) => ({ items: s.items }),
+      migrate: (persistedState: unknown) => {
+        // schema is forward-compatible; older payloads are normalised by `merge`
+        return persistedState
+      },
+      merge: (persisted, current) => {
+        const stored = (persisted ?? {}) as { items?: unknown }
+        const items = Array.isArray(stored.items)
+          ? (stored.items.filter((src): src is string => typeof src === 'string') as string[])
+          : current.items
+        return { ...current, items }
+      },
     }
   )
 )

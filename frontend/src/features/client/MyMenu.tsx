@@ -1,9 +1,13 @@
 import { MenuEditor } from './menu/MenuEditor.tsx'
 import { Button, Card } from '../../shared/ui/ui.tsx'
 import { publicUrl } from '../../shared/lib/hooks.ts'
+import { tx } from '../../shared/lib/utils.ts'
+import { useI18n } from '../../shared/i18n'
 import { useActiveRestaurant, useStore } from '../../shared/store/useStore.ts'
 
 export default function MyMenu() {
+  /* subscribing re-renders on language change so `tx()` re-resolves */
+  const { lang } = useI18n()
   const r = useActiveRestaurant()
   const dirty = useStore((s) => s.dirty)
   const itemCount = r.menu.reduce((sum, c) => sum + c.items.length, 0)
@@ -12,7 +16,7 @@ export default function MyMenu() {
     <div className="space-y-5">
       <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
         <div>
-          <h2 className="text-[16px] font-semibold text-charcoal">{r.name} · menu structure</h2>
+          <h2 className="text-[16px] font-semibold text-charcoal">{typeof r.name === 'string' ? r.name : tx(r.name, lang)} · menu structure</h2>
           <p className="mt-1 text-[13.5px] text-umber">
             {r.menu.length} categories · {itemCount} dishes · live at{' '}
             <span className="font-mono text-[13px] text-charcoal">{publicUrl(r.slug)}</span>

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Icon, Wordmark } from '../../shared/ui/icons.tsx'
+import { Icon } from '../../shared/ui/icons.tsx'
 import { Badge, Button } from '../../shared/ui/ui.tsx'
 import { LanguageSwitcher } from '../../shared/ui/LanguageSwitcher.tsx'
 import { useI18n, type TKey } from '../../shared/i18n'
 import { publicUrl } from '../../shared/lib/hooks.ts'
-import { cx } from '../../shared/lib/utils.ts'
+import { cx, tx } from '../../shared/lib/utils.ts'
 import { useActiveRestaurant, useStore } from '../../shared/store/useStore.ts'
 import { isPlatformAdmin, useAuthStore } from '../../shared/store/useAuth.ts'
 
@@ -14,10 +14,12 @@ const NAV: Array<{ to: string; label: TKey; icon: string; end?: boolean }> = [
   { to: '/dashboard', label: 'dashboard.overview', icon: 'home', end: true },
   { to: '/dashboard/orders', label: 'dashboard.orders', icon: 'list' },
   { to: '/dashboard/earnings', label: 'dashboard.earnings', icon: 'chart' },
-  { to: '/dashboard/reports', label: 'dashboard.reports', icon: 'activity' },
-  { to: '/dashboard/menu', label: 'dashboard.myMenu', icon: 'utensils' },
-  { to: '/dashboard/design', label: 'dashboard.design', icon: 'palette' },
-  { to: '/dashboard/templates', label: 'dashboard.templates', icon: 'layers' },
+  { to: '/dashboard/reports', label: 'dashboard.reports',   icon: 'activity' },
+  { to: '/dashboard/menu', label: 'dashboard.myMenu',       icon: 'utensils' },
+  { to: '/dashboard/branches', label: 'branches.title',     icon: 'mapPin' },
+  { to: '/dashboard/design', label: 'dashboard.design',     icon: 'palette' },
+  { to: '/dashboard/templates', label: 'dashboard.templates',icon: 'layers' },
+  { to: '/dashboard/websites', label: 'dashboard.websites', icon: 'globe' },
   { to: '/dashboard/payments', label: 'dashboard.payments', icon: 'card' },
   { to: '/dashboard/qr-code', label: 'dashboard.qrCode', icon: 'qr' },
   { to: '/dashboard/subscription', label: 'dashboard.subscription', icon: 'tag' },
@@ -36,15 +38,21 @@ const TITLES: Record<string, { title: TKey; sub: TKey }> = {
   '/dashboard/menu': { title: 'menuTab.title', sub: 'dashboard.subMenu' },
   '/dashboard/design': { title: 'dashboard.design', sub: 'dashboard.subDesign' },
   '/dashboard/templates': { title: 'dashboard.templates', sub: 'dashboard.subTemplates' },
+  '/dashboard/websites': { title: 'dashboard.websites', sub: 'dashboard.subWebsites' },
   '/dashboard/payments': { title: 'payments.title', sub: 'dashboard.subPayments' },
   '/dashboard/qr-code': { title: 'dashboard.qrCode', sub: 'dashboard.subQr' },
   '/dashboard/subscription': { title: 'subscription.title', sub: 'dashboard.subSubscription' },
   '/dashboard/team': { title: 'team.title', sub: 'dashboard.subTeam' },
   '/dashboard/settings': { title: 'dashboard.settings', sub: 'dashboard.subSettings' },
+  '/dashboard/branches': { title: 'branches.title', sub: 'branches.sub' },
 }
+
+import { useDashboardTheme } from '../../shared/lib/dashboardTheme'
+import { useBackendAuth } from '../../shared/store/useBackendAuth.ts';
 
 export default function DashboardLayout() {
   const restaurant = useActiveRestaurant()
+  useDashboardTheme()
   const restaurants = useStore((s) => s.restaurants)
   const activeId = useStore((s) => s.activeId)
   const setActive = useStore((s) => s.setActive)
@@ -80,12 +88,18 @@ export default function DashboardLayout() {
   )
 
   return (
-    <div className="flex min-h-screen bg-ivory">
+    <div
+      className="dash-theme flex min-h-screen bg-ivory"
+      style={{ backgroundColor: 'var(--dash-bg)', color: 'var(--dash-text)' }}
+    >
       {/* ------------------------------ sidebar ------------------------------ */}
-      <aside className="sticky top-0 hidden h-screen w-[264px] shrink-0 flex-col bg-ink text-ivory lg:flex">
+      <aside
+        className="sticky top-0 hidden h-screen w-[264px] shrink-0 flex-col bg-ink text-ivory lg:flex"
+        style={{ borderColor: 'var(--dash-border)' }}
+      >
         <div className="flex h-[70px] items-center justify-between border-b border-white/8 px-6">
           <button type="button" onClick={() => navigate('/')} className="text-start">
-            <Wordmark tone="light" />
+            <h1>Digital Menu</h1>
           </button>
           <LanguageSwitcher tone="dark" />
         </div>
@@ -102,10 +116,10 @@ export default function DashboardLayout() {
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[13px] font-semibold"
               style={{ backgroundColor: restaurant.design.colors.accent, color: '#fff' }}
             >
-              {restaurant.logoText.slice(0, 2)}
+              {typeof restaurant.logoText === 'string' ? restaurant.logoText.slice(0, 2) : (tx(restaurant.logoText) || '').slice(0, 2)}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="line-clamp-1 text-[13.5px] font-semibold">{restaurant.name}</span>
+              <span className="line-clamp-1 text-[13.5px] font-semibold">{typeof restaurant.name === 'string' ? restaurant.name : tx(restaurant.name)}</span>
               <span className="line-clamp-1 text-[11.5px] text-ivory/50">
                 {publicUrl(restaurant.slug)}
               </span>
@@ -132,7 +146,7 @@ export default function DashboardLayout() {
                     className="h-2.5 w-2.5 shrink-0 rounded-full"
                     style={{ backgroundColor: r.design.colors.accent }}
                   />
-                  <span className="min-w-0 flex-1 line-clamp-1">{r.name}</span>
+                  <span className="min-w-0 flex-1 line-clamp-1">{typeof r.name === 'string' ? r.name : (tx(r.name) || '')}</span>
                   {r.id === activeId ? <Icon name="check" size={13} /> : null}
                 </button>
               ))}
@@ -191,6 +205,16 @@ export default function DashboardLayout() {
                 </NavLink>
               </li>
             ) : null}
+            <li>
+              <NavLink
+                to="/workspace/login"
+                className="flex items-center gap-3 rounded-xl border border-flame/35 bg-flame/10 px-3 py-2.5 text-[13.5px] font-medium text-flame-light transition hover:bg-flame/18"
+              >
+                <Icon name="activity" size={17} />
+                <span className="flex-1">{t('live.nav.workspace')}</span>
+                <Icon name="arrowUpRight" size={13} className="text-flame-light/60" />
+              </NavLink>
+            </li>
           </ul>
         </nav>
 
@@ -225,6 +249,7 @@ export default function DashboardLayout() {
               type="button"
               onClick={() => {
                 signOut()
+                void useBackendAuth.getState().logout()
                 navigate('/')
               }}
               aria-label={t('dashboard.signOut')}
@@ -242,14 +267,15 @@ export default function DashboardLayout() {
         <header className="sticky top-0 z-40 border-b border-sand bg-ivory/90 backdrop-blur-xl">
           <div className="flex h-[70px] items-center gap-4 px-5 lg:px-8">
             <div className="flex items-center gap-3 lg:hidden">
+             
               <button
                 type="button"
                 onClick={() => navigate('/')}
-                aria-label="MenuCraft home"
+                aria-label="Digital Menu home"
                 className="rounded-lg p-1.5"
               >
-                <Wordmark />
               </button>
+
             </div>
 
             <div className="min-w-0 flex-1">
@@ -297,7 +323,7 @@ export default function DashboardLayout() {
         </main>
 
         <footer className="border-t border-sand px-5 pb-24 pt-5 text-[12px] text-clay lg:px-8 lg:pb-5">
-          MenuCraft prototype · all restaurants, analytics, plans and URLs are simulated demo data.
+          Digital Menu prototype · all restaurants, analytics, plans and URLs are simulated demo data.
         </footer>
       </div>
 
@@ -438,6 +464,15 @@ export default function DashboardLayout() {
                     </NavLink>
                   </li>
                 ) : null}
+                <li>
+                  <NavLink
+                    to="/workspace"
+                    className="flex items-center gap-2.5 rounded-2xl border border-flame/35 bg-flame/8 px-3.5 py-3 text-[13.5px] font-medium text-flame transition"
+                  >
+                    <Icon name="activity" size={17} />
+                    <span className="line-clamp-1">{t('live.nav.workspace')}</span>
+                  </NavLink>
+                </li>
               </ul>
 
               <Button

@@ -422,7 +422,7 @@ export function LogoMark({ size = 34, className }: { size?: number; className?: 
 
 export function Wordmark({
   className,
-  markSize = 32,
+  markSize: _markSize,
   tone = 'dark',
 }: {
   className?: string
@@ -431,13 +431,13 @@ export function Wordmark({
 }) {
   return (
     <span className={`inline-flex items-center gap-2.5 ${className ?? ''}`}>
-      <LogoMark size={markSize} />
+      {/* logo mark */}
       <span
         className={`text-[17px] font-semibold tracking-[-0.02em] ${
           tone === 'light' ? 'text-ivory' : 'text-charcoal'
         }`}
       >
-        Menu<span className="text-flame">Craft</span>
+        Digital<span className="text-flame"> Menu</span>
       </span>
     </span>
   )

@@ -4,6 +4,9 @@ import { cx } from '../lib/utils.ts'
 import { Icon, Wordmark } from '../ui/icons.tsx'
 import { Button } from '../ui/ui.tsx'
 import { LanguageSwitcher } from '../ui/LanguageSwitcher.tsx'
+import { MarketingThemeCustomizer } from './MarketingThemeCustomizer.tsx'
+
+import { useAuthStore } from '../store/useAuth.ts'
 import { useI18n, type TKey } from '../i18n'
 
 interface NavItem {
@@ -18,8 +21,9 @@ const NAV: NavItem[] = [
   { key: 'nav.pricing', to: '/#pricing' },
 ]
 
-export function MarketingHeader({ solid = false }: { solid?: boolean }) {
+export function MarketingHeader({ solid = false, themeEnabled = false }: { solid?: boolean; themeEnabled?: boolean }) {
   const { t } = useI18n()
+  const session = useAuthStore((s) => s.session)
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const { pathname, hash } = useLocation()
@@ -47,6 +51,7 @@ export function MarketingHeader({ solid = false }: { solid?: boolean }) {
       <div className="page-wide page flex h-[70px] items-center justify-between gap-6">
         <Link to="/" aria-label={t('web.header.homeAria')} className="shrink-0">
           <Wordmark />
+          <span className="ml-2 text-[13px] font-semibold tracking-wide text-ink-soft"></span>
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex" aria-label={t('web.header.primaryNav')}>
@@ -62,11 +67,16 @@ export function MarketingHeader({ solid = false }: { solid?: boolean }) {
         </nav>
 
         <div className="flex items-center gap-2">
+          {themeEnabled ? <MarketingThemeCustomizer /> : null}
           {/* phones get the switcher inside the drawer so the bar never overflows */}
           <LanguageSwitcher className="hidden sm:inline-flex" />
-          <Button to="/signin" variant="ghost" size="sm" className="hidden sm:inline-flex">
-            {t('nav.signIn')}
-          </Button>
+          {session ? (
+            <Button to="/dashboard" size="sm" className="hidden sm:inline-flex">Dashboard</Button>
+          ) : (
+            <Button to="/signin" variant="ghost" size="sm" className="hidden sm:inline-flex">
+              {t('nav.signIn')}
+            </Button>
+          )}
           <Button to="/templates" size="sm" icon="arrowRight" iconRight={undefined}>
             {t('nav.getStarted')}
           </Button>

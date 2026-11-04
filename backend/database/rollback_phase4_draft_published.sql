@@ -1,0 +1,6 @@
+-- Phase 4 Rollback Strategy (non-destructive preferred)
+-- Option 1 (safe): Restore from backup before applying rollback.
+-- Option 2 (manual): Copy published_menu back to Restaurants.menu, then drop columns:
+-- UPDATE Restaurants SET menu = published_menu WHERE published_menu IS NOT NULL;
+-- ALTER TABLE Restaurants DROP COLUMN draft_menu;
+-- ALTER TABLE Restaurants DROP COLUMN published_menu;

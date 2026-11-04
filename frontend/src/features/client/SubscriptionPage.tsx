@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Icon } from '../../shared/ui/icons.tsx'
 import { Badge, Button, Card, ChoiceCard, EmptyState, Toggle } from '../../shared/ui/ui.tsx'
 import { useI18n, type TKey } from '../../shared/i18n'
@@ -26,10 +27,8 @@ export default function SubscriptionPage() {
   const { t } = useI18n()
   const r = useActiveRestaurant()
   const record = useSubscription(r.id)
-  const setPlatformPlan = usePlatformStore((s) => s.setPlan)
   const setAutoRenew = usePlatformStore((s) => s.setAutoRenew)
   const renew = usePlatformStore((s) => s.renew)
-  const setRestaurantPlan = useStore((s) => s.setPlan)
   const showToast = useStore((s) => s.showToast)
 
   const isExpired = record?.status === 'expired'
@@ -54,15 +53,24 @@ export default function SubscriptionPage() {
     })
   }
 
+  const [pendingPlan, setPendingPlan] = useState<DemoPlanId | null>(null)
+
   const selectPlan = (planId: DemoPlanId) => {
     if (!record || record.plan === planId) return
-    setPlatformPlan(r.id, planId)
-    setRestaurantPlan(planId)
-    showToast({
-      title: t('kitchenMore.planSwitched'),
-      message: t('dashboard.simulatedNote'),
-      tone: 'success',
-    })
+    setPendingPlan(planId)
+  }
+
+  const confirmPlan = async () => {
+    if (!pendingPlan || !record) return
+    try {
+      await fetch('/api/free-plan-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('menucraft-token') || ''}` },
+        body: JSON.stringify({ restaurantId: r.id, requestedPlan: pendingPlan }),
+      })
+      showToast({ title: t('subscription.requestSent'), message: 'Waiting for Super Admin approval', tone: 'success' })
+    } catch { showToast({ title: t('common.error'), message: 'Failed', tone: 'error' }) }
+    setPendingPlan(null)
   }
 
   /* ----------------------------- plan picker ----------------------------- */
@@ -314,6 +322,15 @@ export default function SubscriptionPage() {
       </Card>
 
       {plansSection}
+      {pendingPlan ? (
+        <Card className="p-5 text-center border-flame/30 bg-flame/5">
+          <h4 className="font-semibold text-charcoal">Confirm plan change?</h4>
+          <div className="mt-4 flex justify-center gap-3">
+            <Button onClick={confirmPlan} variant="accent">Confirm</Button>
+            <Button onClick={() => setPendingPlan(null)} variant="outline">Reject</Button>
+          </div>
+        </Card>
+      ) : null}
     </div>
   )
 }

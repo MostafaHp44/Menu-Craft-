@@ -53,7 +53,7 @@ export default function Templates() {
 
   return (
     <div className="min-h-screen bg-ivory">
-      <MarketingHeader solid />
+      <MarketingHeader solid themeEnabled />
 
       {/* -------------------------------- head -------------------------------- */}
       <section className="relative overflow-hidden border-b border-sand/70 pb-14 pt-[118px]">

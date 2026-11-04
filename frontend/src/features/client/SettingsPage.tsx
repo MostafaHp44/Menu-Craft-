@@ -2,10 +2,14 @@ import { useState } from 'react'
 import { Icon } from '../../shared/ui/icons.tsx'
 import { Badge, Button, Card, Field, IconButton, Input, Modal, Segmented, Toggle } from '../../shared/ui/ui.tsx'
 import { publicUrl } from '../../shared/lib/hooks.ts'
-import { cx } from '../../shared/lib/utils.ts'
+import { cx, tx, writeText } from '../../shared/lib/utils.ts'
+import { useI18n } from '../../shared/i18n'
 import { useActiveRestaurant, useStore } from '../../shared/store/useStore.ts'
+import DashboardIdentityPanel from './DashboardIdentityPanel.tsx'
 
 export default function SettingsPage() {
+  /* subscribing re-renders on language change so `tx()` re-resolves */
+  const { lang } = useI18n()
   const r = useActiveRestaurant()
   const restaurants = useStore((s) => s.restaurants)
   const updateSaved = useStore((s) => s.updateSaved)
@@ -23,7 +27,7 @@ export default function SettingsPage() {
     const blob = new Blob([JSON.stringify(r, null, 2)], { type: 'application/json' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
-    link.download = `${r.slug}-menucraft-config.json`
+    link.download = `${r.slug}-digital-menu-config.json`
     document.body.appendChild(link)
     link.click()
     link.remove()
@@ -46,7 +50,7 @@ export default function SettingsPage() {
 
         <div className="mt-4 space-y-4">
           <Field label="Display name">
-            <Input value={r.name} onChange={(e) => patch((t) => { t.name = e.target.value })} />
+            <Input value={typeof r.name === 'string' ? r.name : tx(r.name, lang)} onChange={(e) => patch((t) => { t.name = writeText(t.name, e.target.value, lang) })} />
           </Field>
 
           <Field label="Public address" hint={validSlug ? 'available' : '3–32 lowercase chars'}>
@@ -65,7 +69,7 @@ export default function SettingsPage() {
                 disabled={!validSlug || slugDraft === r.slug}
                 onClick={() => {
                   patch((t) => { t.slug = slugDraft })
-                  showToast({ title: 'Address updated', message: `${slugDraft}.menucraft.com`, tone: 'success' })
+                  showToast({ title: 'Address updated', message: publicUrl(slugDraft), tone: 'success' })
                 }}
               >
                 Apply
@@ -84,7 +88,7 @@ export default function SettingsPage() {
               </Button>
             </div>
             <p className="mt-2 text-[11.5px] leading-relaxed text-clay">
-              Simulated subdomain — MenuCraft never provisions DNS in this prototype.
+              Simulated subdomain — the public address is configured by deployment, no DNS is provisioned in this prototype.
             </p>
           </div>
 
@@ -201,6 +205,9 @@ export default function SettingsPage() {
           </Button>
         </div>
       </Card>
+
+      {/* dashboard-only visual identity */}
+      <DashboardIdentityPanel />
 
       {/* demo data */}
       <Card className="p-5 sm:p-6 lg:col-span-2">

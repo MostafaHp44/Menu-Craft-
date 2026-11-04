@@ -3,7 +3,7 @@ import { Button, StatCard } from '../../../shared/ui/ui.tsx'
 import { usePlatformStore } from '../../../shared/store/usePlatform.ts'
 import { useStore } from '../../../shared/store/useStore.ts'
 import { publicUrl } from '../../../shared/lib/hooks.ts'
-import { formatDate, money } from '../../../shared/lib/utils.ts'
+import { formatDate, money, tx } from '../../../shared/lib/utils.ts'
 import type { SubscriptionRecord } from '../../../shared/lib/types.ts'
 import {
   DarkEmpty,
@@ -82,7 +82,7 @@ export default function SubscriptionsTab() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h4 className="text-[14px] font-semibold text-ivory">{restaurant.name}</h4>
+                      <h4 className="text-[14px] font-semibold text-ivory">{typeof restaurant.name === 'string' ? restaurant.name : (tx(restaurant.name) || '')}</h4>
                       <p className="mt-0.5 break-all font-mono text-[11.5px] text-ivory/45">
                         {publicUrl(restaurant.slug)}
                       </p>
@@ -107,7 +107,7 @@ export default function SubscriptionsTab() {
               <div key={restaurant.id} className="rounded-2xl border border-white/10 bg-white/4 p-4 sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h4 className="text-[14px] font-semibold text-ivory">{restaurant.name}</h4>
+                    <h4 className="text-[14px] font-semibold text-ivory">{typeof restaurant.name === 'string' ? restaurant.name : (tx(restaurant.name) || '')}</h4>
                     <p className="mt-0.5 break-all font-mono text-[11.5px] text-ivory/45">
                       {publicUrl(restaurant.slug)}
                     </p>

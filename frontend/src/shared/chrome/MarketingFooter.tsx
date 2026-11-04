@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Icon, LogoMark } from '../ui/icons.tsx'
+import { LogoMark } from '../ui/icons.tsx'
 import { useI18n, type TKey } from '../i18n'
 
 type FooterLink = { to: string; label: TKey } | { to: string; name: string }
@@ -39,61 +39,64 @@ export function MarketingFooter() {
   const year = new Date().getFullYear()
 
   return (
-    <footer className="relative overflow-hidden bg-ink text-ivory">
-      <div className="page-wide page relative py-16">
-        <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
-          <div className="max-w-sm">
-            <span className="inline-flex items-center gap-2.5">
-              <LogoMark size={34} />
-              <span className="text-[17px] font-semibold tracking-[-0.02em]">
-                Menu<span className="text-flame">Craft</span>
-              </span>
+    <footer className="border-t border-sand bg-ivory">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <div>
+          <span className="inline-flex items-center gap-2.5">
+            
+            <span className="text-[17px] font-semibold tracking-[-0.02em] text-charcoal">
+              Digital <span className="text-flame">Menu</span>
             </span>
-            <p className="mt-4 text-[15px] leading-relaxed text-ivory/60">
-              {t('web.footer.tagline')}
-            </p>
-            <div className="mt-6 flex items-center gap-2.5">
-              <span className="inline-flex items-center gap-2 rounded-full border border-ivory/15 px-3 py-1.5 text-[12.5px] text-ivory/70">
-                <Icon name="globe" size={14} />
-                bella.menucraft.com
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-ivory/15 px-3 py-1.5 text-[12.5px] text-ivory/70">
-                <span className="h-1.5 w-1.5 rounded-full bg-moss anim-pulse-dot" />
-                {t('web.footer.demoOnline')}
-              </span>
-            </div>
+          </span>
+          <p className="mt-4 max-w-xs text-sm leading-relaxed text-umber">
+            {t('web.footer.tagline')}
+          </p>
+          <div className="mt-6 flex items-center gap-2.5">
+            <span className="inline-flex items-center gap-2 rounded-full border border-sand px-3 py-1.5 text-[12.5px] text-umber">
+              <span className="h-1.5 w-1.5 rounded-full bg-moss anim-pulse-dot" />
+              {t('web.footer.demoOnline')}
+            </span>
           </div>
-
-          {COLUMNS.map((column) => (
-            <div key={column.title}>
-              <h3 className="text-[12px] font-semibold uppercase tracking-[0.18em] text-ivory/45">
-                {t(column.title)}
-              </h3>
-              <ul className="mt-4 space-y-2.5">
-                {column.links.map((link) => (
-                  <li key={link.to}>
-                    <Link
-                      to={link.to}
-                      className="text-[14.5px] text-ivory/70 transition hover:text-flame"
-                    >
-                      {'label' in link ? t(link.label) : link.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
         </div>
 
-        <div className="mt-14 flex flex-col gap-4 border-t border-ivory/10 pt-7 text-[13px] text-ivory/45 sm:flex-row sm:items-center sm:justify-between">
-          <p>{t('web.footer.legal', { year })}</p>
-          <div className="flex items-center gap-5">
-            <a href="#top" className="transition hover:text-ivory">
-              {t('web.footer.backToTop')}
-            </a>
-            <span className="text-ivory/25">·</span>
-            <span>{t('web.footer.madeFor')}</span>
+        {COLUMNS.map((column) => (
+          <div key={column.title}>
+            <h3 className="text-[12px] font-semibold uppercase tracking-[0.18em] text-charcoal">
+              {t(column.title)}
+            </h3>
+            <ul className="mt-4 space-y-2.5">
+              {column.links.map((link) => (
+                <li key={link.to}>
+                  <Link
+                    to={link.to}
+                    className="text-sm text-umber transition hover:text-flame"
+                  >
+                    {'label' in link ? t(link.label) : link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
+        ))}
+
+        <div>
+          <h3 className="text-[12px] font-semibold uppercase tracking-[0.18em] text-charcoal">
+            Contact
+          </h3>
+          <ul className="mt-4 space-y-2.5 text-sm text-umber">
+            <li>hello@digitalmenu.com</li>
+            <li>+20 100 000 0000</li>
+            <li>Mon – Fri · 9:00 – 18:00</li>
+          </ul>
+        </div>
+      </div>
+
+      <div className="border-t border-sand">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-5 text-xs text-umber sm:flex-row sm:px-6">
+          <span>© {year} Digital Menu. All rights reserved.</span>
+          <span className="rounded-full border border-sand px-3 py-1">
+            {t('web.footer.madeFor')}
+          </span>
         </div>
       </div>
     </footer>

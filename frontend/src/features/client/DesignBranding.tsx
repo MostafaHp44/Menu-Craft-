@@ -5,7 +5,7 @@ import { RestaurantSite } from '../../templates/site/RestaurantSite.tsx'
 import { Badge, Button, Card, IconButton } from '../../shared/ui/ui.tsx'
 import { TouchSegmented } from './design/TouchSegmented.tsx'
 import { publicUrl } from '../../shared/lib/hooks.ts'
-import { cx } from '../../shared/lib/utils.ts'
+import { cx, tx } from '../../shared/lib/utils.ts'
 import { useActiveRestaurant, useStore } from '../../shared/store/useStore.ts'
 import { useI18n, type TKey } from '../../shared/i18n'
 import { useMediaQuery } from './design/useMediaQuery.ts'
@@ -44,7 +44,7 @@ export default function DesignBranding() {
     })
     showToast({
       title: t('toast.published'),
-      message: t('toast.publishedMsg', { url: `${r.slug}.menucraft.com` }),
+      message: t('toast.publishedMsg', { url: publicUrl(r.slug) }),
       tone: 'success',
     })
   }
@@ -61,7 +61,7 @@ export default function DesignBranding() {
       <Card className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <div className="min-w-0">
           <h2 className="break-words text-[16px] font-semibold text-charcoal">
-            {t('design.brandKit', { name: r.name })}
+            {t('design.brandKit', { name: typeof r.name === 'string' ? r.name : (tx(r.name) || '') })}
           </h2>
           <p className="mt-1 text-[13.5px] leading-relaxed text-umber">{t('design.brandKitSub')}</p>
         </div>
@@ -144,7 +144,7 @@ export default function DesignBranding() {
             {previewOpen ? (
               <div className={cx('bg-cream/50 p-2.5 sm:p-3', device === 'phone' && 'flex justify-center')}>
                 {device === 'desktop' ? (
-                  <BrowserFrame url={`${working.slug}.menucraft.com`}>
+                  <BrowserFrame url={publicUrl(working.slug)}>
                     <ScaledFrame width={1440} maxHeight={isWide ? 620 : 380}>
                       <RestaurantSite restaurant={working} interactive={false} mode="preview" idPrefix="design-" />
                     </ScaledFrame>

@@ -105,14 +105,16 @@ export type PublishStatus = 'draft' | 'published'
 export type DemoPlanId = 'trial' | 'starter' | 'professional' | 'business'
 export type LogoStyle = 'monogram' | 'wordmark' | 'badge'
 
+import { type Multilang } from '../i18n'
+
 export interface Restaurant {
   id: string
-  name: string
+  name: string | Multilang
   /** simulated subdomain — never provisioned, purely a demo label */
   slug: string
-  tagline: string
-  description: string
-  logoText: string
+  tagline: string | Multilang
+  description: string | Multilang
+  logoText: string | Multilang
   logoStyle: LogoStyle
   heroImage: string
   /** ambient hero clip — ''/absent = none · `https://…mp4` = remote URL · `idb:<uuid>` = uploaded blob in IndexedDB */
@@ -306,6 +308,8 @@ export type AdminPermission =
   | 'templates'
   | 'team'
   | 'payments'
+  | 'plans'
+  | 'revenue'
 
 export const ALL_PERMISSIONS: AdminPermission[] = [
   'clients',
@@ -314,6 +318,8 @@ export const ALL_PERMISSIONS: AdminPermission[] = [
   'templates',
   'team',
   'payments',
+  'plans',
+  'revenue',
 ]
 
 export interface UserAccount {

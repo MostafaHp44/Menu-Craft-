@@ -25,6 +25,7 @@ const SECTION_KEYS: Record<SectionKey, TKey> = {
   showcase: 'platformMore.home.sections.showcase',
   pricing: 'platformMore.home.sections.pricing',
   finalCta: 'platformMore.home.sections.finalCta',
+  logos: 'platformMore.home.sections.logos',
 }
 
 const SECTION_ICONS: Record<SectionKey, string> = {
@@ -36,6 +37,7 @@ const SECTION_ICONS: Record<SectionKey, string> = {
   showcase: 'monitor',
   pricing: 'tag',
   finalCta: 'send',
+  logos: 'grid',
 }
 
 const MAX_BULLETS = 6
@@ -525,6 +527,79 @@ export default function HomeTab() {
               })
             }
           />
+          <DarkField label="Hero Video — Desktop (MP4)">
+            <div className="flex items-center gap-3">
+              <input
+                type="file"
+                accept="video/mp4"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    const url = URL.createObjectURL(file)
+                    update(lang, (draft) => { draft.hero.videoDesktop = url })
+                  }
+                }}
+                className="text-ivory text-xs file:mr-3 file:rounded-md file:border-0 file:bg-flame/20 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-flame/30"
+              />
+              {content.hero.videoDesktop ? <span className="text-[11px] text-moss truncate max-w-[200px]">Desktop video set</span> : null}
+            </div>
+          </DarkField>
+          <DarkField label="Hero Video URL — Desktop (optional)">
+            <Input
+              type="url"
+              placeholder="https://example.com/desktop.mp4"
+              value={content.hero.videoDesktop || ''}
+              onChange={(e) =>
+                update(lang, (draft) => {
+                  draft.hero.videoDesktop = e.target.value || undefined
+                })
+              }
+              className={DARK_FIELD}
+            />
+          </DarkField>
+          <DarkField label="Hero Video — Mobile (MP4)">
+            <div className="flex items-center gap-3">
+              <input
+                type="file"
+                accept="video/mp4"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    const url = URL.createObjectURL(file)
+                    update(lang, (draft) => { draft.hero.videoMobile = url })
+                  }
+                }}
+                className="text-ivory text-xs file:mr-3 file:rounded-md file:border-0 file:bg-flame/20 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-flame/30"
+              />
+              {content.hero.videoMobile ? <span className="text-[11px] text-moss truncate max-w-[200px]">Mobile video set</span> : null}
+            </div>
+          </DarkField>
+          <DarkField label="Hero Video URL — Mobile (optional)">
+            <Input
+              type="url"
+              placeholder="https://example.com/mobile.mp4"
+              value={content.hero.videoMobile || ''}
+              onChange={(e) =>
+                update(lang, (draft) => {
+                  draft.hero.videoMobile = e.target.value || undefined
+                })
+              }
+              className={DARK_FIELD}
+            />
+          </DarkField>
+          <DarkField label="Hero Video URL — Fallback (legacy)">
+            <Input
+              type="url"
+              placeholder="https://example.com/video.mp4"
+              value={content.hero.video || ''}
+              onChange={(e) =>
+                update(lang, (draft) => {
+                  draft.hero.video = e.target.value || undefined
+                })
+              }
+              className={DARK_FIELD}
+            />
+          </DarkField>
         </>
       )}
 
@@ -802,6 +877,79 @@ export default function HomeTab() {
               })
             }
           />
+        </>
+      )}
+
+      {/* client logos */}
+      {panel(
+        'logos',
+        <>
+          <TextField
+            label={t('platformMore.home.title')}
+            value={shown(content.logos?.title ?? '', seed.logos.title)}
+            onChange={(value) =>
+              update(lang, (draft) => {
+                draft.logos.title = value
+              })
+            }
+          />
+          {(content.logos?.items ?? []).map((item, index) => (
+            <div key={index} className="rounded-xl border border-ivory/10 bg-white/[0.03] p-3">
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder={`Logo name ${index + 1}`}
+                  value={item.name}
+                  onChange={(e) =>
+                    update(lang, (draft) => {
+                      draft.logos.items[index].name = e.target.value
+                    })
+                  }
+                  className={DARK_FIELD}
+                />
+                <Button
+                  variant="ghost"
+                  icon="trash"
+                  onClick={() =>
+                    update(lang, (draft) => {
+                      draft.logos.items.splice(index, 1)
+                    })
+                  }
+                />
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      const url = URL.createObjectURL(file)
+                      update(lang, (draft) => {
+                        draft.logos.items[index].image = url
+                      })
+                    }
+                  }}
+                  className="text-ivory text-xs file:mr-3 file:rounded-md file:border-0 file:bg-flame/20 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-flame/30"
+                />
+                {item.image ? (
+                  <span className="text-[11px] text-moss">Logo set</span>
+                ) : (
+                  <span className="text-[11px] text-ivory/40">No logo — shows first letter</span>
+                )}
+              </div>
+            </div>
+          ))}
+          <Button
+            variant="outline"
+            icon="plus"
+            onClick={() =>
+              update(lang, (draft) => {
+                draft.logos.items.push({ name: '' })
+              })
+            }
+          >
+            Add logo
+          </Button>
         </>
       )}
 

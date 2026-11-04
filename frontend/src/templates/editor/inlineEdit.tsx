@@ -148,9 +148,14 @@ export function InlineEditProvider({
         return typeof override === 'string' ? override : undefined
       }
       const value = getByPath(restaurant, path)
-      return typeof value === 'string' || typeof value === 'number'
-        ? String(value)
-        : undefined
+      if (value === null || value === undefined) return undefined
+      if (typeof value === 'string' || typeof value === 'number') return String(value)
+      if (typeof value === 'object') {
+        const multi = value as { en?: string; ar?: string; ku?: string }
+        const pick = multi.en ?? multi.ar ?? multi.ku ?? ''
+        return typeof pick === 'string' ? pick : undefined
+      }
+      return undefined
     },
     [restaurant]
   )

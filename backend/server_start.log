@@ -1,0 +1,10 @@
+{"level":30,"time":1793713895403,"pid":31376,"hostname":"DESKTOP-7LAK1O8","msg":"Server listening at http://0.0.0.0:3004"}
+BACKEND STARTED ON PORT 3004
+{"level":30,"time":1793713895404,"pid":31376,"hostname":"DESKTOP-7LAK1O8","msg":"Server running on http://localhost:3004"}
+{"level":50,"time":1793713895432,"pid":31376,"hostname":"DESKTOP-7LAK1O8","err":{"type":"FastifyError","message":"Root plugin has already booted","stack":"FastifyError: Root plugin has already booted\n    at Boot._addPlugin (D:\\MBN Group\\Test Menu\\backend\\node_modules\\avvio\\boot.js:170:11)\n    at Boot.use (D:\\MBN Group\\Test Menu\\backend\\node_modules\\avvio\\boot.js:139:25)\n    at server.<computed> [as register] (D:\\MBN Group\\Test Menu\\backend\\node_modules\\avvio\\boot.js:213:14)\n    at startServer (D:\\MBN Group\\Test Menu\\backend\\src\\server.js:20:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)","code":"AVV_ERR_ROOT_PLG_BOOTED","name":"FastifyError","statusCode":500},"msg":"Unhandled promise rejection"}
+{"level":30,"time":1793713895433,"pid":31376,"hostname":"DESKTOP-7LAK1O8","msg":"Received UNHANDLED_REJECTION. Initiating graceful shutdown..."}
+{"level":30,"time":1793713895433,"pid":31376,"hostname":"DESKTOP-7LAK1O8","msg":"Closing Fastify server..."}
+{"level":30,"time":1793713895435,"pid":31376,"hostname":"DESKTOP-7LAK1O8","msg":"Redis connection closed"}
+✅ MSSQL connected (pool ready)
+{"level":30,"time":1793713895500,"pid":31376,"hostname":"DESKTOP-7LAK1O8","msg":"SQL Server pool cleared"}
+{"level":30,"time":1793713895500,"pid":31376,"hostname":"DESKTOP-7LAK1O8","msg":"Graceful shutdown complete"}

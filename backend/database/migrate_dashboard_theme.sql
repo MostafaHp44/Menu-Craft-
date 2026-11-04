@@ -1,0 +1,1 @@
+IF OBJECT_ID('DashboardThemes', 'U') IS NULL BEGIN CREATE TABLE DashboardThemes (restaurant_id VARCHAR(100) PRIMARY KEY, theme_json NVARCHAR(MAX) NULL DEFAULT '{}', created_at DATETIME DEFAULT GETDATE(), updated_at DATETIME DEFAULT GETDATE(), FOREIGN KEY (restaurant_id) REFERENCES Restaurants(id) ); END GO

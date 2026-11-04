@@ -1,6 +1,6 @@
-# MenuCraft
+# Digital Menu
 
-Restaurant digital-menu SaaS — marketing site, template marketplace, inline (Elementor-style) template editor, restaurant dashboard, kitchen/worker board, platform admin.
+Digital Menu — a DigitalMov Product. Restaurant digital-menu SaaS — marketing site, template marketplace, inline (Elementor-style) template editor, restaurant dashboard, kitchen/worker board, platform admin.
 
 Monorepo layout:
 

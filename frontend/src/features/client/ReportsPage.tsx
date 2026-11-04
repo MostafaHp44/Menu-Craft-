@@ -100,7 +100,7 @@ export default function ReportsPage() {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `menucraft-${period}-report.csv`
+    link.download = `digital-menu-${period}-report.csv`
     document.body.appendChild(link)
     link.click()
     link.remove()
