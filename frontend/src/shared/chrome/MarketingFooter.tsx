@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { LogoMark } from '../ui/icons.tsx'
 import { useI18n, type TKey } from '../i18n'
 
 type FooterLink = { to: string; label: TKey } | { to: string; name: string }
@@ -43,7 +42,7 @@ export function MarketingFooter() {
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div>
           <span className="inline-flex items-center gap-2.5">
-            
+
             <span className="text-[17px] font-semibold tracking-[-0.02em] text-charcoal">
               Digital <span className="text-flame">Menu</span>
             </span>

@@ -275,31 +275,36 @@ async function createPublicOrder(input) {
     const maxNumObj = maxRow[0] ? maxRow[0] : maxRow;
     const maxNum = maxNumObj.maxNum || maxNumObj.MAX_NUM || 0;
     const orderNumber = (maxNum ? Number(maxNum) : 0) + 1;
+    // temp debug - remove after
 
-    await connection.execute(
-      `INSERT INTO Orders (id, restaurant_id, order_number, channel, table_no, customer_name, customer_phone,
-        customer_email, fulfillment, delivery_address, note, subtotal, delivery_fee, discount, total, currency,
-        payment_method, payment_status, status, order_token, idempotency_key)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        orderId, restaurant.id, orderNumber, parsed.channel, parsed.table || null,
-        customerName, customerPhone, parsed.customer?.email || null,
-        parsed.fulfillment, parsed.deliveryAddress || null, parsed.note || '',
-        subtotal, deliveryFee, discount, total, settings.currency || 'USD',
-        parsed.paymentMethod, paymentStatus, 'pending', orderToken,
-        parsed.idempotencyKey || null
-      ]
-    );
-
-    for (const line of pricedLines) {
+    try {
       await connection.execute(
-        `INSERT INTO OrderLines (order_id, item_id, item_name, price, qty, options)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO Orders (id, restaurant_id, order_number, channel, table_no, customer_name, customer_phone,
+          customer_email, fulfillment, delivery_address, note, subtotal, delivery_fee, discount, total, currency,
+          payment_method, payment_status, status, order_token, idempotency_key)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          orderId, line.itemId, line.name, line.unitPrice, line.qty,
-          line.options && line.options.length ? JSON.stringify(line.options) : null
+          orderId, restaurant.id, orderNumber, parsed.channel, parsed.table || null,
+          customerName, customerPhone, parsed.customer?.email || null,
+          parsed.fulfillment, parsed.deliveryAddress || null, parsed.note || '',
+          subtotal, deliveryFee, discount, total, settings.currency || 'USD',
+          parsed.paymentMethod, paymentStatus, 'pending', orderToken,
+          parsed.idempotencyKey || null
         ]
       );
+    } catch (e) { console.log('ORDERS INSERT FAIL', e.message, '| code:', e.code || e.errno); throw e; }
+
+    for (const line of pricedLines) {
+      try {
+        await connection.execute(
+          `INSERT INTO OrderLines (order_id, item_id, item_name, price, qty, options)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            orderId, line.itemId, line.name, line.unitPrice, line.qty,
+            line.options && line.options.length ? JSON.stringify(line.options) : null
+          ]
+        );
+      } catch (e) { console.log('ORDERLINES INSERT FAIL', e.message, '| line:', line.itemId, '| code:', e.code || e.errno); throw e; }
     }
 
     await connection.commit();
