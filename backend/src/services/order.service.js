@@ -277,8 +277,7 @@ async function createPublicOrder(input) {
     const orderNumber = (maxNum ? Number(maxNum) : 0) + 1;
     // temp debug - remove after
 
-    try {
-      await connection.execute(
+    await connection.execute(
         `INSERT INTO Orders (id, restaurant_id, order_number, channel, table_no, customer_name, customer_phone,
           customer_email, fulfillment, delivery_address, note, subtotal, delivery_fee, discount, total, currency,
           payment_method, payment_status, status, order_token, idempotency_key)
@@ -292,19 +291,16 @@ async function createPublicOrder(input) {
           parsed.idempotencyKey || null
         ]
       );
-    } catch (e) { console.log('ORDERS INSERT FAIL', e.message, '| code:', e.code || e.errno); throw e; }
 
     for (const line of pricedLines) {
-      try {
-        await connection.execute(
-          `INSERT INTO OrderLines (order_id, item_id, item_name, price, qty, options)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [
-            orderId, line.itemId, line.name, line.unitPrice, line.qty,
-            line.options && line.options.length ? JSON.stringify(line.options) : null
-          ]
-        );
-      } catch (e) { console.log('ORDERLINES INSERT FAIL', e.message, '| line:', line.itemId, '| code:', e.code || e.errno); throw e; }
+      await connection.execute(
+        `INSERT INTO OrderLines (id, order_id, item_id, item_name, price, qty, options)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          crypto.randomUUID(), orderId, line.itemId, line.name, line.unitPrice, line.qty,
+          line.options && line.options.length ? JSON.stringify(line.options) : null
+        ]
+      );
     }
 
     await connection.commit();

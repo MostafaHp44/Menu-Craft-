@@ -16,11 +16,10 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { LANGS, resolveLang, useI18n, type Lang } from '../../shared/i18n';
+import { resolveLang, useI18n, type Lang } from '../../shared/i18n';
 import { guestOrderAPI, menuAPI } from '../../shared/lib/api.service';
 import type {
   PublicBranch,
-  PublicMenuCategory,
   PublicMenuItem,
   PublicMenuItemOptionGroup,
   PublicMenuResponse,
@@ -86,21 +85,6 @@ export default function PublicSitePage() {
   const [customizeItem, setCustomizeItem] = useState<PublicMenuItem | null>(null);
   const [justAdded, setJustAdded] = useState<string | null>(null);
   const [selectedCat, setSelectedCat] = useState<string>('all');
-
-  const categories = useMemo<PublicMenuCategory[]>(() => (data?.menu || []).filter((c) => c.items.length > 0), [data]);
-  const featured = useMemo<PublicMenuItem[]>(() => {
-    const seen = new Set<string>();
-    const out: PublicMenuItem[] = [];
-    for (const cat of data?.menu || []) {
-      for (const it of cat.items) {
-        if (it.featured && it.available && !seen.has(it.id)) {
-          seen.add(it.id);
-          out.push(it);
-        }
-      }
-    }
-    return out.slice(0, 4);
-  }, [data]);
 
   /* QR deep link?table=&mode=dinein&lang= — يُقرأ مرة */
   const deepLink = useMemo<DeepLink>(() => ({
