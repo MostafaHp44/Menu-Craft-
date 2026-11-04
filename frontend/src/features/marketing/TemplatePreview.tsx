@@ -6,7 +6,7 @@ import { MarketingHeader } from '../../shared/chrome/MarketingHeader.tsx'
 import { BrowserFrame, ScaledFrame } from '../../shared/ui/ScaledFrame.tsx'
 import { RestaurantSite } from '../../templates/site/RestaurantSite.tsx'
 import { Badge, Button, Card, Img } from '../../shared/ui/ui.tsx'
-import { useCustomize } from '../../shared/lib/hooks.ts'
+import { useCustomize, publicUrl } from '../../shared/lib/hooks.ts'
 import { FONTS } from '../../templates/data/fonts.ts'
 import { buildTemplatePreviewRestaurant, getTemplate, hasTemplate } from '../../templates/data/templates.ts'
 import { useTemplateList } from '../../templates/data/useTemplateList.ts'
@@ -31,7 +31,7 @@ export default function TemplatePreview() {
   if (!exists) {
     return (
       <div className="min-h-screen bg-ivory">
-        <MarketingHeader solid />
+        <MarketingHeader solid themeEnabled />
         <main className="page flex min-h-[70vh] flex-col items-center justify-center py-24 text-center">
           <span className="eyebrow">{t('web.preview.unknownEyebrow')}</span>
           <h1 className="display-serif mt-4 text-[clamp(34px,5vw,56px)] leading-none">
@@ -55,7 +55,7 @@ export default function TemplatePreview() {
 
   return (
     <div className="min-h-screen bg-ivory">
-      <MarketingHeader solid />
+      <MarketingHeader solid themeEnabled />
 
       {/* ------------------------------ action bar ----------------------------- */}
       <div className="sticky top-[70px] z-40 border-b border-sand bg-ivory/92 backdrop-blur-xl">
@@ -147,7 +147,7 @@ export default function TemplatePreview() {
 
         <div className="h-[min(74vh,780px)] overflow-y-auto rounded-3xl border border-sand bg-cream/50 p-3 thin-scroll sm:p-5">
           {device === 'desktop' ? (
-            <BrowserFrame url={`${template.sample.slug}.menucraft.com`} badge={t('web.preview.liveBadge')}>
+            <BrowserFrame url={publicUrl(template.sample.slug)} badge={t('web.preview.liveBadge')}>
               <ScaledFrame width={1440}>
                 <RestaurantSite restaurant={preview} interactive={false} mode="preview" idPrefix="tp-" />
               </ScaledFrame>

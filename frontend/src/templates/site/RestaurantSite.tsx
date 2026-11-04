@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
 import type {
   InlineTextStyle,
   MenuCategory,
@@ -8,9 +8,10 @@ import type {
 } from '../../shared/lib/types.ts'
 import { fontStack } from '../data/fonts.ts'
 import { getTemplate } from '../data/templates.ts'
-import { cx, mix, money, readableOn } from '../../shared/lib/utils.ts'
+import { cx, mix, money, readableOn, tx } from '../../shared/lib/utils.ts'
 import { resolveVideoSrc } from '../../shared/lib/heroVideo.ts'
 import { Icon } from '../../shared/ui/icons.tsx'
+import { cartSignature, useCartStore } from '../../features/public/publicCart.ts'
 import { useI18n, type TKey } from '../../shared/i18n/index.tsx'
 import {
   Ed,
@@ -20,6 +21,7 @@ import {
   type ActiveField,
 } from '../editor/inlineEdit.tsx'
 import './site.css'
+import CheckoutOverlay from './CheckoutOverlay';
 
 const SPACES = ['0.84', '1', '1.18'] as const
 
@@ -41,11 +43,12 @@ const SECTION_LABELS: Record<SectionId, TKey> = {
 
 const NAV_SECTIONS: SectionId[] = ['menu', 'about', 'gallery', 'hours', 'contact']
 
-/** `Ed format` helper â€” renders a raw stored number as a price */
+/** `Ed format` helper — renders a raw stored number as a price */
 const moneyFormat = (raw: string) => money(Number(raw) || 0)
 
 function designVars(r: Restaurant): CSSProperties {
-  const { colors: c, typography: t, layout: l } = r.design
+  const d = typeof r.design === 'string' ? JSON.parse(r.design) : (r.design || { colors: {}, typography: {}, layout: {} });
+  const { colors: c, typography: t, layout: l } = d
   return {
     '--rs-bg': c.background,
     '--rs-text': c.text,
@@ -77,7 +80,7 @@ export interface RestaurantSiteProps {
   restaurant: Restaurant
   /** interactive = anchor navigation & menu tabs respond to clicks */
   interactive?: boolean
-  /** site = published page (sticky header) Â· preview = editor frame */
+  /** site = published page (sticky header) · preview = editor frame */
   mode?: 'site' | 'preview'
   /** avoids id collisions when several renders share one page */
   idPrefix?: string
@@ -89,6 +92,10 @@ export interface RestaurantSiteProps {
   onCommit?: (path: string, value: string) => void
   /** commit an inline style tweak (null patch clears it) */
   onStyle?: (path: string, patch: InlineTextStyle | null) => void
+  /** external cart control (published page can manage its own overlays) */
+  onOpenCart?: () => void
+  /** external add-to-cart (published page's cart/checkout/branch) */
+  onAddItem?: (item: MenuItem) => void
 }
 
 export function RestaurantSite({
@@ -100,15 +107,19 @@ export function RestaurantSite({
   onActiveChange,
   onCommit,
   onStyle,
+  onOpenCart,
+  onAddItem,
 }: RestaurantSiteProps) {
   const { layout } = r.design
   const enabled = r.design.sections.filter((s) => s.enabled).map((s) => s.id)
   const nav = NAV_SECTIONS.filter((id) => enabled.includes(id))
   const anchor = (id: string) => `#${idPrefix}rs-${id}`
   const rootRef = useRef<HTMLDivElement | null>(null)
+  const [cartOpen, setCartOpen] = useState(false)
+  const [checkoutOpen, setCheckoutOpen] = useState(false)
 
   // while editing, the frame must accept pointer events (text taps) while
-  // anchor jumps stay neutralised â€” otherwise `data-interactive="false"`
+  // anchor jumps stay neutralised — otherwise `data-interactive="false"`
   // would grey out every editable word
   const stopNavigation = (event: ReactMouseEvent<HTMLDivElement>) => {
     if (!editable) return
@@ -135,7 +146,7 @@ export function RestaurantSite({
         id={`${idPrefix}rs-top`}
         onClick={editable ? stopNavigation : undefined}
       >
-        <SiteHeader r={r} nav={nav} anchor={anchor} prefix={idPrefix} />
+        <SiteHeader r={r} nav={nav} anchor={anchor} prefix={idPrefix} onOpenCart={onOpenCart ? () => onOpenCart() : () => setCartOpen(true)} />
         <SiteHero r={r} anchor={anchor} />
 
         {enabled.includes('featured') ? <FeaturedSection r={r} prefix={idPrefix} /> : null}
@@ -148,26 +159,85 @@ export function RestaurantSite({
         {enabled.includes('contact') ? <ContactSection r={r} prefix={idPrefix} /> : null}
 
         <SiteFooter r={r} nav={nav} anchor={anchor} prefix={idPrefix} />
+        {cartOpen ? <SiteCartOverlay onClose={() => setCartOpen(false)} onCheckout={() => { setCartOpen(false); setCheckoutOpen(true); }} /> : null}
+        {checkoutOpen ? <CheckoutOverlay restaurant={r} onClose={() => setCheckoutOpen(false)} onPlaced={() => { setCheckoutOpen(false); useCartStore.getState().clear(); }} /> : null}
+        {cartOpen ? <SiteCartOverlay onClose={() => setCartOpen(false)} onCheckout={() => { setCartOpen(false); setCheckoutOpen(true); }} /> : null}
       </div>
     </InlineEditProvider>
   )
 }
 
-/* --------------------------------- header --------------------------------- */
+function SiteCartOverlay({ onClose, onCheckout }: { onClose: () => void; onCheckout?: () => void }) {
+  const cart = useCartStore()
+  const lines = cart.lines
+  const total = cart.subtotal
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-label="Cart">
+      <div className="w-full max-w-md rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl sm:p-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-gray-900">Cart</h3>
+          <button type="button" onClick={onClose} className="rounded-full p-2 hover:bg-gray-100" aria-label="Close cart">
+            <Icon name="x" size={18} />
+          </button>
+        </div>
+        {lines.length === 0 ? (
+          <p className="mt-6 text-sm text-gray-600">Your cart is empty.</p>
+        ) : (
+          <ul className="mt-4 max-h-80 space-y-3 overflow-y-auto">
+            {lines.map((line) => (
+              <li key={`${line.itemId}-${cartSignature(line)}`} className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 p-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-gray-900">{line.name}</p>
+                  <p className="text-[12px] text-gray-500">{Number(line.price).toFixed(2)} × {line.qty}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => cart.setQty(line.itemId, cartSignature(line), line.qty - 1)} className="h-7 w-7 rounded-md bg-gray-100 text-sm font-bold leading-none" aria-label="Decrease">−</button>
+                  <span className="w-6 text-center text-sm font-medium tabular-nums">{line.qty}</span>
+                  <button type="button" onClick={() => cart.setQty(line.itemId, cartSignature(line), line.qty + 1)} className="h-7 w-7 rounded-md bg-gray-100 text-sm font-bold leading-none" aria-label="Increase">+</button>
+                  <button type="button" onClick={() => cart.remove(line.itemId, cartSignature(line))} className="ms-1 text-[11px] font-semibold text-red-600" aria-label="Remove">Remove</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {lines.length > 0 && (
+          <div className="mt-5 border-t border-gray-200 pt-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Total</span>
+              <span className="text-base font-bold text-gray-900">{total.toFixed(2)}</span>
+            </div>
+            <p className="mt-3 text-[11px] leading-relaxed text-gray-500">
+              Checkout is available on the published ordering page. This preview cart is connected to the same shared ordering flow; placing an order requires a published restaurant linked to the backend.
+            </p>
+            <button type="button" onClick={onCheckout ? onCheckout : undefined} disabled={!onCheckout} className={`mt-3 w-full rounded-xl py-2.5 text-sm font-semibold text-white transition ${onCheckout ? 'bg-primary hover:bg-primary-dark' : 'cursor-not-allowed bg-gray-300 text-gray-700'}`}>
+              Checkout
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+
 
 function SiteHeader({
   r,
   nav,
   anchor,
   prefix,
+  onOpenCart,
 }: {
   r: Restaurant
   nav: SectionId[]
   anchor: (id: string) => string
   prefix: string
+  onOpenCart: () => void
 }) {
   const [open, setOpen] = useState(false)
   const { t } = useI18n()
+  const cartCount = useCartStore(s => s.count)
   const category = getTemplate(r.templateId).category
 
   const links = nav.map((id) => (
@@ -212,6 +282,18 @@ function SiteHeader({
           </a>
           <button
             type="button"
+            onClick={onOpenCart}
+            className="rs-btn rs-header__cta"
+            style={{ marginLeft: '0.5rem', display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}
+            aria-label={t('web.site.cart', { defaultValue: 'Cart' })}
+          >
+            {t('web.site.cart', { defaultValue: 'Cart' })}
+            <span className="rs-cart-badge" style={{ minWidth: '1.4rem', height: '1.4rem', lineHeight: '1.4rem', textAlign: 'center', borderRadius: '999px', background: 'var(--rs-accent)', color: 'var(--rs-on-button)', fontSize: '0.72rem', fontWeight: 700 }}>
+              {cartCount}
+            </span>
+          </button>
+          <button
+            type="button"
             className="rs-burger"
             aria-label={open ? t('web.site.header.closeNav') : t('web.site.header.openNav')}
             aria-expanded={open}
@@ -254,7 +336,7 @@ function SiteHeader({
 /* ---------------------------------- hero ---------------------------------- */
 
 /**
- * Ambient hero video — decorative layer over the hero photo.
+ * Ambient hero video � decorative layer over the hero photo.
  * `idb:` refs resolve to object URLs (revoked on cleanup); until resolved
  * nothing renders, so the photo/poster stays visible underneath. Always
  * pointer-events-none: taps must reach the inline-editable image below.
@@ -344,7 +426,7 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
   const hoursMeta = firstHours ? (
     <>
       <Ed path="hours.0.day" label="editor.inline.f.hours" />
-      {' · '}
+      {' � '}
       <Ed path="hours.0.hours" label="editor.inline.f.hours" />
     </>
   ) : (
@@ -358,7 +440,7 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
           className="rs-hero__media"
           style={{ backgroundImage: `url(${r.heroImage})` }}
           role="img"
-          aria-label={t('web.site.hero.ambienceAlt', { name: r.name })}
+          aria-label={t('web.site.hero.ambienceAlt', { name: tx(r.name) })}
           onClick={
             inline?.enabled
               ? () => inline.select({ path: 'heroImage', kind: 'image', label: 'editor.inline.f.heroPhoto' })
@@ -434,7 +516,7 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
             <EdImage
               path="heroImage"
               src={r.heroImage}
-              alt={t('web.site.hero.signatureAlt', { name: r.name })}
+              alt={t('web.site.hero.signatureAlt', { name: tx(r.name) })}
               eager
               label="editor.inline.f.photo"
             />
@@ -443,7 +525,7 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
               <Icon name="utensils" size={15} />
               <Ed path="name" label="editor.inline.f.name" />
               <span>
-                {' · '}
+                {' � '}
                 <Ed
                   path="copy.hero.chip"
                   fallback={getTemplate(r.templateId).category}
@@ -465,7 +547,7 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
           <EdImage
             path="heroImage"
             src={r.heroImage}
-            alt={t('web.site.hero.diningAlt', { name: r.name })}
+            alt={t('web.site.hero.diningAlt', { name: tx(r.name) })}
             eager
             label="editor.inline.f.photo"
           />
@@ -493,7 +575,7 @@ function SectionHead({
   sub?: string
   split?: boolean
   action?: React.ReactNode
-  /** copy namespace, e.g. `featured` â†’ the `copy.featured.*` overrides */
+  /** copy namespace, e.g. `featured` → the `copy.featured.*` overrides */
   copyKey: string
   /** lets a section bind the title to real data (the menu edits its category) */
   titlePath?: string
@@ -655,10 +737,22 @@ function FeaturedSection({ r, prefix }: { r: Restaurant; prefix: string }) {
   )
 }
 
-function MenuCard({ item, base }: { item: MenuItem; base: string }) {
+function addToCart(restaurant: Restaurant, item: MenuItem) {
+  useCartStore.getState().add({
+    restaurantId: restaurant.id,
+    slug: restaurant.slug,
+    restaurantName: tx(restaurant.name) || 'Restaurant',
+    item,
+    displayName: tx(item.name) || 'Item',
+    options: [],
+    note: '',
+  })
+}
+
+function MenuCard({ item, base, restaurant }: { item: MenuItem; base: string; restaurant: Restaurant }) {
   const { t } = useI18n()
   return (
-    <article className={cx('rs-item', !item.available && 'rs-item--out')}>
+    <article className={cx('rs-item group relative overflow-hidden rounded-2xl bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md', !item.available && 'rs-item--out')}>
       <div className="rs-item__media">
         <EdImage path={`${base}.image`} src={item.image} alt={item.name} label="editor.inline.f.photo" />
         <div className="rs-item__badges">
@@ -679,16 +773,25 @@ function MenuCard({ item, base }: { item: MenuItem; base: string }) {
         />
         {!item.available ? (
           <span className="rs-item__out-label">{t('web.site.availability.backTomorrow')}</span>
-        ) : null}
+        ) : (
+          <button
+            type="button"
+            onClick={() => addToCart(restaurant, item)}
+            className="rs-btn"
+            style={{ marginTop: '0.5rem', display: 'inline-block', fontSize: '0.85rem', padding: '0.35rem 0.7rem' }}
+          >
+            {t('web.site.menu.add', { defaultValue: 'Add to cart' })}
+          </button>
+        )}
       </div>
     </article>
   )
 }
 
-function MenuRow({ item, base }: { item: MenuItem; base: string }) {
+function MenuRow({ item, base, restaurant }: { item: MenuItem; base: string; restaurant: Restaurant }) {
   const { t } = useI18n()
   return (
-    <article className={cx('rs-item', !item.available && 'rs-item--out')}>
+    <article className={cx('rs-item group relative overflow-hidden rounded-2xl bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md', !item.available && 'rs-item--out')}>
       <div className="rs-item__media">
         <EdImage path={`${base}.image`} src={item.image} alt={item.name} label="editor.inline.f.photo" />
       </div>
@@ -710,6 +813,16 @@ function MenuRow({ item, base }: { item: MenuItem; base: string }) {
             <span className="rs-item__out-label">{t('web.site.availability.unavailable')}</span>
           ) : null}
         </div>
+        {item.available ? (
+          <button
+            type="button"
+            onClick={() => addToCart(restaurant, item)}
+            className="rs-btn"
+            style={{ marginTop: '0.35rem', display: 'inline-block', fontSize: '0.85rem', padding: '0.35rem 0.7rem' }}
+          >
+            {t('web.site.menu.add', { defaultValue: 'Add to cart' })}
+          </button>
+        ) : null}
       </div>
     </article>
   )
@@ -783,9 +896,9 @@ function MenuSection({ r, prefix }: { r: Restaurant; prefix: string }) {
               {current?.items.map((menuItem, itemIndex) => {
                 const base = `menu.${currentIndex}.items.${itemIndex}`
                 return listMode ? (
-                  <MenuRow key={menuItem.id} item={menuItem} base={base} />
+                  <MenuRow key={menuItem.id} item={menuItem} base={base} restaurant={r} />
                 ) : (
-                  <MenuCard key={menuItem.id} item={menuItem} base={base} />
+                  <MenuCard key={menuItem.id} item={menuItem} base={base} restaurant={r} />
                 )
               })}
             </div>
@@ -807,7 +920,7 @@ function AboutSection({ r, prefix }: { r: Restaurant; prefix: string }) {
           <EdImage
             path="gallery.0"
             src={r.gallery[0] ?? r.heroImage}
-            alt={t('web.site.about.interiorAlt', { name: r.name })}
+            alt={t('web.site.about.interiorAlt', { name: tx(r.name) })}
             label="editor.inline.f.photo"
           />
         </figure>
@@ -893,7 +1006,7 @@ function GallerySection({ r, prefix }: { r: Restaurant; prefix: string }) {
               <EdImage
                 path={`gallery.${index}`}
                 src={src}
-                alt={t('web.site.gallery.imageAlt', { name: r.name, index: index + 1 })}
+                alt={t('web.site.gallery.imageAlt', { name: tx(r.name), index: index + 1 })}
                 label="editor.inline.f.galleryPhoto"
               />
             </div>
@@ -1006,7 +1119,7 @@ function ContactSection({ r, prefix }: { r: Restaurant; prefix: string }) {
             </span>
             <div className="rs-map__label">
               <Icon name="globe" size={15} />
-              {r.slug}.menucraft.com <span>· {t('web.site.contact.simulated')}</span>
+              {r.slug}.example.com
             </div>
           </div>
         </div>
@@ -1165,7 +1278,7 @@ function SiteFooter({
               {r.hours.map((row, index) => (
                 <span key={`${row.day}-${index}`}>
                   <Ed path={`hours.${index}.day`} label="editor.inline.f.day" />
-                  {' — '}
+                  {' � '}
                   <Ed path={`hours.${index}.hours`} label="editor.inline.f.hours" />
                 </span>
               ))}
@@ -1175,7 +1288,7 @@ function SiteFooter({
 
         <div className="rs-footer__bottom">
           <span>
-            © {year} <strong><Ed path="name" label="editor.inline.f.name" /></strong>
+            � {year} <strong><Ed path="name" label="editor.inline.f.name" /></strong>
             <Ed
               path="copy.footer.rights"
               fallback={t('web.site.footer.rights')}
@@ -1183,7 +1296,7 @@ function SiteFooter({
             />
           </span>
           <span>
-            {t('web.site.footer.publishedWith')} <strong>MenuCraft</strong> · {r.slug}.menucraft.com
+            {t('web.site.footer.publishedWith')} <strong>Digital Menu</strong> · {r.slug}.example.com
           </span>
         </div>
       </div>

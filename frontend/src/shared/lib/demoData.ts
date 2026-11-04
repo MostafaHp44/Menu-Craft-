@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   AdminRestaurantRow,
   DemoPlanId,
   DemoSubscription,
@@ -18,7 +18,7 @@ import { IMG } from './images.ts'
 import { getTemplate } from '../../templates/data/templates.ts'
 
 /* ------------------------------------------------------------------ *
- * Plans — demo pricing only, no payments are processed anywhere.
+ * Plans â€” demo pricing only, no payments are processed anywhere.
  * ------------------------------------------------------------------ */
 
 export interface PlanCard {
@@ -43,7 +43,7 @@ export const PLANS: PlanCard[] = [
       'Up to 15 menu items',
       'All 8 templates included',
       'QR code generator',
-      'menucraft.com subdomain (demo)',
+      'configured deployment domain (demo)',
     ],
     highlight: false,
   },
@@ -57,7 +57,7 @@ export const PLANS: PlanCard[] = [
       'Unlimited menu items',
       'Full design studio: fonts, colors, layout',
       'QR scan tracking (demo analytics)',
-      'Remove MenuCraft branding',
+      'Remove Digital Menu badge',
       'Photo gallery & featured dishes',
       'Priority template releases',
     ],
@@ -89,7 +89,7 @@ export const SUBSCRIPTIONS: Record<DemoPlanId, DemoSubscription> = {
     period: '14 days',
     status: 'trialing',
     renews: 'Trial ends in 9 days',
-    features: ['All editor features unlocked', '1 restaurant site', 'MenuCraft badge shown'],
+    features: ['All editor features unlocked', '1 restaurant site', 'Digital Menu badge shown'],
   },
   starter: {
     plan: 'starter',
@@ -111,7 +111,7 @@ export const SUBSCRIPTIONS: Record<DemoPlanId, DemoSubscription> = {
       'Unlimited menu items',
       'Full design studio',
       'QR scan tracking',
-      'No MenuCraft branding',
+      'No Digital Menu branding',
     ],
   },
   business: {
@@ -126,7 +126,7 @@ export const SUBSCRIPTIONS: Record<DemoPlanId, DemoSubscription> = {
 }
 
 /* ------------------------------------------------------------------ *
- * Seed restaurants — each one owns an independent configuration.
+ * Seed restaurants â€” each one owns an independent configuration.
  * ------------------------------------------------------------------ */
 
 export function createRestaurantFromTemplate(
@@ -185,7 +185,7 @@ export function createSeedRestaurants(): Restaurant[] {
     logoText: 'CK',
     tagline: 'Slow mornings, properly poured coffee.',
     description:
-      'A corner café on Cedar Road serving house-roasted espresso, laminated pastries and a short brunch menu until three.',
+      'A corner cafÃ© on Cedar Road serving house-roasted espresso, laminated pastries and a short brunch menu until three.',
     heroImage: IMG.cafeInterior,
     gallery: [IMG.cafeInterior, IMG.latteHands, IMG.avocadoToast, IMG.cafeBright],
     phone: '+1 (720) 555-0122',
@@ -238,7 +238,7 @@ export const RECENT_ACTIVITY: RecentActivity[] = [
     id: 'a1',
     icon: 'publish',
     title: 'Website published',
-    detail: 'bella.menucraft.com is live with the latest menu',
+    detail: 'bella site is live with the latest menu',
     time: '3 hours ago',
   },
   {
@@ -266,7 +266,7 @@ export const RECENT_ACTIVITY: RecentActivity[] = [
     id: 'a5',
     icon: 'edit',
     title: 'Price updated',
-    detail: 'Spaghetti ai Frutti di Mare · $23',
+    detail: 'Spaghetti ai Frutti di Mare Â· $23',
     time: '2 days ago',
   },
 ]
@@ -284,17 +284,17 @@ export const ADMIN_ROWS: AdminRestaurantRow[] = [
   { id: 'r6', name: 'Green Table', owner: 'Sofia Mendes', plan: 'professional', templateId: 'green-table', status: 'published', views: 9640, created: '2026-01-27' },
   { id: 'r7', name: 'Maison Patisserie', owner: 'Julien Roux', plan: 'professional', templateId: 'maison-patisserie', status: 'published', views: 7210, created: '2026-02-14' },
   { id: 'r8', name: 'The Royal', owner: 'Alexandra Vane', plan: 'business', templateId: 'the-royal', status: 'published', views: 15990, created: '2025-06-21' },
-  { id: 'r9', name: 'Nonna’s Table', owner: 'Luca Bianchi', plan: 'trial', templateId: 'bella-italia', status: 'draft', views: 320, created: '2026-10-18' },
+  { id: 'r9', name: 'Nonnaâ€™s Table', owner: 'Luca Bianchi', plan: 'trial', templateId: 'bella-italia', status: 'draft', views: 320, created: '2026-10-18' },
   { id: 'r10', name: 'Sunrise Juice Co.', owner: 'Mia Coleman', plan: 'starter', templateId: 'green-table', status: 'draft', views: 540, created: '2026-10-22' },
 ]
 
 export const PLATFORM_ACTIVITY: PlatformActivity[] = [
-  { id: 'p1', type: 'signup', title: 'New restaurant created', detail: 'Nonna’s Table · Trial plan', time: '12 min ago' },
+  { id: 'p1', type: 'signup', title: 'New restaurant created', detail: 'Nonnaâ€™s Table Â· Trial plan', time: '12 min ago' },
   { id: 'p2', type: 'publish', title: 'Site published', detail: 'Bella Italian Kitchen went live', time: '3 hours ago' },
-  { id: 'p3', type: 'upgrade', title: 'Plan upgraded', detail: 'Bean & Brew · Professional → Business', time: '5 hours ago' },
-  { id: 'p4', type: 'template', title: 'Template updated', detail: 'Maison Patisserie · new hero layouts', time: 'Yesterday' },
+  { id: 'p3', type: 'upgrade', title: 'Plan upgraded', detail: 'Bean & Brew Â· Professional â†’ Business', time: '5 hours ago' },
+  { id: 'p4', type: 'template', title: 'Template updated', detail: 'Maison Patisserie Â· new hero layouts', time: 'Yesterday' },
   { id: 'p5', type: 'qr', title: 'Milestone reached', detail: 'Burger District passed 5,000 QR scans', time: 'Yesterday' },
-  { id: 'p6', type: 'signup', title: 'New restaurant created', detail: 'Sunrise Juice Co. · Trial plan', time: '2 days ago' },
+  { id: 'p6', type: 'signup', title: 'New restaurant created', detail: 'Sunrise Juice Co. Â· Trial plan', time: '2 days ago' },
 ]
 
 /** Restaurant signups per month, last 12 months (mock). */
@@ -330,7 +330,7 @@ export const PLAN_SPLIT = [
 ]
 
 /* ------------------------------------------------------------------ *
- * Deterministic helpers — demo data must look the same on every reload
+ * Deterministic helpers â€” demo data must look the same on every reload
  * ------------------------------------------------------------------ */
 
 function hash(str: string): number {
@@ -369,7 +369,7 @@ const CUSTOMERS = [
 ]
 
 /* ------------------------------------------------------------------ *
- * Today's orders — the kitchen board starts alive
+ * Today's orders â€” the kitchen board starts alive
  * ------------------------------------------------------------------ */
 
 export function createSeedOrders(restaurants: Restaurant[]): Order[] {
@@ -409,7 +409,7 @@ export function createSeedOrders(restaurants: Restaurant[]): Order[] {
         number: n,
         restaurantId: r.id,
         channel: counter ? 'counter' : 'online',
-        table: counter ? '—' : String(1 + Math.floor(rnd() * 18)),
+        table: counter ? 'â€”' : String(1 + Math.floor(rnd() * 18)),
         customer: CUSTOMERS[Math.floor(rnd() * CUSTOMERS.length)],
         lines,
         note: rnd() < 0.25 ? 'No onions, please.' : '',
@@ -609,7 +609,7 @@ export function createSeedPayments(): Record<string, PaymentMethod[]> {
       {
         id: 'pay-bella-2',
         provider: 'card',
-        label: 'Card terminal · Verifone',
+        label: 'Card terminal Â· Verifone',
         account: 'Merchant ****4242',
         enabled: true,
       },

@@ -15,7 +15,8 @@ import {
   resolveVideoSrc,
   saveVideo,
 } from '../../../shared/lib/heroVideo.ts'
-import { cx, slugify } from '../../../shared/lib/utils.ts'
+import { cx, slugify, tx, writeText } from '../../../shared/lib/utils.ts'
+import { publicUrl } from '../../../shared/lib/hooks.ts'
 import { useStore } from '../../../shared/store/useStore.ts'
 import { useI18n, type TKey } from '../../../shared/i18n'
 import { setByPath } from '../../../templates/editor/inlineEdit.tsx'
@@ -70,22 +71,50 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
       Object.assign(d, setByPath(d, path, value))
     })
 
+  /**
+   * Write a localized text field (`name`, `tagline`, …). When the stored value
+   * is `{ en, ar, ku }` only the visible language is replaced, so the other
+   * translations survive the edit.
+   */
+  const setLocalized = <K extends 'name' | 'tagline' | 'description' | 'logoText'>(
+    key: K,
+    value: string
+  ) =>
+    updateDraft((d) => {
+      d[key] = writeText(d[key], value)
+    })
+
   return (
     <div className={cx('space-y-6', compact && 'space-y-5')}>
       <PanelBlock title={t('design.identity')} description={t('design.identityDesc')}>
         <div className="space-y-3">
           <Field label={t('design.restaurantName')}>
-            <Input value={draft.name} onChange={(e) => set('name', e.target.value)} />
+            <Input
+              value={typeof draft.name === 'string' ? draft.name : (tx(draft.name) || '')}
+              onChange={(e) => setLocalized('name', e.target.value)}
+            />
           </Field>
           <Field label={t('design.tagline')}>
-            <Input value={draft.tagline} onChange={(e) => set('tagline', e.target.value)} />
+            <Input
+              value={typeof draft.tagline === 'string' ? draft.tagline : (tx(draft.tagline) || '')}
+              onChange={(e) => setLocalized('tagline', e.target.value)}
+            />
           </Field>
-          <Field label={t('design.shortDescription')} hint={t('design.chars', { count: draft.description.length })}>
+          <Field
+            label={t('design.shortDescription')}
+            hint={t('design.chars', {
+              count:
+                (typeof draft.description === 'string'
+                  ? draft.description
+                  : (tx(draft.description) || '')
+                ).length,
+            })}
+          >
             <textarea
-              value={draft.description}
+              value={typeof draft.description === 'string' ? draft.description : (tx(draft.description) || '')}
               rows={3}
               maxLength={180}
-              onChange={(e) => set('description', e.target.value)}
+              onChange={(e) => setLocalized('description', e.target.value)}
               className="w-full rounded-xl border border-sand bg-paper px-3.5 py-2.5 text-sm leading-relaxed text-charcoal transition focus:border-flame focus:outline-none focus:ring-4 focus:ring-flame/12"
             />
           </Field>
@@ -93,18 +122,18 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
             <button
               type="button"
               onClick={() =>
-                set('slug', slugify(draft.name).replace(/[^a-z0-9-]/g, '') || draft.slug)
+                set('slug', slugify(tx(draft.name, 'en')).replace(/[^a-z0-9-]/g, '') || draft.slug)
               }
               className="flex w-full items-center justify-between gap-3 text-start"
             >
               <span className="min-w-0">
                 <span className="block text-[12.5px] font-medium text-espresso">{t('design.publicAddress')}</span>
-                <span className="block font-mono text-[12.5px] text-umber">{draft.slug}.menucraft.com</span>
+                <span className="block font-mono text-[12.5px] text-umber">{publicUrl(draft.slug)}</span>
               </span>
               <span className="shrink-0 text-end text-[11.5px] font-medium text-flame">
                 {t('design.syncWithName')}
                 <span className="block font-mono font-normal text-umber">
-                  {slugify(draft.name) || draft.slug}
+                  {slugify(tx(draft.name, 'en')) || draft.slug}
                 </span>
               </span>
             </button>
@@ -118,14 +147,14 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
             className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-[15px] font-semibold text-white shadow-inner"
             style={{ backgroundColor: draft.design.colors.primary }}
           >
-            {draft.logoText.slice(0, 2).toUpperCase()}
+            {typeof draft.logoText === 'string' ? draft.logoText.slice(0, 2).toUpperCase() : (tx(draft.logoText) || '').slice(0, 2).toUpperCase()}
           </span>
           <div className="min-w-0 flex-1 space-y-2.5">
             <Field label={t('design.logoText')} hint={t('design.logoTextHint')}>
               <Input
-                value={draft.logoText}
+                value={typeof draft.logoText === 'string' ? draft.logoText : (tx(draft.logoText) || '')}
                 maxLength={3}
-                onChange={(e) => set('logoText', e.target.value.toUpperCase())}
+                onChange={(e) => setLocalized('logoText', e.target.value.toUpperCase())}
               />
             </Field>
           </div>

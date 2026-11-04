@@ -11,7 +11,7 @@ const en = {
   platformMore: {
     demoBadge: 'Demo data',
     footerNote:
-      'MenuCraft platform console · every figure on this screen is simulated for the prototype.',
+      'Digital Menu platform console · every figure on this screen is simulated for the prototype.',
     tabsLabel: 'Admin sections',
     planLabel: 'Plan',
     access: {
@@ -90,7 +90,7 @@ const en = {
         'Super admins always see every tab — the permissions below only restrict admins.',
       permissionsFor: 'Access for {name}',
       namePh: 'e.g. Rania Aziz',
-      emailPh: 'e.g. rania@menucraft.demo',
+      emailPh: 'e.g. rania@digitalmenu.demo',
       addedMsg: '{name} joined the platform team.',
       permissionsSaved: 'Access updated for {name}.',
     },
@@ -114,7 +114,7 @@ const en = {
       resetTitle: 'Restore the original home page (all languages)',
       resetConfirmTitle: 'Reset the home page in all languages?',
       resetConfirmBody:
-        'Every headline, section and image goes back to the original MenuCraft copy — in all three languages (English, Arabic and Kurdish). This cannot be undone.',
+        'Every headline, section and image goes back to the original Digital Menu copy — in all three languages (English, Arabic and Kurdish). This cannot be undone.',
       resetMsg: 'The home page was reset to the original copy in all three languages.',
       sectionResetMsg: '{section} was reset to the original {lang} copy.',
       eyebrow: 'Eyebrow',
@@ -145,6 +145,7 @@ const en = {
         showcase: 'Responsive showcase',
         pricing: 'Pricing',
         finalCta: 'Final call to action',
+        logos: 'Client logos',
       },
     },
   },
@@ -153,7 +154,7 @@ const en = {
 const ar: Deep<typeof en> = {
   platformMore: {
     demoBadge: 'بيانات تجريبية',
-    footerNote: 'وحدة تحكم المنصة في MenuCraft · كل رقم في هذه الشاشة محاكاة للنموذج التجريبي.',
+    footerNote: 'وحدة تحكم المنصة في Digital Menu · كل رقم في هذه الشاشة محاكاة للنموذج التجريبي.',
     tabsLabel: 'أقسام لوحة التحكم',
     planLabel: 'الخطة',
     access: {
@@ -229,7 +230,7 @@ const ar: Deep<typeof en> = {
       superAdminNote: 'يرى المديرون الأعلىون كل التبويبات دائماً — الصلاحيات أدناه تحدّد المديرين فقط.',
       permissionsFor: 'الصلاحية لـ {name}',
       namePh: 'مثال: رانيا عزيز',
-      emailPh: 'مثال: rania@menucraft.demo',
+      emailPh: 'مثال: rania@digitalmenu.demo',
       addedMsg: 'انضم {name} إلى فريق المنصة.',
       permissionsSaved: 'تم تحديث صلاحيات {name}.',
     },
@@ -252,7 +253,7 @@ const ar: Deep<typeof en> = {
       resetTitle: 'استعادة الصفحة الأصلية (كل اللغات)',
       resetConfirmTitle: 'إعادة تعيين الصفحة الرئيسية بكل اللغات؟',
       resetConfirmBody:
-        'ستعود كل العناوين والأقسام والصور إلى نصوص MenuCraft الأصلية — في اللغات الثلاث جميعها (الإنجليزية والعربية والكردية). لا يمكن التراجع عن ذلك.',
+        'ستعود كل العناوين والأقسام والصور إلى نصوص Digital Menu الأصلية — في اللغات الثلاث جميعها (الإنجليزية والعربية والكردية). لا يمكن التراجع عن ذلك.',
       resetMsg: 'أُعيدت الصفحة الرئيسية إلى النصوص الأصلية في اللغات الثلاث.',
       sectionResetMsg: 'أُعيد {section} إلى نصوصه الأصلية ({lang}).',
       eyebrow: 'العنوان الصغير',
@@ -283,6 +284,7 @@ const ar: Deep<typeof en> = {
         showcase: 'العرض المتجاوب',
         pricing: 'الأسعار',
         finalCta: 'دعوة أخيرة',
+        logos: 'لوجوهات العملاء',
       },
     },
   },
@@ -292,7 +294,7 @@ const ku: Deep<typeof en> = {
   platformMore: {
     demoBadge: 'داتای تاقیکراوە',
     footerNote:
-      'کۆنتڕۆڵی پلاتفۆرمی MenuCraft · هەموو ژمارەیەکان لەم شاشەیەدا بۆ ئەم پێوانەی تاقیکراوە تەقەکراون.',
+      'کۆنتڕۆڵی پلاتفۆرمی Digital Menu · هەموو ژمارەیەکان لەم شاشەیەدا بۆ ئەم پێوانەی تاقیکراوە تەقەکراون.',
     tabsLabel: 'بەشەکانی ئەدمین',
     planLabel: 'پلان',
     access: {
@@ -370,7 +372,7 @@ const ku: Deep<typeof en> = {
         'سوپەر ئەدمینەکان هەمیشە هەموو بەشەکان بینن — مۆڵەتەکانی خوارەوە تەنها ئەدمینەکان سنوور دەدەن.',
       permissionsFor: 'دەستگەیشتن بۆ {name}',
       namePh: 'ونە: ڕانیا عەزیز',
-      emailPh: 'ونە: rania@menucraft.demo',
+      emailPh: 'ونە: rania@digitalmenu.demo',
       addedMsg: '{name} پیوستی بۆ تیمی پلاتفۆرم بوو.',
       permissionsSaved: 'مۆڵەتی {name} نوێکرایەوە.',
     },
@@ -394,7 +396,7 @@ const ku: Deep<typeof en> = {
       resetTitle: 'گەڕاندنەوەی لاپەڕەی ڕەسەن (هەموو زمانەکان)',
       resetConfirmTitle: 'لاپەڕەی سەرەکی بە هەموو زمانەکان بگەڕێتەوە؟',
       resetConfirmBody:
-        'هەموو سەردێڕ و بەش و وێنەکان دەگەڕێنرێتەوە بۆ دەقی ڕەسەنی MenuCraft — لە سێ زمانەکاندا (ئینگلیزی، عەرەبی و کوردی). ئەمە ناتوانرێت بگەڕێنرێتەوە.',
+        'هەموو سەردێڕ و بەش و وێنەکان دەگەڕێنرێتەوە بۆ دەقی ڕەسەنی Digital Menu — لە سێ زمانەکاندا (ئینگلیزی، عەرەبی و کوردی). ئەمە ناتوانرێت بگەڕێنرێتەوە.',
       resetMsg: 'لاپەڕەی سەرەکی گەڕێنرایەوە بۆ دەقی ڕەسەن لە سێ زمانەکاندا.',
       sectionResetMsg: '{section} گەڕێنرایەوە بۆ دەقی ڕەسەنی {lang}.',
       eyebrow: 'سەردێڕی بچووک',
@@ -425,6 +427,7 @@ const ku: Deep<typeof en> = {
         showcase: 'پیشاندانی وەشانکردن',
         pricing: 'نرخەکان',
         finalCta: 'کریای کۆتایی',
+        logos: 'لۆگۆی کڕیارەکان',
       },
     },
   },

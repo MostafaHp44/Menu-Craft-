@@ -4,10 +4,11 @@ import { Icon, Wordmark } from '../../shared/ui/icons.tsx'
 import { Button, Card, Img, Input, Segmented } from '../../shared/ui/ui.tsx'
 import { IMG } from '../../shared/lib/images.ts'
 import { TEMPLATES } from '../../templates/data/templates.ts'
-import { cx } from '../../shared/lib/utils.ts'
+import { cx, tx } from '../../shared/lib/utils.ts'
 import { useI18n } from '../../shared/i18n'
 import { useStore } from '../../shared/store/useStore.ts'
 import { isPlatformAdmin, useAuthStore, type SocialProvider } from '../../shared/store/useAuth.ts'
+import { useBackendAuth } from '../../shared/store/useBackendAuth.ts'
 
 type Mode = 'signin' | 'signup'
 /** the card walks through: account form → forgot → sent → reset */
@@ -115,12 +116,15 @@ export default function SignIn() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [restaurantName, setRestaurantName] = useState(draft?.name ?? '')
+  const [restaurantName, setRestaurantName] = useState(() =>
+    typeof draft?.name === 'string' ? draft.name : (tx(draft?.name) || '')
+  )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [magicLink, setMagicLink] = useState(false)
   const [connecting, setConnecting] = useState<SocialProvider | null>(null)
   const [sentTo, setSentTo] = useState('')
+  const [language, setLanguage] = useState<'ar' | 'en' | 'ku'>('ar')
   const [needsAccount, setNeedsAccount] = useState(false)
 
   const switchMode = (next: Mode) => {
@@ -158,7 +162,7 @@ export default function SignIn() {
         // in "create account" mode a social sign-up must behave exactly like
         // register — the current draft becomes the new site
         adoptDraft: mode === 'signup',
-        restaurantName: draftNow?.name ?? '',
+        restaurantName: typeof draftNow?.name === 'string' ? (draftNow?.name ?? '') : (tx(draftNow?.name) || ''),
         templateId: draftNow?.templateId ?? TEMPLATES[0].id,
       })
       setConnecting(null)
@@ -174,7 +178,7 @@ export default function SignIn() {
 
   /* -------------------------------- submits -------------------------------- */
 
-  const submitSignIn = (e: FormEvent) => {
+  const submitSignIn = async (e: FormEvent) => {
     e.preventDefault()
     if (!EMAIL_RE.test(email)) {
       setError(t('flow.validEmail'))
@@ -190,17 +194,30 @@ export default function SignIn() {
     }
     setError('')
     setBusy(true)
-    window.setTimeout(() => {
-      const result = signInWithPassword(email, password)
+
+    // 1) Try the real backend first so the HttpOnly session cookie is issued.
+    try {
+      const backendUser = await useBackendAuth.getState().signin(email.trim(), password)
+      // mirror into the prototype session when such an account exists (best effort)
+      signInWithPassword(email, password)
       setBusy(false)
-      if (!result.ok) {
-        if (result.reason === 'suspended') setError(t('flow.suspended'))
-        else if (result.reason === 'wrongPassword') setError(t('flow.wrongPassword'))
-        else setError(t('flow.noPasswordSet'))
-        return
-      }
-      navigate(isPlatformAdmin(result.account ?? null) ? '/admin' : '/dashboard')
-    }, 450)
+      const role = backendUser?.role
+      navigate(role === 'admin' || role === 'super_admin' ? '/admin' : '/dashboard')
+      return
+    } catch {
+      // not a backend account (or wrong backend password) — fall through to the
+      // prototype accounts so the demo keeps working
+    }
+
+    const result = signInWithPassword(email, password)
+    setBusy(false)
+    if (!result.ok) {
+      if (result.reason === 'suspended') setError(t('flow.suspended'))
+      else if (result.reason === 'wrongPassword') setError(t('flow.wrongPassword'))
+      else setError(t('flow.noPasswordSet'))
+      return
+    }
+    navigate(isPlatformAdmin(result.account ?? null) ? '/admin' : '/dashboard')
   }
 
   const submitMagicLink = (e: FormEvent) => {
@@ -222,7 +239,7 @@ export default function SignIn() {
     }, 450)
   }
 
-  const submitSignUp = (e: FormEvent) => {
+  const submitSignUp = async (e: FormEvent) => {
     e.preventDefault()
     if (!EMAIL_RE.test(email)) {
       setError(t('flow.validEmail'))
@@ -235,17 +252,33 @@ export default function SignIn() {
     setError('')
     setBusy(true)
     const hadDraft = Boolean(useStore.getState().draft)
-    window.setTimeout(() => {
-      signUp({
-        name,
-        email,
-        restaurantName,
-        templateId: useStore.getState().draft?.templateId ?? TEMPLATES[0].id,
+    const templateId = useStore.getState().draft?.templateId ?? TEMPLATES[0].id
+
+    // Register on the real backend first so the account + session cookie exist.
+    let backendError: string | null = null
+    try {
+      await useBackendAuth.getState().signup({
+        email: email.trim(),
         password,
+        name,
+        restaurantName,
+        templateId,
+        language,
       })
-      setBusy(false)
-      navigate(hadDraft ? '/dashboard/editor' : '/dashboard/templates')
-    }, 450)
+    } catch (err) {
+      backendError = err instanceof Error ? err.message : null
+    }
+
+    // Keep the prototype workspace in sync (it drives the editor/templates UI).
+    signUp({ name, email, restaurantName, templateId, password })
+    setBusy(false)
+
+    if (backendError) {
+      setError(backendError)
+      return
+    }
+
+    navigate(hadDraft ? '/dashboard/editor' : '/dashboard/templates')
   }
 
   const submitForgot = (e: FormEvent) => {
@@ -341,7 +374,7 @@ export default function SignIn() {
       {/* -------------------------------- form --------------------------------- */}
       <div className="flex flex-col bg-ivory px-6 py-8 sm:px-10 lg:px-14">
         <div className="flex items-center justify-between">
-          <Link to="/" aria-label="MenuCraft home">
+          <Link to="/" aria-label="Digital Menu home">
             <Wordmark />
           </Link>
           <Link
@@ -468,6 +501,13 @@ export default function SignIn() {
                         onChange={(e) => setRestaurantName(e.target.value)}
                         placeholder={t('auth.restaurantPh')}
                       />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-1.5 block text-[13px] font-medium text-espresso">Store default language</span>
+                      <select value={language} onChange={(e) => setLanguage(e.target.value as 'ar' | 'en' | 'ku')} className="w-full rounded-xl border border-sand bg-paper px-3 py-2.5 text-sm text-charcoal">
+                        <option value="ar">Arabic</option><option value="en">English</option><option value="ku">Kurdish Sorani</option>
+                      </select>
                     </label>
 
                     {error ? (
@@ -741,6 +781,10 @@ export default function SignIn() {
             {' · '}
             <Link to="/admin" className="text-clay transition hover:text-umber">
               {t('flow.adminLink')}
+            </Link>
+            {' · '}
+            <Link to="/workspace/login" className="text-clay transition hover:text-umber">
+              {t('live.nav.workspace')}
             </Link>
           </p>
         </div>

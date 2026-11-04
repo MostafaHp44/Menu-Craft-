@@ -5,7 +5,7 @@ import { Icon } from '../../shared/ui/icons.tsx'
 import { Badge, Button, Card, IconButton } from '../../shared/ui/ui.tsx'
 import { LanguageSwitcher } from '../../shared/ui/LanguageSwitcher.tsx'
 import { useI18n, type TKey } from '../../shared/i18n'
-import { cx, money, timeAgo } from '../../shared/lib/utils.ts'
+import { cx, money, timeAgo, tx } from '../../shared/lib/utils.ts'
 import { useOrderedOrders, useOrdersStore } from '../../shared/store/useOrders.ts'
 import { useActiveRestaurant, useStore } from '../../shared/store/useStore.ts'
 import { useAuthStore } from '../../shared/store/useAuth.ts'
@@ -279,7 +279,7 @@ export default function WorkerBoard() {
           <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-white/8 pt-2.5">
             <span className="flex min-w-0 items-center gap-2 rounded-full border border-white/12 bg-white/5 px-3 py-1.5 text-[12.5px] font-medium text-ivory/85">
               <Icon name="store" size={14} className="shrink-0 text-flame-light" />
-              <span className="truncate">{restaurant.name}</span>
+              <span className="truncate">{typeof restaurant.name === 'string' ? restaurant.name : tx(restaurant.name)}</span>
             </span>
             <LanguageSwitcher tone="dark" />
           </div>

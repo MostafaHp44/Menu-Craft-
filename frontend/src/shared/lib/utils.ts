@@ -2,6 +2,50 @@
 
 let counter = 0
 
+/**
+ * Active UI language, kept in sync by `<I18nProvider>` so `tx()` resolves
+ * localized strings for the language the user is actually looking at — without
+ * every display site having to thread `lang` through its props.
+ */
+let activeLang: string = 'en'
+
+export function setActiveLang(lang: string): void {
+  activeLang = lang
+}
+
+export function tx(
+  value: string | { en?: string; ar?: string; ku?: string } | undefined | null,
+  lang: string = activeLang
+): string {
+  if (value == null) return ''
+  if (typeof value === 'string') return value
+  const multi = value as Record<string, string | undefined>
+  return multi[lang] || multi.en || multi.ar || multi.ku || ''
+}
+
+/** language currently shown in the UI — what new edits should be written to */
+export function getActiveLang(): string {
+  return activeLang
+}
+
+/**
+ * Store an edited string on a field that may hold `{ en, ar, ku }`.
+ * Object values keep their other languages: only the edited language is
+ * replaced, so translations are never silently dropped.
+ */
+export function writeText(
+  previous: string | { en?: string; ar?: string; ku?: string } | undefined,
+  value: string,
+  lang: string = activeLang
+): string | { en?: string; ar?: string; ku?: string } {
+  if (previous == null || typeof previous === 'string') return value
+  const next: { en?: string; ar?: string; ku?: string } = { ...previous }
+  if (lang === 'ar') next.ar = value
+  else if (lang === 'ku') next.ku = value
+  else next.en = value
+  return next
+}
+
 export function uid(prefix = 'id'): string {
   counter += 1
   return `${prefix}-${Date.now().toString(36)}-${counter.toString(36)}`
@@ -51,6 +95,18 @@ export function normalizeHex(value: string): string {
   const v = value.trim()
   const withHash = v.startsWith('#') ? v : `#${v}`
   return isHex(withHash) ? withHash.toUpperCase() : '#000000'
+}
+
+/* -------------------------------- localization ------------------------------- */
+
+export function resolveLocalized(
+  value: string | { en?: string; ar?: string; ku?: string } | null | undefined,
+  lang: string = 'en'
+): string {
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'string') return value
+  const selected = value[lang as 'en' | 'ar' | 'ku'] ?? value.en ?? value.ar ?? value.ku ?? ''
+  return typeof selected === 'string' ? selected : ''
 }
 
 /** Blend two hex colors; t=0 → a, t=1 → b */

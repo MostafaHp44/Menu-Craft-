@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { AdminPermission, Restaurant, Role, UserAccount } from '../lib/types.ts'
 import { createSeedAccounts, createRestaurantFromTemplate } from '../lib/demoData.ts'
+import { tx } from '../lib/utils.ts'
 import { useStore } from './useStore.ts'
 import { usePlatformStore } from './usePlatform.ts'
 
@@ -38,6 +39,7 @@ function encodePassword(value: string): string {
 
 interface AuthState {
   session: UserAccount | null
+  isInitializing: boolean
   accounts: UserAccount[]
   /** demo password vault keyed by lowercased email — deliberately kept off UserAccount */
   passwords: Record<string, string>
@@ -87,6 +89,7 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       session: null,
+      isInitializing: false,
       accounts: createSeedAccounts(),
       passwords: {},
 
@@ -197,7 +200,7 @@ export const useAuthStore = create<AuthState>()(
         let restaurantId: string
         if (draft) {
           /* the visitor was editing — their draft BECOMES the new client's restaurant */
-          const displayName = input.restaurantName.trim() || draft.name
+          const displayName = input.restaurantName.trim() || tx(draft.name)
           restaurantId = `rst-${slugify(displayName)}-${Date.now().toString(36)}`
           const restaurant: Restaurant = {
             ...draft,
@@ -312,7 +315,7 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'menucraft-auth-v1',
       version: 1,
-      partialize: (s) => ({ session: s.session, accounts: s.accounts, passwords: s.passwords }),
+      partialize: (s) => ({ session: s.session, accounts: s.accounts, passwords: s.passwords, isInitializing: s.isInitializing }),
       merge: (persisted, current) => {
         const stored = (persisted ?? {}) as Partial<AuthState>
         const accounts =
@@ -331,6 +334,10 @@ export const useAuthStore = create<AuthState>()(
           passwords,
           session: stored.session ?? null,
         }
+      },
+      migrate: (persistedState: unknown) => {
+        // schema is forward-compatible; older payloads are normalised by `merge`
+        return persistedState
       },
     }
   )

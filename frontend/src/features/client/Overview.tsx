@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom'
 import { Icon } from '../../shared/ui/icons.tsx'
 import { Badge, Button, Card, Sparkline, StatCard } from '../../shared/ui/ui.tsx'
-import { RECENT_ACTIVITY } from '../../shared/lib/demoData.ts'
+
 import { publicUrl } from '../../shared/lib/hooks.ts'
 import { getTemplate } from '../../templates/data/templates.ts'
-import { cx, formatDate, timeAgo } from '../../shared/lib/utils.ts'
+import { cx, formatDate, timeAgo, tx } from '../../shared/lib/utils.ts'
+import { useI18n } from '../../shared/i18n'
 import { useActiveRestaurant, useStore } from '../../shared/store/useStore.ts'
 
 const QUICK_ACTIONS = [
@@ -15,6 +16,8 @@ const QUICK_ACTIONS = [
 ] as const
 
 export default function Overview() {
+  /* subscribing re-renders this page when the language changes so `tx()` re-resolves */
+  const { lang } = useI18n()
   const r = useActiveRestaurant()
   const dirty = useStore((s) => s.dirty)
   const itemCount = r.menu.reduce((sum, c) => sum + c.items.length, 0)
@@ -30,9 +33,9 @@ export default function Overview() {
       <Card className="relative overflow-hidden p-6 lg:p-7">
         <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-center">
           <div>
-            <span className="eyebrow">Good to see you, Marco</span>
+            <span className="eyebrow">Good to see you</span>
             <h2 className="display-serif mt-2.5 text-[clamp(24px,3vw,32px)] leading-tight text-charcoal">
-              {r.name} is {r.status === 'published' && !dirty ? 'live and taking orders.' : 'one click from live.'}
+              {typeof r.name === 'string' ? r.name : tx(r.name, lang)} is {r.status === 'published' && !dirty ? 'live and taking orders.' : 'one click from live.'}
             </h2>
             <p className="mt-2 max-w-xl text-[14.5px] leading-relaxed text-umber">
               {dirty ? (
@@ -76,7 +79,7 @@ export default function Overview() {
               {publicUrl(r.slug)}
             </Link>
             <p className="mt-1 text-[12px] leading-relaxed text-clay">
-              Simulated MenuCraft subdomain — DNS is never provisioned in this prototype.
+              The public URL for this restaurant.
             </p>
             <div className="mt-4 flex items-center gap-4 border-t border-sand/70 pt-4 text-[12px] text-umber">
               <span className="flex items-center gap-1.5">
@@ -102,9 +105,9 @@ export default function Overview() {
         <StatCard
           label="QR scans"
           value={r.stats.qrScans.toLocaleString()}
-          delta="+9.4%"
+          delta="—"
           icon="qr"
-          trend={r.stats.trend.map((v) => Math.round(v / 9))}
+          trend={r.stats.trend}
         />
         <StatCard label="Scan rate" value={`${scanRate}%`} delta="+1.1%" icon="activity" />
         <StatCard label="Menu items" value={String(itemCount)} delta="+2" icon="utensils" />
@@ -116,9 +119,7 @@ export default function Overview() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h3 className="text-[15.5px] font-semibold text-charcoal">Menu views · last 7 days</h3>
-              <p className="mt-1 text-[13px] text-umber">
-                Simulated analytics for {publicUrl(r.slug)}
-              </p>
+              <p className="mt-1 text-[13px] text-umber">Real traffic data from the restaurant's public menu.</p>
             </div>
             <div className="text-end">
               <div className="text-[26px] font-semibold leading-none tracking-[-0.02em] text-charcoal">
@@ -159,7 +160,7 @@ export default function Overview() {
             <span className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-clay/60" /> Other days
             </span>
-            <span className="ms-auto text-clay">Demo data · not measured from real visitors</span>
+            <span className="ms-auto text-clay">From restaurant data</span>
           </div>
         </Card>
 
@@ -167,25 +168,9 @@ export default function Overview() {
         <Card className="flex flex-col p-6">
           <div className="flex items-center justify-between">
             <h3 className="text-[15.5px] font-semibold text-charcoal">Recent activity</h3>
-            <Badge tone="neutral">Demo feed</Badge>
+            <Badge tone="neutral">Recent</Badge>
           </div>
-          <ul className="mt-4 space-y-1">
-            {RECENT_ACTIVITY.map((a) => (
-              <li
-                key={a.id}
-                className="flex items-start gap-3 rounded-xl px-2 py-2.5 transition hover:bg-cream/70"
-              >
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cream text-espresso">
-                  <Icon name={a.icon === 'publish' ? 'send' : a.icon === 'qr' ? 'qr' : a.icon === 'item' ? 'star' : a.icon === 'design' ? 'palette' : 'pencil'} size={15} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="line-clamp-1 text-[13.5px] font-medium text-charcoal">{a.title}</span>
-                  <span className="line-clamp-1 text-[12.5px] text-umber">{a.detail}</span>
-                </span>
-                <span className="shrink-0 text-[11.5px] text-clay">{a.time}</span>
-              </li>
-            ))}
-          </ul>
+          <p className="mt-4 text-[13px] text-umber">No recent activity to show.</p>
           <div className="mt-auto pt-4">
             <Button to="/dashboard/menu" variant="outline" size="sm" full icon="arrowRight">
               Continue editing

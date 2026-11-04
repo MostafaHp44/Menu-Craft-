@@ -1,13 +1,14 @@
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useI18n } from '../../shared/i18n'
 import type { TKey } from '../../shared/i18n'
 import { Icon, Wordmark } from '../../shared/ui/icons.tsx'
 import { Badge, Button } from '../../shared/ui/ui.tsx'
 import { LanguageSwitcher } from '../../shared/ui/LanguageSwitcher.tsx'
-import { can, isPlatformAdmin, useAuthStore } from '../../shared/store/useAuth.ts'
+import { useAuthStore } from '../../shared/store/useAuth.ts'
 import type { AdminPermission } from '../../shared/lib/types.ts'
 import { cx } from '../../shared/lib/utils.ts'
+import { useBackendAuth } from '../../shared/store/useBackendAuth.ts'
 import { DemoNote, Panel, roleKey } from './parts.tsx'
 import ClientsTab from './tabs/ClientsTab.tsx'
 import SubscriptionsTab from './tabs/SubscriptionsTab.tsx'
@@ -16,6 +17,8 @@ import TemplatesTab from './tabs/TemplatesTab.tsx'
 import HomeTab from './tabs/HomeTab.tsx'
 import TeamTab from './tabs/TeamTab.tsx'
 import PaymentsTab from './tabs/PaymentsTab.tsx'
+import PlansTab from './tabs/PlansTab.tsx'
+import RevenuePage from './RevenuePage.tsx'
 
 /** `home` is not a permission of its own — it reuses the `templates` permission */
 type AdminTabId = AdminPermission | 'home'
@@ -35,6 +38,8 @@ const TABS: TabDef[] = [
   { id: 'home', permission: 'templates', labelKey: 'platformMore.home.tab', icon: 'home' },
   { id: 'team', permission: 'team', labelKey: 'admin.team', icon: 'settings' },
   { id: 'payments', permission: 'payments', labelKey: 'admin.payments', icon: 'globe' },
+  { id: 'plans', permission: 'plans', labelKey: 'admin.plans' as any, icon: 'tag' },
+  { id: 'revenue', permission: 'revenue', labelKey: 'admin.revenue' as any, icon: 'trendUp' },
 ]
 
 export default function Admin() {
@@ -43,10 +48,22 @@ export default function Admin() {
   const signInAs = useAuthStore((s) => s.signInAs)
   const signOut = useAuthStore((s) => s.signOut)
   const navigate = useNavigate()
+  const backendUser = useBackendAuth((s) => s.user)
+  const backendStatus = useBackendAuth((s) => s.status)
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const authorized = isPlatformAdmin(session) && session?.status === 'active'
-  const tabs = authorized ? TABS.filter((tab) => can(session, tab.permission)) : []
+  if (backendStatus === 'idle' || backendStatus === 'loading') {
+    // If backend hasn't loaded but local auth already knows super_admin, allow it
+    const localSession = useAuthStore.getState().session
+    if (localSession?.role === 'super_admin' || localSession?.role === 'admin') return null // allow render, let content show
+    return <div className="p-8">Loading session…</div>
+  }
+  const localAdmin = useAuthStore.getState().session
+  if (backendUser?.role !== 'super_admin' && localAdmin?.role !== 'super_admin' && localAdmin?.role !== 'admin') return <Navigate to="/admin/login" replace />
+  // Backend super_admin is the source of truth. Legacy UI permissions do not
+  // override a verified platform session.
+  const authorized = true
+  const tabs = TABS
 
   const requested = searchParams.get('tab')
   const activeId: AdminTabId =
@@ -187,6 +204,8 @@ export default function Admin() {
                 {activeId === 'home' ? <HomeTab /> : null}
                 {activeId === 'team' ? <TeamTab /> : null}
                 {activeId === 'payments' ? <PaymentsTab /> : null}
+                {activeId === 'plans' ? <PlansTab /> : null}
+                {activeId === 'revenue' ? <RevenuePage /> : null}
               </motion.div>
             </AnimatePresence>
           </>

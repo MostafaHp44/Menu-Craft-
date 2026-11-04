@@ -39,6 +39,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize
   to?: string
   href?: string
+  target?: string
+  rel?: string
   icon?: string
   iconRight?: string
   full?: boolean
@@ -50,6 +52,8 @@ export function Button({
   size = 'md',
   to,
   href,
+  target,
+  rel,
   icon,
   iconRight,
   full,
@@ -92,7 +96,7 @@ export function Button({
   }
   if (href) {
     return (
-      <a href={href} className={classes} {...(rest as object)}>
+      <a href={href} target={target} rel={rel} className={classes} {...(rest as object)}>
         {content}
       </a>
     )
@@ -252,10 +256,12 @@ const FIELD_CLASS =
   'w-full rounded-xl border border-sand bg-paper px-3.5 text-sm text-charcoal placeholder:text-clay transition focus:border-flame focus:outline-none focus:ring-4 focus:ring-flame/12'
 
 export function Input({
+  label,
   className,
   ...rest
-}: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cx(FIELD_CLASS, 'h-11', className)} {...rest} />
+}: InputHTMLAttributes<HTMLInputElement> & { label?: string }) {
+  const input = <input className={cx(FIELD_CLASS, 'h-11', className)} {...rest} />
+  return label ? <div className="space-y-1"><label className="block text-xs font-medium text-charcoal">{label}</label>{input}</div> : input
 }
 
 export function TextArea({

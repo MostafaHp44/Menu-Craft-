@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   ColorSet,
   DesignConfiguration,
   LayoutConfig,
@@ -14,7 +14,7 @@ import type {
 import { IMG } from '../../shared/lib/images.ts'
 
 /* ------------------------------------------------------------------ *
- * Design construction helpers — every template is assembled from the
+ * Design construction helpers â€” every template is assembled from the
  * same building blocks so the renderer stays generic.
  * ------------------------------------------------------------------ */
 
@@ -100,20 +100,20 @@ function category(name: string, note: string, items: MenuItem[]): MenuCategory {
 
 const DEFAULT_HOURS: OpeningHour[] = [
   { day: 'Monday', hours: 'Closed' },
-  { day: 'Tuesday – Thursday', hours: '17:00 – 23:00' },
-  { day: 'Friday – Saturday', hours: '17:00 – 00:00' },
-  { day: 'Sunday', hours: '17:00 – 22:00' },
+  { day: 'Tuesday â€“ Thursday', hours: '17:00 â€“ 23:00' },
+  { day: 'Friday â€“ Saturday', hours: '17:00 â€“ 00:00' },
+  { day: 'Sunday', hours: '17:00 â€“ 22:00' },
 ]
 
 const CAFE_HOURS: OpeningHour[] = [
-  { day: 'Monday – Friday', hours: '07:00 – 18:00' },
-  { day: 'Saturday', hours: '08:00 – 18:00' },
-  { day: 'Sunday', hours: '08:00 – 16:00' },
+  { day: 'Monday â€“ Friday', hours: '07:00 â€“ 18:00' },
+  { day: 'Saturday', hours: '08:00 â€“ 18:00' },
+  { day: 'Sunday', hours: '08:00 â€“ 16:00' },
 ]
 
 const BAKERY_HOURS: OpeningHour[] = [
-  { day: 'Tuesday – Friday', hours: '07:00 – 19:00' },
-  { day: 'Saturday – Sunday', hours: '08:00 – 18:00' },
+  { day: 'Tuesday â€“ Friday', hours: '07:00 â€“ 19:00' },
+  { day: 'Saturday â€“ Sunday', hours: '08:00 â€“ 18:00' },
   { day: 'Monday', hours: 'Closed' },
 ]
 
@@ -130,7 +130,7 @@ export const TEMPLATES: TemplateDefinition[] = [
     tagline: 'A tasting menu in seven quiet movements.',
     description:
       'A dark, cinematic template for restaurants that sell an evening rather than a meal. Editorial serif headlines, gold detail work and a menu list built for wine-paired storytelling.',
-    personality: 'Luxe · Dark · Editorial',
+    personality: 'Luxe Â· Dark Â· Editorial',
     tags: ['Dark', 'Serif', 'Tasting menu'],
     featured: true,
     chips: ['#14110F', '#C6A15B', '#F3ECE1'],
@@ -149,15 +149,15 @@ export const TEMPLATES: TemplateDefinition[] = [
       email: 'reserve@theroyal.demo',
       address: '44 Grand Avenue, San Francisco, CA',
       hours: DEFAULT_HOURS,
-      socials: { instagram: '@theroyal', facebook: 'theroyal', website: 'theroyal.menucraft.com' },
+      socials: { instagram: '@theroyal', facebook: 'theroyal', website: 'theroyal.example.com' },
     },
     sampleMenu: [
       category('Overture', 'First bites and cold openings', [
         item('Hand Dived Scallop', 'Brown butter, cauliflower, caviar', 26, IMG.fineDiningPlate, {
           featured: true,
         }),
-        item('Heritage Beetroot', 'Chèvre, walnut, aged balsamic', 18, IMG.saladPlate),
-        item('Velouté of Celeriac', 'Truffle, chive oil, crème fraîche', 16, IMG.soupBowl, {
+        item('Heritage Beetroot', 'ChÃ¨vre, walnut, aged balsamic', 18, IMG.saladPlate),
+        item('VeloutÃ© of Celeriac', 'Truffle, chive oil, crÃ¨me fraÃ®che', 16, IMG.soupBowl, {
           popular: true,
         }),
       ]),
@@ -175,7 +175,7 @@ export const TEMPLATES: TemplateDefinition[] = [
         item('Heirloom Tomato', 'Stracciatella, basil oil, sea salt', 21, IMG.healthyPlate),
       ]),
       category('Finale', 'Desserts and petit fours', [
-        item('Salted Caramel Custard', 'Toasted honey, crème double', 14, IMG.platedDessert, {
+        item('Salted Caramel Custard', 'Toasted honey, crÃ¨me double', 14, IMG.platedDessert, {
           popular: true,
         }),
         item('Dark Chocolate Marquise', 'Malt, sour cherry, vanilla cream', 15, IMG.chocolateCake, {
@@ -224,8 +224,8 @@ export const TEMPLATES: TemplateDefinition[] = [
     category: 'Cafe',
     tagline: 'All-day coffee, loud type, easy mornings.',
     description:
-      'A confident city-café template with a split hero, oversized sans headlines and a square menu grid that photographs beautifully on mobile.',
-    personality: 'Modern · Bold · Graphic',
+      'A confident city-cafÃ© template with a split hero, oversized sans headlines and a square menu grid that photographs beautifully on mobile.',
+    personality: 'Modern Â· Bold Â· Graphic',
     tags: ['Bold', 'Sans serif', 'Day menu'],
     featured: true,
     chips: ['#17150F', '#E8571F', '#F7F5F2'],
@@ -237,14 +237,14 @@ export const TEMPLATES: TemplateDefinition[] = [
       slug: 'urbancafe',
       tagline: 'All-day coffee, loud type, easy mornings.',
       description:
-        'A corner café serving single-origin espresso, slow ferments and a short all-day kitchen menu. Dogs welcome, laptops until noon.',
+        'A corner cafÃ© serving single-origin espresso, slow ferments and a short all-day kitchen menu. Dogs welcome, laptops until noon.',
       logoText: 'UC',
       logoStyle: 'monogram',
       phone: '+1 (212) 555-0177',
       email: 'hey@urbancafe.demo',
       address: '9 Bond Street, New York, NY',
       hours: CAFE_HOURS,
-      socials: { instagram: '@urbancafe', facebook: 'urbancafe', website: 'urban.menucraft.com' },
+      socials: { instagram: '@urbancafe', facebook: 'urbancafe', website: 'urban.example.com' },
     },
     sampleMenu: [
       category('Coffee', 'Espresso, filter, cold', [
@@ -309,10 +309,10 @@ export const TEMPLATES: TemplateDefinition[] = [
     id: 'sweet-atelier',
     name: 'Sweet Atelier',
     category: 'Bakery',
-    tagline: 'Butter, flour, patience — baked before sunrise.',
+    tagline: 'Butter, flour, patience â€” baked before sunrise.',
     description:
       'A romantic bakery template with editorial hero composition, portrait imagery and soft elevated cards. Perfect for pastry counters and pre-order collections.',
-    personality: 'Romantic · Soft · Artisan',
+    personality: 'Romantic Â· Soft Â· Artisan',
     tags: ['Warm', 'Serif', 'Portrait imagery'],
     featured: true,
     chips: ['#A05C4B', '#C2703F', '#FBF4EF'],
@@ -322,7 +322,7 @@ export const TEMPLATES: TemplateDefinition[] = [
     sample: {
       name: 'Sweet Atelier',
       slug: 'atelier',
-      tagline: 'Butter, flour, patience — baked before sunrise.',
+      tagline: 'Butter, flour, patience â€” baked before sunrise.',
       description:
         'A small atelier baking laminated pastries, layer cakes and naturally leavened bread every morning. Pre-orders close at 18:00 the day before.',
       logoText: 'SA',
@@ -334,7 +334,7 @@ export const TEMPLATES: TemplateDefinition[] = [
       socials: {
         instagram: '@sweetatelier',
         facebook: 'sweetatelier',
-        website: 'atelier.menucraft.com',
+        website: 'atelier.example.com',
       },
     },
     sampleMenu: [
@@ -407,7 +407,7 @@ export const TEMPLATES: TemplateDefinition[] = [
     tagline: 'Smashed daily. Stack it high. Napkins included.',
     description:
       'Street-food energy: near-black surfaces, electric yellow accents, condensed headlines and a hero that fills the screen before anyone reads a word.',
-    personality: 'Punchy · Loud · Street',
+    personality: 'Punchy Â· Loud Â· Street',
     tags: ['Dark', 'Condensed', 'Fast service'],
     featured: false,
     chips: ['#0F0F0F', '#F2C230', '#F5F2EC'],
@@ -426,14 +426,14 @@ export const TEMPLATES: TemplateDefinition[] = [
       email: 'yo@burgerdistrict.demo',
       address: '78 Market Row, Chicago, IL',
       hours: [
-        { day: 'Monday – Thursday', hours: '11:30 – 23:00' },
-        { day: 'Friday – Saturday', hours: '11:30 – 01:00' },
-        { day: 'Sunday', hours: '12:00 – 22:00' },
+        { day: 'Monday â€“ Thursday', hours: '11:30 â€“ 23:00' },
+        { day: 'Friday â€“ Saturday', hours: '11:30 â€“ 01:00' },
+        { day: 'Sunday', hours: '12:00 â€“ 22:00' },
       ],
       socials: {
         instagram: '@burgerdistrict',
         facebook: 'burgerdistrict',
-        website: 'district.menucraft.com',
+        website: 'district.example.com',
       },
     },
     sampleMenu: [
@@ -448,7 +448,7 @@ export const TEMPLATES: TemplateDefinition[] = [
         }),
       ]),
       category('Loaded', 'Fries engineered for gravity', [
-        item('District Loaded Fries', 'Cheese sauce, brisket, jalapeño', 9.5, IMG.steakFrites),
+        item('District Loaded Fries', 'Cheese sauce, brisket, jalapeÃ±o', 9.5, IMG.steakFrites),
         item('The Works Dog', 'Smoked sausage, kraut, mustard', 8.5, IMG.deliSandwich),
         item('Buttermilk Chicken', 'Slaw, hot honey, pickles', 14, IMG.burgersBoard),
       ]),
@@ -503,7 +503,7 @@ export const TEMPLATES: TemplateDefinition[] = [
     tagline: 'Slow food, loud tables, extra parmesan.',
     description:
       'A warm trattoria template pairing olive greens with tomato reds. Editorial hero, classic list menu and generous food photography.',
-    personality: 'Rustic · Warm · Generous',
+    personality: 'Rustic Â· Warm Â· Generous',
     tags: ['Warm', 'Serif', 'List menu'],
     featured: true,
     chips: ['#3F5D45', '#C1442E', '#FBF6EE'],
@@ -515,7 +515,7 @@ export const TEMPLATES: TemplateDefinition[] = [
       slug: 'bella',
       tagline: 'Slow food, loud tables, extra parmesan.',
       description:
-        'A family kitchen serving the recipes Nonna brought from Emilia-Romagna — hand-rolled pasta, dough fermented for 48 hours and wine poured by the carafe.',
+        'A family kitchen serving the recipes Nonna brought from Emilia-Romagna â€” hand-rolled pasta, dough fermented for 48 hours and wine poured by the carafe.',
       logoText: 'BK',
       logoStyle: 'monogram',
       phone: '+1 (617) 555-0188',
@@ -523,11 +523,11 @@ export const TEMPLATES: TemplateDefinition[] = [
       address: '12 Harbor Street, Boston, MA',
       hours: [
         { day: 'Monday', hours: 'Closed' },
-        { day: 'Tuesday – Thursday', hours: '17:00 – 22:30' },
-        { day: 'Friday – Saturday', hours: '17:00 – 23:30' },
-        { day: 'Sunday', hours: '12:00 – 21:00' },
+        { day: 'Tuesday â€“ Thursday', hours: '17:00 â€“ 22:30' },
+        { day: 'Friday â€“ Saturday', hours: '17:00 â€“ 23:30' },
+        { day: 'Sunday', hours: '12:00 â€“ 21:00' },
       ],
-      socials: { instagram: '@bellaitalia', facebook: 'bellaitalia', website: 'bella.menucraft.com' },
+      socials: { instagram: '@bellaitalia', facebook: 'bellaitalia', website: 'bella.example.com' },
     },
     sampleMenu: [
       category('Antipasti', 'To share, or not', [
@@ -545,7 +545,7 @@ export const TEMPLATES: TemplateDefinition[] = [
         item('Spaghetti ai Frutti di Mare', 'Clams, mussels, chilli, white wine', 23, IMG.seafoodPasta, {
           featured: true,
         }),
-        item('Penne all’Arrabbiata', 'Tomato, garlic, calabrian chilli', 16, IMG.penneArrabbiata),
+        item('Penne allâ€™Arrabbiata', 'Tomato, garlic, calabrian chilli', 16, IMG.penneArrabbiata),
         item('Pasta alla Zucchina', 'Courgette ribbons, mint, pecorino', 18, IMG.zucchiniPasta),
       ]),
       category('Pizza', '48-hour dough, wood fired', [
@@ -560,10 +560,10 @@ export const TEMPLATES: TemplateDefinition[] = [
           featured: true,
         }),
         item('Bistecca alla Fiorentina', 'For two, 600g, rosemary potatoes', 68, IMG.slicedSteak),
-        item('Costolette d’Agnello', 'Slow braised, tomato, olives', 29, IMG.ribs),
+        item('Costolette dâ€™Agnello', 'Slow braised, tomato, olives', 29, IMG.ribs),
       ]),
       category('Dolci', 'Made by Marta', [
-        item('Tiramisù Classico', 'Mascarpone, espresso, cocoa', 9, IMG.platedDessert, {
+        item('TiramisÃ¹ Classico', 'Mascarpone, espresso, cocoa', 9, IMG.platedDessert, {
           featured: true,
         }),
         item('Torta al Cioccolato', 'Warm dark chocolate centre', 10, IMG.chocolateCake),
@@ -611,7 +611,7 @@ export const TEMPLATES: TemplateDefinition[] = [
     tagline: 'Roasted upstairs. Brewed exactly to spec.',
     description:
       'A calm specialty-coffee template: split hero, square imagery and a restrained palette that lets origin notes and brew methods do the talking.',
-    personality: 'Calm · Minimal · Craft',
+    personality: 'Calm Â· Minimal Â· Craft',
     tags: ['Neutral', 'Modern', 'Brew guide'],
     featured: false,
     chips: ['#4A3428', '#A9673A', '#F4EDE4'],
@@ -630,7 +630,7 @@ export const TEMPLATES: TemplateDefinition[] = [
       email: 'hello@beanbrew.demo',
       address: '5 Pike Lane, Seattle, WA',
       hours: CAFE_HOURS,
-      socials: { instagram: '@beanbrew', facebook: 'beanbrew', website: 'brew.menucraft.com' },
+      socials: { instagram: '@beanbrew', facebook: 'beanbrew', website: 'brew.example.com' },
     },
     sampleMenu: [
       category('Espresso', 'House blend + rotating guest', [
@@ -699,7 +699,7 @@ export const TEMPLATES: TemplateDefinition[] = [
     tagline: 'Plants first, portions generous, zero lecture.',
     description:
       'Fresh, bright and optimistic. A centered header, airy spacing and elevated cards give bowls and juices the room they deserve.',
-    personality: 'Fresh · Bright · Airy',
+    personality: 'Fresh Â· Bright Â· Airy',
     tags: ['Light', 'Rounded', 'Plant forward'],
     featured: false,
     chips: ['#2F7A57', '#E1B94B', '#FAFCF6'],
@@ -718,11 +718,11 @@ export const TEMPLATES: TemplateDefinition[] = [
       email: 'eat@greentable.demo',
       address: '300 Cedar Road, Austin, TX',
       hours: [
-        { day: 'Monday – Friday', hours: '11:00 – 21:00' },
-        { day: 'Saturday', hours: '10:00 – 21:00' },
-        { day: 'Sunday', hours: '10:00 – 20:00' },
+        { day: 'Monday â€“ Friday', hours: '11:00 â€“ 21:00' },
+        { day: 'Saturday', hours: '10:00 â€“ 21:00' },
+        { day: 'Sunday', hours: '10:00 â€“ 20:00' },
       ],
-      socials: { instagram: '@greentable', facebook: 'greentable', website: 'green.menucraft.com' },
+      socials: { instagram: '@greentable', facebook: 'greentable', website: 'green.example.com' },
     },
     sampleMenu: [
       category('Bowls', 'Built on brown rice or greens', [
@@ -741,7 +741,7 @@ export const TEMPLATES: TemplateDefinition[] = [
         }),
       ]),
       category('Warm', 'Small plates, big flavour', [
-        item('Carrot & Ginger Velouté', 'Coconut, chilli oil, seeds', 10, IMG.soupBowl),
+        item('Carrot & Ginger VeloutÃ©', 'Coconut, chilli oil, seeds', 10, IMG.soupBowl),
         item('Herb Marinated Chicken', 'Charred greens, lemon', 19, IMG.grilledMeat),
         item('Market Catch of the Day', 'Beurre blanc, seasonal garnish', 24, IMG.porkPlate),
       ]),
@@ -792,7 +792,7 @@ export const TEMPLATES: TemplateDefinition[] = [
     tagline: 'Small cakes, long afternoons.',
     description:
       'Parisian restraint with burgundy and gold. Portrait imagery, elegant serif headlines and elevated cards that make each dessert feel like an object.',
-    personality: 'Parisian · Refined · Golden',
+    personality: 'Parisian Â· Refined Â· Golden',
     tags: ['Elegant', 'Serif', 'Portrait imagery'],
     featured: false,
     chips: ['#7A2E3B', '#C9A227', '#FFF9F0'],
@@ -804,7 +804,7 @@ export const TEMPLATES: TemplateDefinition[] = [
       slug: 'maison',
       tagline: 'Small cakes, long afternoons.',
       description:
-        'A marble counter of entremets, petits gâteaux and viennoiserie, made in a small kitchen behind the shop. Tea served until five.',
+        'A marble counter of entremets, petits gÃ¢teaux and viennoiserie, made in a small kitchen behind the shop. Tea served until five.',
       logoText: 'MP',
       logoStyle: 'monogram',
       phone: '+1 (415) 555-0190',
@@ -814,26 +814,26 @@ export const TEMPLATES: TemplateDefinition[] = [
       socials: {
         instagram: '@maisonpatisserie',
         facebook: 'maisonpatisserie',
-        website: 'maison.menucraft.com',
+        website: 'maison.example.com',
       },
     },
     sampleMenu: [
-      category('Entremets', 'Whole cakes · 48h notice', [
+      category('Entremets', 'Whole cakes Â· 48h notice', [
         item('Chocolat Grand Cru', '70% ganache, praline base', 48, IMG.chocolateCake, {
           featured: true,
           popular: true,
         }),
-        item('Jardin d’Été', 'Vanilla, raspberry, pistachio', 52, IMG.rainbowCake, {
+        item('Jardin dâ€™Ã‰tÃ©', 'Vanilla, raspberry, pistachio', 52, IMG.rainbowCake, {
           featured: true,
         }),
-        item('Tarte au Citron', 'Torched meringue, almond sablé', 38, IMG.platedDessert),
+        item('Tarte au Citron', 'Torched meringue, almond sablÃ©', 38, IMG.platedDessert),
       ]),
-      category('Petits Gâteaux', 'By the piece', [
+      category('Petits GÃ¢teaux', 'By the piece', [
         item('Vanilla Cupcake', 'Brown butter frosting', 4.5, IMG.cupcakes),
-        item('Caramel Saint-Honoré', 'Choux, caramel, crème', 7.5, IMG.platedDessert, {
+        item('Caramel Saint-HonorÃ©', 'Choux, caramel, crÃ¨me', 7.5, IMG.platedDessert, {
           popular: true,
         }),
-        item('Sablé Breton', 'Salted caramel, dark chocolate', 4, IMG.cookies),
+        item('SablÃ© Breton', 'Salted caramel, dark chocolate', 4, IMG.cookies),
       ]),
       category('Viennoiserie', 'From the morning bake', [
         item('Pain au Chocolat', 'Two batons, 27% butter', 4.8, IMG.frenchToast),
@@ -841,7 +841,7 @@ export const TEMPLATES: TemplateDefinition[] = [
         item('Baguette de Tradition', 'Stone milled flour', 4, IMG.artisanBread),
       ]),
       category('Boissons', 'Tea, coffee, cold', [
-        item('Thé Maison', 'Bergamot, rose, white tea', 5, IMG.cappuccino),
+        item('ThÃ© Maison', 'Bergamot, rose, white tea', 5, IMG.cappuccino),
         item('Iced Coffee Latte', 'Double shot, milk of choice', 5.5, IMG.icedCoffee),
         item('Chocolat Chaud', 'Dark, whipped cream', 6, IMG.latteHands),
       ]),
@@ -887,7 +887,7 @@ function meatballs(): MenuItem {
 /* ------------------------------------------------------------------ *
  * Super-admin duplicated designs live in the platform store (they are
  * user data, not stock data), so this module never imports the store.
- * The store injects a read-only provider instead — see usePlatform.ts.
+ * The store injects a read-only provider instead â€” see usePlatform.ts.
  * ------------------------------------------------------------------ */
 
 export interface CustomTemplateSeed {
@@ -904,7 +904,7 @@ export function registerCustomTemplates(provider: () => CustomTemplateSeed[]): v
   customTemplatesProvider = provider
 }
 
-/** Stable public id for a duplicated design ("My Café" → "custom-my-café"). */
+/** Stable public id for a duplicated design ("My CafÃ©" â†’ "custom-my-cafÃ©"). */
 export function customTemplateId(name: string): string {
   const slug =
     name
@@ -939,7 +939,7 @@ function customTemplateDefinitions(): TemplateDefinition[] {
   })
 }
 
-/** Every design a visitor can pick — super-admin duplicates first, then stock. */
+/** Every design a visitor can pick â€” super-admin duplicates first, then stock. */
 export function allTemplates(): TemplateDefinition[] {
   const customs = customTemplateDefinitions()
   return customs.length ? [...customs, ...TEMPLATES] : TEMPLATES

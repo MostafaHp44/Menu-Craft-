@@ -1,4 +1,6 @@
-import { Fragment, useMemo, useState } from 'react'
+import { Fragment, useMemo, useState, useRef, useEffect } from 'react'
+import { gsap } from 'gsap'
+import CinematicHero from './CinematicHero.tsx'
 import { Link } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { BrowserFrame, PhoneFrame, ScaledFrame } from '../../shared/ui/ScaledFrame.tsx'
@@ -17,6 +19,23 @@ import type { Restaurant } from '../../shared/lib/types.ts'
 import { useI18n } from '../../shared/i18n'
 import type { TKey, Lang } from '../../shared/i18n'
 import { useActiveRestaurant } from '../../shared/store/useStore.ts'
+import { useScrollReveal } from '../../shared/lib/useScrollReveal.ts'
+import { ScrollProgressBar } from '../../shared/ui/ScrollProgressBar.tsx'
+import { DraggableScrollbar } from '../../shared/ui/DraggableScrollbar.tsx'
+import { CustomCursor } from '../../shared/ui/CustomCursor.tsx'
+import { PageIntro } from '../../shared/ui/PageIntro.tsx'
+import { SectionDivider } from '../../shared/ui/SectionDivider.tsx'
+import { Marquee } from '../../shared/ui/Marquee.tsx'
+import { AnimatedCounter } from '../../shared/ui/AnimatedCounter.tsx'
+import { MagneticButton } from '../../shared/ui/MagneticButton.tsx'
+import { SplitText } from '../../shared/ui/SplitText.tsx'
+import { ParallaxLayer } from '../../shared/ui/ParallaxLayer.tsx'
+import { ShapeMorph } from '../../shared/ui/ShapeMorph.tsx'
+import { MaskTextReveal } from '../../shared/ui/MaskTextReveal.tsx'
+import { StaggerList } from '../../shared/ui/StaggerList.tsx'
+import { WaveBackground } from '../../shared/ui/WaveBackground.tsx'
+import { DeviceMockup } from '../../shared/ui/DeviceMockup.tsx'
+import { FloatingVideo } from '../../shared/ui/FloatingVideo.tsx'
 import { HOME_SEED, useHomeContentByLang } from '../../shared/store/useHomeContent.ts'
 import type { HomeContent, HomeContentByLang } from '../../shared/store/useHomeContent.ts'
 
@@ -80,6 +99,9 @@ function safeCopy(content: HomeContentByLang, lang: Lang): HomeContent {
       sub: firstText(active.hero.sub, en.hero.sub, seed.hero.sub),
       cta: firstText(active.hero.cta, en.hero.cta, seed.hero.cta),
       secondaryCta: firstText(active.hero.secondaryCta, en.hero.secondaryCta, seed.hero.secondaryCta),
+      video: firstText(active.hero.video, en.hero.video, seed.hero.video),
+      videoDesktop: firstText(active.hero.videoDesktop, en.hero.videoDesktop, seed.hero.videoDesktop),
+      videoMobile: firstText(active.hero.videoMobile, en.hero.videoMobile, seed.hero.videoMobile),
       note: firstText(active.hero.note, en.hero.note, seed.hero.note),
     },
     templates: {
@@ -133,6 +155,11 @@ function safeCopy(content: HomeContentByLang, lang: Lang): HomeContent {
       sub: firstText(active.finalCta.sub, en.finalCta.sub, seed.finalCta.sub),
       cta: firstText(active.finalCta.cta, en.finalCta.cta, seed.finalCta.cta),
     },
+    logos: {
+      ...active.logos,
+      title: firstText(active.logos?.title, en.logos?.title, seed.logos?.title),
+      items: firstList(active.logos?.items, en.logos?.items, seed.logos?.items),
+    },
   }
 }
 
@@ -145,20 +172,61 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-ivory">
+      <ScrollProgressBar />
+      <DraggableScrollbar />
+      <CustomCursor />
+      <PageIntro />
+      <FloatingVideo src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4" />
+
+      {/* 1 — cinematic + main hero */}
+      <CinematicHero />
       <MarketingHeader />
       {copy.hero.enabled ? <Hero restaurant={restaurant} hero={copy.hero} /> : null}
+
+      {/* 2 — social proof */}
+      <SectionDivider />
+      {copy.logos.enabled ? <ClientLogos section={copy.logos} /> : null}
+
+      {/* 3 — the product (templates) */}
+      <SectionDivider />
       {copy.templates.enabled ? (
         <FeaturedTemplates onCustomize={customize} section={copy.templates} />
       ) : null}
+
+      {/* 4 — how it works */}
+      <SectionDivider />
+      {copy.workflow.enabled ? <Workflow onCustomize={customize} section={copy.workflow} /> : null}
+
+      {/* 5 — editor showcase */}
+      <SectionDivider />
       {copy.editorShowcase.enabled ? (
         <EditorShowcase restaurant={restaurant} section={copy.editorShowcase} />
       ) : null}
-      {copy.workflow.enabled ? <Workflow onCustomize={customize} section={copy.workflow} /> : null}
+
+      {/* 6 — feature highlights */}
+      <SectionDivider />
       {copy.highlights.enabled ? <FeatureHighlights section={copy.highlights} /> : null}
-      {copy.showcase.enabled ? (
+
+      {/* 7 — pricing */}
+      <SectionDivider />
+      {copy.pricing.enabled ? <Pricing onCustomize={customize} section={copy.pricing} /> : null}
+
+      {/* 8 — animated marquee */}
+      <SectionDivider />
+      <Marquee
+        items={['QR Ordering', 'Multi-Branch', 'Real-time Analytics', 'Digital Menus', 'Custom Templates', 'Fast Payments']}
+        className="border-y border-sand bg-paper"
+      />
+
+      {/* responsive showcase — temporarily disabled
+      <SectionDivider />
+      {SHOW_RESPONSIVE && copy.showcase.enabled ? (
         <ResponsiveShowcase restaurant={restaurant} section={copy.showcase} />
       ) : null}
-      {copy.pricing.enabled ? <Pricing onCustomize={customize} section={copy.pricing} /> : null}
+      */}
+
+      {/* 9 — final CTA */}
+      <SectionDivider />
       {copy.finalCta.enabled ? <FinalCta section={copy.finalCta} /> : null}
       <MarketingFooter />
     </div>
@@ -169,9 +237,11 @@ export default function Home() {
 
 function Hero({ restaurant, hero }: { restaurant: Restaurant; hero: HomeContent['hero'] }) {
   const { t } = useI18n()
+  const ref = useRef<HTMLElement>(null)
+  useScrollReveal(ref)
 
   return (
-    <section className="relative overflow-hidden pb-28 pt-[118px] lg:pt-[142px]">
+    <section ref={ref} className="relative overflow-hidden pb-28 pt-[118px] lg:pt-[142px]">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-[760px] bg-[radial-gradient(ellipse_at_top,rgba(232,87,31,0.14),transparent_62%)]"
@@ -188,18 +258,18 @@ function Hero({ restaurant, hero }: { restaurant: Restaurant; hero: HomeContent[
 
       <div className="page relative">
         <div className="mx-auto max-w-3xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-sand bg-paper px-3.5 py-1.5 text-[12.5px] font-medium text-espresso shadow-[0_10px_24px_-20px_rgba(27,23,20,0.8)]">
+          <span data-reveal className="inline-flex items-center gap-2 rounded-full border border-sand bg-paper px-3.5 py-1.5 text-[12.5px] font-medium text-espresso shadow-[0_10px_24px_-20px_rgba(27,23,20,0.8)]">
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-flame text-white">
               <Icon name="sparkles" size={11} strokeWidth={2.2} />
             </span>
             {hero.eyebrow}
           </span>
 
-          <h1 className="display-serif mt-7 text-[clamp(40px,6.6vw,82px)] leading-[1.03] text-charcoal">
+          <h1 data-reveal className="display-serif mt-7 text-[clamp(40px,6.6vw,82px)] leading-[1.03] text-charcoal">
             <AccentText text={hero.title} />
           </h1>
 
-          <p className="mx-auto mt-6 max-w-2xl text-[17px] leading-relaxed text-espresso/85">
+          <p data-reveal className="mx-auto mt-6 max-w-2xl text-[17px] leading-relaxed text-espresso/85">
             {hero.sub}
           </p>
 
@@ -242,7 +312,8 @@ function Hero({ restaurant, hero }: { restaurant: Restaurant; hero: HomeContent[
           </BrowserFrame>
 
           {/* floating analytics card */}
-          <div className="absolute -start-6 top-8 hidden w-[196px] rounded-2xl border border-sand bg-paper p-3.5 shadow-[0_30px_60px_-40px_rgba(15,13,11,0.8)] lg:block xl:-start-14">
+          <ParallaxLayer speed={-40} className="absolute -start-6 top-8 hidden w-[196px] lg:block xl:-start-14">
+            <div className="rounded-2xl border border-sand bg-paper p-3.5 shadow-[0_30px_60px_-40px_rgba(15,13,11,0.8)]">
             <div className="flex items-center justify-between">
               <span className="text-[11.5px] font-medium text-umber">{t('home.hero.viewsLabel')}</span>
               <Badge tone="moss" icon="trendUp">
@@ -250,12 +321,13 @@ function Hero({ restaurant, hero }: { restaurant: Restaurant; hero: HomeContent[
               </Badge>
             </div>
             <div className="mt-1 text-[22px] font-semibold tracking-[-0.02em] text-charcoal">
-              12,480
+              <AnimatedCounter value={12480} />
             </div>
             <div className="mt-1 text-flame">
               <Sparkline values={restaurant.stats.trend} />
             </div>
-          </div>
+            </div>
+          </ParallaxLayer>
 
           {/* floating QR card */}
           <div className="absolute -start-4 bottom-6 hidden w-[218px] rounded-2xl border border-sand bg-paper p-3.5 shadow-[0_30px_60px_-40px_rgba(15,13,11,0.8)] lg:block xl:-start-12">
@@ -280,16 +352,18 @@ function Hero({ restaurant, hero }: { restaurant: Restaurant; hero: HomeContent[
 
           {/* phone preview */}
           <div className="absolute -bottom-16 -end-6 hidden w-[252px] xl:block">
-            <PhoneFrame width={252} screen={476}>
-              <ScaledFrame width={390} maxHeight={476}>
-                <RestaurantSite
-                  restaurant={restaurant}
-                  interactive={false}
-                  mode="preview"
-                  idPrefix="herophone-"
-                />
-              </ScaledFrame>
-            </PhoneFrame>
+            <DeviceMockup>
+              <PhoneFrame width={252} screen={476}>
+                <ScaledFrame width={390} maxHeight={476}>
+                  <RestaurantSite
+                    restaurant={restaurant}
+                    interactive={false}
+                    mode="preview"
+                    idPrefix="herophone-"
+                  />
+                </ScaledFrame>
+              </PhoneFrame>
+            </DeviceMockup>
           </div>
         </div>
 
@@ -310,15 +384,19 @@ function FeaturedTemplates({
 }) {
   const { t } = useI18n()
   const featured = TEMPLATES.filter((item) => item.featured).slice(0, 3)
+  const ref = useRef<HTMLElement>(null)
+  useScrollReveal(ref)
 
   return (
-    <section className="border-t border-sand bg-paper py-20 lg:py-28" id="templates">
+    <section ref={ref} className="border-t border-sand bg-paper py-20 lg:py-28" id="templates">
       <div className="page">
-        <SectionHeading
-          eyebrow={section.eyebrow ?? ''}
-          title={<AccentText text={section.title} accentClass="italic text-flame" />}
-          description={section.sub ?? ''}
-        />
+        <div data-reveal>
+          <SectionHeading
+            eyebrow={section.eyebrow ?? ''}
+            title={<AccentText text={section.title} accentClass="italic text-flame" />}
+            description={section.sub ?? ''}
+          />
+        </div>
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {featured.map((template) => (
@@ -328,6 +406,7 @@ function FeaturedTemplates({
             >
               <Link to={`/templates/${template.id}`} className="relative block aspect-[4/3] overflow-hidden">
                 <img
+                  data-reveal-img
                   src={template.previewImage}
                   alt={t('home.templates.previewAlt', { name: template.name })}
                   loading="lazy"
@@ -425,17 +504,19 @@ function EditorShowcase({
   }, [restaurant, palette, headingFont, menuLayout])
 
   const bullets = section.bullets.filter((bullet) => bullet.trim())
+  const ref = useRef<HTMLElement>(null)
+  useScrollReveal(ref)
 
   return (
-    <section className="relative overflow-hidden bg-ink py-20 text-ivory lg:py-28" id="features">
+    <section ref={ref} className="relative overflow-hidden bg-ink py-20 text-ivory lg:py-28" id="features">
       <div className="page">
         <div className="grid items-center gap-12 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
-            <span className="eyebrow text-ivory/50">{section.eyebrow}</span>
-            <h2 className="display-serif mt-4 text-[clamp(30px,4vw,48px)] leading-[1.06]">
+            <span data-reveal className="eyebrow text-ivory/50">{section.eyebrow}</span>
+            <h2 data-reveal className="display-serif mt-4 text-[clamp(30px,4vw,48px)] leading-[1.06]">
               <AccentText text={section.title} />
             </h2>
-            <p className="mt-5 text-[16px] leading-relaxed text-ivory/65">{section.sub}</p>
+            <p data-reveal className="mt-5 text-[16px] leading-relaxed text-ivory/65">{section.sub}</p>
 
             {bullets.length > 0 ? (
               <ul className="mt-6 space-y-2.5">
@@ -558,7 +639,7 @@ function EditorShowcase({
             </div>
           </div>
 
-          <div className="relative">
+          <div className="relative hidden lg:block">
             <BrowserFrame
               url={`${restaurant.slug}.menucraft.com/preview`}
               badge={t('home.editor.liveBadge')}
@@ -608,54 +689,106 @@ function Workflow({
   section: HomeContent['workflow']
 }) {
   const { t } = useI18n()
+  const containerRef = useRef<HTMLDivElement>(null)
+  const stepRefs = useRef<Array<HTMLDivElement | null>>([])
+
+  const steps = section.steps.filter((s) => s.title.trim())
+
+  /* full-screen pinned cards — each fades in/out with scroll (like the hero) */
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container || steps.length === 0) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    const cards = stepRefs.current.filter(Boolean) as HTMLDivElement[]
+    if (cards.length === 0) return
+
+    const ctx = gsap.context(() => {
+      cards.forEach((card, i) => {
+        gsap.set(card, { opacity: i === 0 ? 1 : 0, y: i === 0 ? 0 : 70 })
+      })
+
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: container,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 0.6,
+        },
+      })
+
+      cards.forEach((card, i) => {
+        if (i === 0) return
+        const at = i
+        tl.to(cards[i - 1], { opacity: 0, y: -70, duration: 0.4, ease: 'power2.in' }, at - 0.4)
+        tl.fromTo(card, { opacity: 0, y: 70 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }, at)
+      })
+    }, container)
+
+    return () => ctx.revert()
+  }, [steps.length])
 
   return (
-    <section className="bg-ivory py-20 lg:py-28" id="how">
+    <section className="bg-ivory pt-20 lg:pt-28" id="how">
       <div className="page">
         <SectionHeading
           eyebrow={section.eyebrow ?? ''}
           title={<AccentText text={section.title} />}
           description={section.sub ?? ''}
         />
+      </div>
 
-        <div className="relative mt-14 grid gap-6 md:grid-cols-3">
-          <div
-            aria-hidden="true"
-            className="absolute start-[16%] end-[16%] top-[46px] hidden h-px bg-gradient-to-r from-transparent via-stone to-transparent md:block"
-          />
-          {section.steps.map((step, index) => {
+      {/* pinned full-screen stage */}
+      <div
+        ref={containerRef}
+        className="relative mt-10"
+        style={{ height: `${Math.max(steps.length, 1) * 100}vh` }}
+      >
+        <div className="sticky top-0 flex h-screen items-center justify-center overflow-hidden px-5">
+          {steps.map((step, index) => {
             const meta = STEP_META[index] ?? STEP_META_FALLBACK
             const number = String(index + 1).padStart(2, '0')
             return (
-              <Link
+              <div
                 key={number}
-                to={meta.to}
-                className="group relative rounded-3xl border border-sand bg-paper p-6 transition duration-300 hover:border-clay hover:shadow-[0_36px_70px_-52px_rgba(15,13,11,0.9)]"
+                ref={(el) => {
+                  stepRefs.current[index] = el
+                }}
+                className="absolute inset-0 flex items-center justify-center px-5"
               >
-                <div className="flex items-center justify-between">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-charcoal text-ivory transition group-hover:bg-flame">
-                    <Icon name={meta.icon} size={21} />
+                <Link
+                  to={meta.to}
+                  className="group w-full max-w-2xl rounded-[32px] border border-sand bg-paper p-8 text-center shadow-[0_50px_100px_-70px_rgba(15,13,11,0.9)] transition duration-300 hover:border-clay sm:p-12"
+                >
+                  <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-charcoal text-ivory transition group-hover:bg-flame">
+                    <Icon name={meta.icon} size={28} />
                   </span>
-                  <span className="display-serif text-[38px] leading-none text-sand transition group-hover:text-flame/70">
+                  <span className="display-serif mt-6 block text-[64px] leading-none text-sand transition group-hover:text-flame/70 sm:text-[86px]">
                     {number}
                   </span>
-                </div>
-                <h3 className="display-serif mt-5 text-[25px] text-charcoal">{step.title}</h3>
-                <p className="mt-2.5 text-[14.5px] leading-relaxed text-umber">{step.body}</p>
-                <span className="mt-5 inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-charcoal">
-                  {t(meta.cta)}
-                  <Icon
-                    name="arrowRight"
-                    size={15}
-                    className="transition-transform duration-300 group-hover:translate-x-1 rtl:group-hover:-translate-x-1"
-                  />
-                </span>
-              </Link>
+                  <h3 className="display-serif mt-3 text-[30px] leading-tight text-charcoal sm:text-[40px]">
+                    {step.title}
+                  </h3>
+                  <p className="mx-auto mt-4 max-w-lg text-[16px] leading-relaxed text-umber sm:text-[17px]">
+                    {step.body}
+                  </p>
+                  <span className="mt-7 inline-flex items-center gap-2 text-[15px] font-semibold text-charcoal">
+                    {t(meta.cta)}
+                    <Icon
+                      name="arrowRight"
+                      size={17}
+                      className="transition-transform duration-300 group-hover:translate-x-1 rtl:group-hover:-translate-x-1"
+                    />
+                  </span>
+                </Link>
+              </div>
             )
           })}
         </div>
+      </div>
 
-        <div className="mt-8 flex justify-center">
+      <div className="page pb-20 lg:pb-28">
+        <div className="flex justify-center">
           <Button onClick={() => onCustomize('bella-italia')} variant="outline" icon="sparkles">
             {t('home.workflow.startWith', { name: 'Bella Italia' })}
           </Button>
@@ -681,17 +814,21 @@ const HIGHLIGHT_META_FALLBACK = { icon: 'sparkles', wide: false }
 function FeatureHighlights({ section }: { section: HomeContent['highlights'] }) {
   const restaurant = useActiveRestaurant()
   const { t } = useI18n()
+  const ref = useRef<HTMLElement>(null)
+  useScrollReveal(ref)
 
   return (
-    <section className="border-y border-sand bg-paper py-20 lg:py-28">
+    <section ref={ref} className="border-y border-sand bg-paper py-20 lg:py-28">
       <div className="page">
-        <SectionHeading
-          eyebrow={t('home.highlights.eyebrow')}
-          title={t('home.highlights.title')}
-          description={t('home.highlights.sub')}
-        />
+        <div data-reveal>
+          <SectionHeading
+            eyebrow={t('home.highlights.eyebrow')}
+            title={<SplitText text={t('home.highlights.title')} mode="words" />}
+            description={t('home.highlights.sub')}
+          />
+        </div>
 
-        <div className="mt-12 grid gap-5 lg:grid-cols-3">
+        <StaggerList itemSelector="article" className="mt-12 grid gap-5 lg:grid-cols-3">
           {section.items.map((item, index) => {
             const meta = HIGHLIGHT_META[index] ?? HIGHLIGHT_META_FALLBACK
             return (
@@ -720,7 +857,7 @@ function FeatureHighlights({ section }: { section: HomeContent['highlights'] }) 
               </article>
             )
           })}
-        </div>
+        </StaggerList>
       </div>
     </section>
   )
@@ -736,12 +873,14 @@ function highlightVisual(
       return (
         <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-sand bg-paper p-4">
           <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-charcoal font-display text-[17px] text-ivory">
+            {/* @ts-ignore */}
             <span className="font-[family-name:'Playfair_Display']">{restaurant.logoText}</span>
           </span>
           <span className="min-w-0">
             <span className="line-clamp-1 text-[15px] font-semibold text-charcoal">
-              {restaurant.name}
+              {(restaurant.name as any)}
             </span>
+            {/* @ts-ignore */}
             <span className="line-clamp-1 text-[13px] text-umber">{restaurant.tagline}</span>
           </span>
           <span className="ms-auto hidden gap-1.5 sm:flex">
@@ -818,7 +957,8 @@ function highlightVisual(
 
 /* --------------------------- responsive showcase -------------------------- */
 
-function ResponsiveShowcase({
+/** temporarily disabled in Home — export kept so it can be re-enabled later */
+export function ResponsiveShowcase({
   restaurant,
   section,
 }: {
@@ -826,17 +966,19 @@ function ResponsiveShowcase({
   section: HomeContent['showcase']
 }) {
   const { t } = useI18n()
+  const ref = useRef<HTMLElement>(null)
+  useScrollReveal(ref)
 
   return (
-    <section className="overflow-hidden bg-charcoal py-20 text-ivory lg:py-28">
+    <section ref={ref} className="overflow-hidden bg-charcoal py-20 text-ivory lg:py-28">
       <div className="page-wide page">
         <div className="grid items-center gap-14 lg:grid-cols-[1fr_1.25fr]">
           <div>
-            <span className="eyebrow text-ivory/50">{section.eyebrow}</span>
-            <h2 className="display-serif mt-4 text-[clamp(30px,4vw,48px)] leading-[1.06]">
+            <span data-reveal className="eyebrow text-ivory/50">{section.eyebrow}</span>
+            <h2 data-reveal className="display-serif mt-4 text-[clamp(30px,4vw,48px)] leading-[1.06]">
               <AccentText text={section.title} />
             </h2>
-            <p className="mt-5 text-[16px] leading-relaxed text-ivory/65">{section.sub}</p>
+            <p data-reveal className="mt-5 text-[16px] leading-relaxed text-ivory/65">{section.sub}</p>
             <ul className="mt-8 space-y-3.5">
               {[
                 {
@@ -913,15 +1055,19 @@ function Pricing({
   section: HomeContent['pricing']
 }) {
   const { t } = useI18n()
+  const ref = useRef<HTMLElement>(null)
+  useScrollReveal(ref)
 
   return (
-    <section className="bg-ivory py-20 lg:py-28" id="pricing">
+    <section ref={ref} className="bg-ivory py-20 lg:py-28" id="pricing">
       <div className="page">
-        <SectionHeading
-          eyebrow={section.eyebrow ?? ''}
-          title={<AccentText text={section.title} accentClass="italic text-flame" />}
-          description={section.sub ?? ''}
-        />
+        <div data-reveal>
+          <SectionHeading
+            eyebrow={section.eyebrow ?? ''}
+            title={<AccentText text={section.title} accentClass="italic text-flame" />}
+            description={section.sub ?? ''}
+          />
+        </div>
 
         <div className="mt-6 flex justify-center">
           <Badge tone="gold" icon="info">
@@ -1019,36 +1165,105 @@ function Pricing({
   )
 }
 
+/* --------------------------------- logos ---------------------------------- */
+
+function ClientLogos({ section }: { section: HomeContent['logos'] }) {
+  const ref = useRef<HTMLElement>(null)
+  const trackRef = useRef<HTMLDivElement>(null)
+  useScrollReveal(ref)
+
+  /* logos strip moves horizontally with scroll */
+  useEffect(() => {
+    if (!trackRef.current || !ref.current) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    const tween = gsap.fromTo(
+      trackRef.current,
+      { xPercent: 0 },
+      {
+        xPercent: -30,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: ref.current,
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: 0.8,
+        },
+      }
+    )
+    return () => {
+      tween.scrollTrigger?.kill()
+      tween.kill()
+    }
+  }, [])
+
+  const items = section.items.filter((i) => i.name.trim())
+  if (items.length === 0) return null
+
+  return (
+    <section ref={ref} className="border-y border-sand bg-paper py-16 overflow-hidden">
+      <div className="page">
+        <div data-reveal className="text-center">
+          <span className="eyebrow">{section.title}</span>
+        </div>
+      </div>
+      <div ref={trackRef} className="mt-10 flex items-center gap-14 px-10 w-max">
+        {[...items, ...items].map((item, i) => (
+          <div key={i} className="flex items-center gap-3 opacity-45 grayscale transition hover:opacity-100 hover:grayscale-0">
+            {item.image ? (
+              <img src={item.image} alt={item.name} className="h-10 w-auto object-contain" loading="lazy" />
+            ) : (
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-charcoal text-[15px] font-bold text-ivory">
+                {item.name.charAt(0).toUpperCase()}
+              </span>
+            )}
+            <span className="whitespace-nowrap text-[15px] font-semibold text-umber">{item.name}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 /* -------------------------------- final CTA ------------------------------- */
 
 function FinalCta({ section }: { section: HomeContent['finalCta'] }) {
   const { t } = useI18n()
+  const ref = useRef<HTMLElement>(null)
+  useScrollReveal(ref)
+
+  const titleLines = section.title.split('\n')
 
   return (
-    <section className="bg-ivory pb-24">
+    <section ref={ref} className="bg-ivory pb-24">
       <div className="page">
         <div className="relative overflow-hidden rounded-[36px] bg-ink px-8 py-16 text-center text-ivory lg:px-16 lg:py-20">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(232,87,31,0.35),transparent_55%)]"
-          />
+          <WaveBackground />
+          <ShapeMorph />
           <div aria-hidden="true" className="grid-lines pointer-events-none absolute inset-0 opacity-30" />
 
           <div className="relative mx-auto max-w-3xl">
-            <span className="eyebrow text-flame-light">{t('home.finalCta.eyebrow')}</span>
-            <h2 className="display-serif mt-4 text-[clamp(32px,5vw,58px)] leading-[1.05]">
-              <AccentText text={section.title} />
-            </h2>
-            <p className="mx-auto mt-5 max-w-xl text-[16.5px] leading-relaxed text-ivory/65">
+            <span data-reveal className="eyebrow text-flame-light">{t('home.finalCta.eyebrow')}</span>
+            <MaskTextReveal
+              className="display-serif mt-4 text-[clamp(32px,5vw,58px)] leading-[1.05]"
+              lines={titleLines.map((line, i) => (
+                <AccentText key={i} text={line} />
+              ))}
+            />
+            <p data-reveal className="mx-auto mt-5 max-w-xl text-[16.5px] leading-relaxed text-ivory/65">
               {section.sub}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Button to="/templates" size="lg" icon="arrowRight">
-                {section.cta}
-              </Button>
-              <Button to="/dashboard/editor" size="lg" variant="light">
-                {t('home.finalCta.secondary')}
-              </Button>
+              <MagneticButton>
+                <Button to="/templates" size="lg" icon="arrowRight">
+                  {section.cta}
+                </Button>
+              </MagneticButton>
+              <MagneticButton>
+                <Button to="/dashboard/editor" size="lg" variant="light">
+                  {t('home.finalCta.secondary')}
+                </Button>
+              </MagneticButton>
             </div>
             <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[13px] text-ivory/45">
               <span>{t('home.finalCta.noCard')}</span>

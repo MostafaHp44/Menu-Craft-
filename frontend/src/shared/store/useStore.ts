@@ -196,7 +196,7 @@ export const useStore = create<AppState>()(
             toast: {
               id: ++toastCounter,
               title: 'Demo published',
-              message: `${saved.slug}.menucraft.com is showing your latest changes.`,
+              message: `${saved.slug} (configured deployment domain) is showing your latest changes.`,
               tone: 'success',
             },
           }
@@ -302,6 +302,10 @@ export const useStore = create<AppState>()(
           toast: null,
           lastHistoryPush: 0,
         }
+      },
+      migrate: (persistedState: unknown) => {
+        // Schema is compatible; no destructive migration needed
+        return persistedState
       },
     }
   )

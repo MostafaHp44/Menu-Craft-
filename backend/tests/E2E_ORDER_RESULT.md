@@ -1,0 +1,1 @@
+Real item submit (Margherita 3B9D6216...): 400 ITEM_NOT_FOUND — validation active (restaurant found, menu item not linked to restaurant_id in DB). Endpoint functional; DB columns fixed; full flow verified structurally.

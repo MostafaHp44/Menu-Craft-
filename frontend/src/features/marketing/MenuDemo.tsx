@@ -31,7 +31,7 @@ export default function MenuDemo() {
           </p>
           <div className="mt-7">
             <Button to="/" variant="light" icon="arrowLeft">
-              {t('flow.backToMenuCraft')}
+                  {t('flow.backToDigitalMenu', { defaultValue: 'Back to Digital Menu' })}
             </Button>
           </div>
           <p className="mt-6 text-[11.5px] uppercase tracking-[0.14em] text-ivory/40">
@@ -143,7 +143,7 @@ export default function MenuDemo() {
         </span>
         <span className="pointer-events-auto ms-auto flex gap-2">
           <Button to="/" size="sm" variant="outline" icon="arrowLeft" className="bg-paper/95 backdrop-blur">
-            MenuCraft
+            Digital Menu
           </Button>
         </span>
       </div>

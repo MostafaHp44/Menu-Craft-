@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Icon, Wordmark } from '../../shared/ui/icons.tsx'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Icon } from '../../shared/ui/icons.tsx'
 import { MenuEditor } from './menu/MenuEditor.tsx'
 import {
   BrandingPanel,
@@ -19,10 +19,10 @@ import type { InlineTextStyle } from '../../shared/lib/types.ts'
 import { Badge, Button, Field, IconButton, Input, Segmented, Toggle } from '../../shared/ui/ui.tsx'
 import { publicUrl } from '../../shared/lib/hooks.ts'
 import { getTemplate } from '../../templates/data/templates.ts'
-import { cx } from '../../shared/lib/utils.ts'
+import { cx, tx } from '../../shared/lib/utils.ts'
 import { useStore } from '../../shared/store/useStore.ts'
 import { useAuthStore } from '../../shared/store/useAuth.ts'
-import { useSubscription } from '../../shared/store/usePlatform.ts'
+import { usePlatformStore, useSubscription } from '../../shared/store/usePlatform.ts'
 import { useI18n, type TKey } from '../../shared/i18n'
 import { PricingBubble } from './billing/PricingBubble.tsx'
 import { SubscribeModal } from './billing/SubscribeModal.tsx'
@@ -43,7 +43,7 @@ const PANELS: Array<{ id: PanelId; labelKey: TKey; icon: string; noteKey: TKey }
 
 export default function Editor() {
   const navigate = useNavigate()
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const draft = useStore((s) => s.draft)
   const dirty = useStore((s) => s.dirty)
   const past = useStore((s) => s.past)
@@ -65,10 +65,19 @@ export default function Editor() {
   const [subscribeFromPublish, setSubscribeFromPublish] = useState(false)
   const [gateOpen, setGateOpen] = useState(false)
 
+  // حالة الاشتراك تُقرأ من السيرفر — بدونها يظن المحرر أن الموقع منشور وهو ليس كذلك
+  const fetchSubscription = usePlatformStore((s) => s.fetchSubscription)
+  useEffect(() => {
+    if (session && draft?.id) {
+      fetchSubscription(draft.id)
+    }
+  }, [session, draft?.id, fetchSubscription])
+
   const [panel, setPanel] = useState<PanelId>('content')
   const [device, setDevice] = useState<Device>('desktop')
   const [expanded, setExpanded] = useState(false)
   const [mobileView, setMobileView] = useState<'controls' | 'preview'>('controls')
+  const [searchParams] = useSearchParams()
 
   /* Elementor-style in-place editing ------------------------------------- */
   const updateDraft = useStore((s) => s.updateDraft)
@@ -102,8 +111,15 @@ export default function Editor() {
   )
 
   useEffect(() => {
-    if (!draft) beginEdit()
-  }, [draft, beginEdit])
+    if (!draft) {
+      const templateId = searchParams.get('templateId')
+      if (templateId) {
+        beginEdit(templateId)
+      } else {
+        beginEdit()
+      }
+    }
+  }, [draft, beginEdit, searchParams])
 
   /* publish is gated: session → live subscription → publish */
   const requestPublish = useCallback(() => {
@@ -209,7 +225,7 @@ export default function Editor() {
   const previewBody = (
     <div className="min-h-0 flex-1 overflow-y-auto bg-cream/60 p-3 thin-scroll sm:p-5">
       {device === 'desktop' ? (
-        <BrowserFrame url={`${draft.slug}.menucraft.com`} badge={t('editor.liveBadge')}>
+        <BrowserFrame url={publicUrl(draft.slug)} badge={t('editor.liveBadge')}>
           <ScaledFrame width={width}>
             <RestaurantSite
               restaurant={draft}
@@ -249,14 +265,13 @@ export default function Editor() {
             onClick={() => navigate('/dashboard')}
           />
           <button type="button" onClick={() => navigate('/')} className="hidden shrink-0 md:block" aria-label={t('web.header.homeAria')}>
-            <Wordmark markSize={26} />
-          </button>
+            <h1>Digital Menu </h1>          </button>
 
           <div className="mx-1 hidden h-7 w-px bg-sand md:block" />
 
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-2">
-              <span className="line-clamp-1 text-[14.5px] font-semibold text-charcoal">{draft.name}</span>
+              <span className="line-clamp-1 text-[14.5px] font-semibold text-charcoal">{tx(draft.name, lang)}</span>
               <Badge tone="outline" className="hidden sm:inline-flex">
                 {template.name}
               </Badge>
@@ -489,7 +504,7 @@ export default function Editor() {
         <div className="fixed inset-0 z-[80] flex flex-col bg-ink">
           <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
             <div className="flex min-w-0 items-center gap-3">
-              <span className="line-clamp-1 text-[14.5px] font-semibold text-ivory">{draft.name}</span>
+              <span className="line-clamp-1 text-[14.5px] font-semibold text-ivory">{tx(draft.name, lang)}</span>
               <span className="hidden rounded-full bg-white/10 px-2.5 py-1 font-mono text-[11.5px] text-ivory/70 sm:inline">
                 {publicUrl(draft.slug)}
               </span>
@@ -555,7 +570,7 @@ export default function Editor() {
       />
 
       {/* --------------------- pricing bubble + subscribe gate ----------------- */}
-      {!live && draft.name.trim() ? (
+      {!live && tx(draft.name, lang).trim() ? (
         <PricingBubble
           slug={draft.slug}
           onSubscribe={() => {
@@ -569,14 +584,14 @@ export default function Editor() {
         open={subscribeOpen}
         onClose={() => setSubscribeOpen(false)}
         restaurantId={draft.id}
-        restaurantName={draft.name}
+        restaurantName={tx(draft.name, lang)}
         onSuccess={subscribeFromPublish ? () => publishDemo() : undefined}
       />
 
       <AuthModal
         open={gateOpen}
         onClose={() => setGateOpen(false)}
-        restaurantName={draft.name}
+        restaurantName={tx(draft.name, lang)}
         onSuccess={() => publishDemo()}
       />
     </div>
@@ -615,7 +630,7 @@ function EditorSettings({
           <Input value={value} spellCheck={false} onChange={(e) => setValue(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} />
         </Field>
         <div className="rounded-xl border border-sand bg-cream/60 px-3.5 py-3">
-          <span className="block font-mono text-[13px] text-charcoal">{value || draft.slug}.menucraft.com</span>
+          <span className="block font-mono text-[13px] text-charcoal">{value || publicUrl(draft.slug)}</span>
           <span className="mt-0.5 block text-[11.5px] text-clay">
             {t('editor.settings.domainNote')}
           </span>
@@ -630,7 +645,7 @@ function EditorSettings({
             })
             showToast({
               title: t('editor.settings.addressUpdated'),
-              message: `${value}.menucraft.com`,
+              message: publicUrl(value || draft.slug),
               tone: 'success',
             })
           }}

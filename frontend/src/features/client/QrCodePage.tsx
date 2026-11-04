@@ -3,7 +3,8 @@ import { QRCodeSVG } from 'qrcode.react'
 import { Icon } from '../../shared/ui/icons.tsx'
 import { Badge, Button, Card, Segmented, Select, StatCard } from '../../shared/ui/ui.tsx'
 import { publicUrl } from '../../shared/lib/hooks.ts'
-import { cx } from '../../shared/lib/utils.ts'
+import { cx, tx } from '../../shared/lib/utils.ts'
+import { useI18n } from '../../shared/i18n'
 import { useActiveRestaurant, useStore } from '../../shared/store/useStore.ts'
 
 type SizeId = 'small' | 'medium' | 'large'
@@ -16,6 +17,8 @@ const SIZES: Record<SizeId, { px: number; label: string; note: string }> = {
 }
 
 export default function QrCodePage() {
+  /* subscribing re-renders on language change so `tx()` re-resolves */
+  const { lang } = useI18n()
   const r = useActiveRestaurant()
   const stats = useStore((s) => s.restaurants.find((x) => x.id === s.activeId)?.stats)
   const [size, setSize] = useState<SizeId>('medium')
@@ -130,7 +133,7 @@ export default function QrCodePage() {
                     className="text-center font-semibold leading-none"
                     style={{ color: fg, fontSize: Math.round(px * 0.062) }}
                   >
-                    {r.logoText.slice(0, 2)}
+                    {typeof r.logoText === 'string' ? r.logoText.slice(0, 2) : tx(r.logoText, lang).slice(0, 2)}
                   </span>
                 </span>
               ) : null}
@@ -237,7 +240,7 @@ export default function QrCodePage() {
                 {
                   icon: 'qr',
                   title: 'The code encodes your address',
-                  text: `Scanning resolves to ${publicUrl(r.slug)} — a simulated MenuCraft subdomain. No domain or DNS record is provisioned in this prototype.`,
+                  text: `Scanning resolves to ${publicUrl(r.slug)} — configured via your deployment domain. No separate DNS record is provisioned in this prototype.`,
                 },
                 {
                   icon: 'smartphone',

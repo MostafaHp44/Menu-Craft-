@@ -15,7 +15,7 @@ const en = {
     statusUpdated: 'Order status updated',
     removeOrder: 'Remove order',
     confirmRemove: 'Remove this order?',
-    confirmRemoveMsg: 'It disappears from the board and from today’s numbers. This cannot be undone.',
+    confirmRemoveMsg: 'It disappears from the board and from today\'s numbers. This cannot be undone.',
     manualHint: 'Counter orders land on the board instantly — simulated demo data.',
     tablePh: 'Table number, e.g. 4',
     customerPh: 'Guest name',
@@ -33,6 +33,9 @@ const en = {
     growth: 'Growth vs. previous period',
     qtySold: '{n} sold',
     csvExported: 'Report exported',
+    /* ------------------------------ websites ------------------------------ */
+    websites: 'Websites',
+    subWebsites: 'Your published websites',
   },
 }
 
@@ -59,6 +62,9 @@ const ar: Deep<typeof en> = {
     growth: 'النمو مقارنة بالفترة السابقة',
     qtySold: '{n} مبيعاً',
     csvExported: 'تم تصدير التقرير',
+    /* ------------------------------ websites ------------------------------ */
+    websites: 'المواقع',
+    subWebsites: 'مواقعك المنشورة',
   },
 }
 
@@ -85,6 +91,9 @@ const ku: Deep<typeof en> = {
     growth: 'گەشە بەراوەی دەرەی پێش',
     qtySold: '{n} فرۆشراوە',
     csvExported: 'ڕاپۆرتەکە دەرهێنرا',
+    /* ------------------------------ websites ------------------------------ */
+    websites: 'بەلگەکانی وێب',
+    subWebsites: 'بەلگەکانی وێبکەی تووەت',
   },
 }
 

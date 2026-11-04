@@ -17,6 +17,9 @@ import { authFlow } from './locales/ext/authFlow'
 import { marketing } from './locales/ext/marketing'
 import { homePage } from './locales/ext/homePage'
 import { designUi } from './locales/ext/design'
+import { live } from './locales/ext/live'
+import { publicUi } from './locales/ext/publicUi'
+import { setActiveLang } from '../lib/utils.ts'
 
 export type Lang = 'en' | 'ar' | 'ku'
 export type Dir = 'ltr' | 'rtl'
@@ -29,7 +32,9 @@ type ExtDict =
   (typeof authFlow)['en'] &
   (typeof marketing)['en'] &
   (typeof homePage)['en'] &
-  (typeof designUi)['en']
+  (typeof designUi)['en'] &
+  (typeof live)['en'] &
+  (typeof publicUi)['en']
 
 type FullDict = Dict & ExtDict
 
@@ -45,9 +50,9 @@ type DeepKeys<T> = {
 type Vars = Record<string, string | number>
 
 const dictionaries: Record<Lang, FullDict> = {
-  en: { ...en, ...clientTabs.en, ...platform.en, ...kitchen.en, ...authFlow.en, ...marketing.en, ...homePage.en, ...designUi.en },
-  ar: { ...ar, ...clientTabs.ar, ...platform.ar, ...kitchen.ar, ...authFlow.ar, ...marketing.ar, ...homePage.ar, ...designUi.ar },
-  ku: { ...ku, ...clientTabs.ku, ...platform.ku, ...kitchen.ku, ...authFlow.ku, ...marketing.ku, ...homePage.ku, ...designUi.ku },
+  en: { ...en, ...clientTabs.en, ...platform.en, ...kitchen.en, ...authFlow.en, ...marketing.en, ...homePage.en, ...designUi.en, ...live.en, ...publicUi.en },
+  ar: { ...ar, ...clientTabs.ar, ...platform.ar, ...kitchen.ar, ...authFlow.ar, ...marketing.ar, ...homePage.ar, ...designUi.ar, ...live.ar, ...publicUi.ar },
+  ku: { ...ku, ...clientTabs.ku, ...platform.ku, ...kitchen.ku, ...authFlow.ku, ...marketing.ku, ...homePage.ku, ...designUi.ku, ...live.ku, ...publicUi.ku },
 }
 
 export const LANGS: Array<{ id: Lang; native: string; dir: Dir }> = [
@@ -85,7 +90,7 @@ function detectLang(): Lang {
 interface I18nValue {
   lang: Lang
   dir: Dir
-  t: (key: TKey, vars?: Vars) => string
+  t: (key: TKey | string, vars?: Vars) => string
   setLang: (lang: Lang) => void
 }
 
@@ -99,6 +104,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const dir: Dir = lang === 'en' ? 'ltr' : 'rtl'
 
+  /* keep the module-level `tx()` default in sync with the visible language */
+  setActiveLang(lang)
+
   useEffect(() => {
     document.documentElement.lang = lang
     document.documentElement.dir = dir
@@ -110,7 +118,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, [lang, dir])
 
   const t = useCallback(
-    (key: TKey, vars?: Vars) => {
+    (key: TKey | string, vars?: Vars) => {
       const value = pick(dictionaries[lang], key) ?? pick(en, key) ?? key
       if (value === key && import.meta.env.DEV) console.warn(`[i18n] missing key: ${key}`)
       return interpolate(value, vars)
@@ -127,6 +135,14 @@ export function useI18n(): I18nValue {
   const ctx = useContext(I18nContext)
   if (!ctx) throw new Error('useI18n must be used inside <I18nProvider>')
   return ctx
+}
+
+export type Multilang = { en?: string; ar?: string; ku?: string }
+
+export function resolveLang(value: Multilang | string | undefined, lang: Lang): string {
+  if (typeof value === 'string') return value
+  if (!value || typeof value !== 'object') return ''
+  return value[lang] ?? value.en ?? value.ar ?? value.ku ?? ''
 }
 
 /** shortcut for components that only need the translator */

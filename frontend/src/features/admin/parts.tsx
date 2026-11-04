@@ -8,9 +8,8 @@ import { useI18n } from '../../shared/i18n'
 import type { TKey } from '../../shared/i18n'
 import { Icon } from '../../shared/ui/icons.tsx'
 import { Badge, Card, Toggle } from '../../shared/ui/ui.tsx'
-import { SUBSCRIPTIONS } from '../../shared/lib/demoData.ts'
 import { cx } from '../../shared/lib/utils.ts'
-import type { AdminPermission, DemoPlanId, Role, SubscriptionStatus } from '../../shared/lib/types.ts'
+import type { AdminPermission, Role, SubscriptionStatus } from '../../shared/lib/types.ts'
 
 /** light-on-dark equivalent of the shared input styling */
 export const DARK_FIELD =
@@ -76,10 +75,8 @@ export function DemoNote({ children }: { children: ReactNode }) {
   )
 }
 
-export function PlanBadge({ plan }: { plan: DemoPlanId }) {
-  const tone =
-    plan === 'trial' ? 'gold' : plan === 'starter' ? 'outline' : plan === 'professional' ? 'flame' : 'moss'
-  return <Badge tone={tone}>{SUBSCRIPTIONS[plan].name}</Badge>
+export function PlanBadge({ plan }: { plan: string | null | undefined }) {
+  return <Badge tone="outline">{plan || '—'}</Badge>
 }
 
 const SUB_STATUS_KEY: Record<SubscriptionStatus, TKey> = {
@@ -111,7 +108,7 @@ export function roleKey(role: Role): TKey {
         : 'admin.roleClient'
 }
 
-export function permKey(permission: AdminPermission): TKey {
+export function permKey(permission: AdminPermission): any {
   return `admin.${permission}`
 }
 

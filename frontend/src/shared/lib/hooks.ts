@@ -18,8 +18,23 @@ export function useCustomize() {
   }
 }
 
+/**
+ * Public site URL for a restaurant slug — configured domain resolution.
+ * Domain comes from the application configuration (`VITE_PUBLIC_SITE_DOMAIN`);
+ * when unset, the current deployment host is used so QR codes and links keep
+ * resolving in this deployment. No hard-coded platform domain.
+ */
 export function publicUrl(slug: string): string {
-  return `${slug}.menucraft.com`
+  const rawEnv = String(import.meta.env.VITE_PUBLIC_SITE_DOMAIN ?? '').trim()
+  const host = rawEnv.replace(/^https?:\/\//i, '').replace(/\/+$/, '')
+    || (typeof window !== 'undefined' && window.location.host ? window.location.host : '')
+    || 'localhost'
+  return `${host}/site/${slug}`
+}
+
+/** Absolute public site link (adds the scheme consistently) */
+export function publicSiteLink(slug: string): string {
+  return `https://${publicUrl(slug)}`
 }
 
 /**

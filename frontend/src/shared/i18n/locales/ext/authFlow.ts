@@ -31,6 +31,9 @@ const en = {
     passwordPh: 'At least 6 characters',
     passwordRequired: 'Enter your password to continue.',
     passwordMin: 'Use at least 6 characters for your password.',
+    emailTaken: 'This email is already registered — sign in instead.',
+    signUpFailed: 'Could not create the account. Please try again.',
+    subscribeFailed: 'Could not complete the subscription. Please try again.',
     wrongPassword: 'That password does not match this account. Try again or use a magic link.',
     noPasswordSet: 'No password is set for this email yet — continue with a magic link, or create a new account.',
     passwordsDontMatch: 'The two passwords do not match.',
@@ -82,7 +85,7 @@ const en = {
 
     /* ----------------------------- publish gating ------------------------- */
     gateTitle: 'Almost ready to publish',
-    gateSub: 'Publishing needs a free MenuCraft account — your current draft becomes the site behind it.',
+    gateSub: 'Publishing needs a free Digital Menu account — your current draft becomes the site behind it.',
     gateCta: 'Create account & publish',
     publishNeedsPlan: 'Publishing and the public menu need an active subscription.',
     expiredNotice:
@@ -107,7 +110,7 @@ const en = {
     /* ------------------------------- paused menu -------------------------- */
     pausedTitle: 'This menu is paused',
     pausedSub: 'The subscription for this restaurant ended. Renew it to bring this public menu back online.',
-    backToMenuCraft: 'Back to MenuCraft',
+    backToMenuCraft: 'Back to Digital Menu',
   },
 }
 
@@ -134,6 +137,9 @@ const ar: Deep<typeof en> = {
     passwordPh: '6 أحرف على الأقل',
     passwordRequired: 'أدخل كلمة المرور للمتابعة.',
     passwordMin: 'استخدم 6 أحرف على الأقل لكلمة المرور.',
+    emailTaken: 'هذا البريد مسجّل مسبقاً — سجّل الدخول بدلاً من ذلك.',
+    signUpFailed: 'تعذّر إنشاء الحساب. حاول مرة أخرى.',
+    subscribeFailed: 'تعذّر إتمام الاشتراك. حاول مرة أخرى.',
     wrongPassword: 'كلمة المرور غير مطابقة لهذا الحساب. جرّب مجدداً أو استخدم رابطاً سحرياً.',
     noPasswordSet: 'لا توجد كلمة مرور لهذا البريد بعد — تابع برابط سحري، أو أنشئ حساباً جديداً.',
     passwordsDontMatch: 'كلمتا المرور غير متطابقتين.',
@@ -182,7 +188,7 @@ const ar: Deep<typeof en> = {
     asideAnalytics: 'تحليلات تجريبية',
     asideFoot: 'الصور مضمّنة محلياً · يعمل هذا العرض التجريبي دون إنترنت.',
     gateTitle: 'اقتربت من النشر',
-    gateSub: 'النشر يتطلّب حساباً مجانياً في MenuCraft — ومسودتك الحالية تصبح الموقع خلفه.',
+    gateSub: 'النشر يتطلّب حساباً مجانياً في Digital Menu — ومسودتك الحالية تصبح الموقع خلفه.',
     gateCta: 'إنشاء حساب ونشر',
     publishNeedsPlan: 'النشر والقائمة العامة يتطلّبان اشتراكاً فعّالاً.',
     expiredNotice: 'انتهى اشتراكك — النشر متوقّف وقائمتك العامة غير متاحة حتى تجديد الاشتراك.',
@@ -200,7 +206,7 @@ const ar: Deep<typeof en> = {
     continueEditing: 'متابعة التحرير',
     pausedTitle: 'هذه القائمة متوقفة',
     pausedSub: 'انتهى اشتراك هذا المطعم. جدّده لتعود قائمتك العامة إلى العمل.',
-    backToMenuCraft: 'العودة إلى MenuCraft',
+    backToMenuCraft: 'العودة إلى Digital Menu',
   },
 }
 
@@ -227,6 +233,9 @@ const ku: Deep<typeof en> = {
     passwordPh: 'لەکەمەوە 6 تۆکە',
     passwordRequired: 'وشەی نهێنیت بنووسە بۆ بەردەوامبوون.',
     passwordMin: 'لەکەمەوە 6 تۆکە بۆ وشەی نهێنی بەکاربهێنە.',
+    emailTaken: 'ئەم ئیمەیلە پێشتر تۆمارکراوە — لەبری ئەوە چوونەژوورەوە بکە.',
+    signUpFailed: 'دروستکردنی هەژمارەکە سەرکەوتوو نەبوو. دووبارە هەوڵ بدە.',
+    subscribeFailed: 'تەواوکردنی ئاواژەکە سەرکەوتوو نەبوو. دووبارە هەوڵ بدە.',
     wrongPassword: 'وشەی نهێنی لەگەڵ ئەم هەژمارەوە نایەکێت. دووبارە تاقی بکەرەوە یان بەستەرێکی سیحڕ بەکاربهێنە.',
     noPasswordSet: 'هێشتا وشەی نهێنی بۆ ئەم ئیمەیلە نییە — بە بەستەرێکی سیحڕ بەردەوام بە یان هەژمارێکی نوێ دروست بکە.',
     passwordsDontMatch: 'دوو وشەی نهێنییەکە نایەکێن.',
@@ -275,7 +284,7 @@ const ku: Deep<typeof en> = {
     asideAnalytics: 'شیکاری دیمۆ',
     asideFoot: 'وێنەکان لە ناو ماڵپەڕەکەدا نهۆن — ئەم دیمۆیە بێ ئینتەرنێت کاردەکات.',
     gateTitle: 'نزیکی بڵاوکردنەوەیت',
-    gateSub: 'بڵاوکردنەوە پێویستی بە هەژمارێکی بەخۆڕایی MenuCraft هەیە — پێشنویسەکەت دەبێتە ماڵپەڕەکەی.',
+    gateSub: 'بڵاوکردنەوە پێویستی بە هەژمارێکی بەخۆڕایی Digital Menu هەیە — پێشنویسەکەت دەبێتە ماڵپەڕەکەی.',
     gateCta: 'هەژمار دروست بکە و بڵاو بکەرەوە',
     publishNeedsPlan: 'بڵاوکردنەوە و مینیۆی گشتی پێویستیان بە ئاکامێکی چالاک هەیە.',
     expiredNotice: 'ئاکامەکەت تەواو بوو — بڵاوکردنەوە وەستاوە و مینیۆی گشتیت ناچالاکە تا تازەی بیکەیتەوە.',
@@ -293,7 +302,7 @@ const ku: Deep<typeof en> = {
     continueEditing: 'بەردەوامبوون بە دەستکاری',
     pausedTitle: 'ئەم مینیۆیە وەستاوە',
     pausedSub: 'ئاکامی ئەم چێشتخانەیە تەواو بوو. تازەی بکەرەوە بۆ گەڕاندنەوەی مینیۆی گشتی.',
-    backToMenuCraft: 'گەڕانەوە بۆ MenuCraft',
+    backToMenuCraft: 'گەڕانەوە بۆ Digital Menu',
   },
 }
 

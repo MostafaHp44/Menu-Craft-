@@ -1,300 +1,81 @@
-import { useEffect, useState } from 'react'
-import { useI18n } from '../../../shared/i18n'
+import { useMemo, useState } from 'react'
+import { Input, Badge } from '../../../shared/ui/ui.tsx'
+import { DarkEmpty, Panel, PanelHeading } from '../parts.tsx'
+import { useAdminData } from '../useAdminData.ts'
 import { Icon } from '../../../shared/ui/icons.tsx'
-import {
-  Badge,
-  Button,
-  Field,
-  Input,
-  Modal,
-  Segmented,
-} from '../../../shared/ui/ui.tsx'
-import { useAuthStore } from '../../../shared/store/useAuth.ts'
-import { useStore } from '../../../shared/store/useStore.ts'
-import { ALL_PERMISSIONS } from '../../../shared/lib/types.ts'
-import type { AdminPermission, Role, UserAccount } from '../../../shared/lib/types.ts'
-import { cx } from '../../../shared/lib/utils.ts'
-import { DemoNote, Panel, PanelHeading, permKey, roleKey } from '../parts.tsx'
 
-const ROLE_GROUPS: Role[] = ['super_admin', 'admin', 'worker', 'client']
-
-const ROLE_TONE: Record<Role, 'flame' | 'gold' | 'neutral' | 'outline'> = {
-  super_admin: 'flame',
-  admin: 'gold',
-  worker: 'neutral',
-  client: 'outline',
-}
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.slice(0, 1))
-    .join('')
-    .toUpperCase()
-}
-
-function PermissionEditor({ account }: { account: UserAccount }) {
-  const { t } = useI18n()
-  const updateAccount = useAuthStore((s) => s.updateAccount)
-  const showToast = useStore((s) => s.showToast)
-  const [draft, setDraft] = useState<AdminPermission[]>(account.permissions ?? [])
-
-  useEffect(() => {
-    setDraft(account.permissions ?? [])
-  }, [account.permissions])
-
-  const current = account.permissions ?? []
-  const dirty =
-    draft.length !== current.length || draft.some((permission) => !current.includes(permission))
-
-  const toggle = (permission: AdminPermission) =>
-    setDraft((prev) =>
-      prev.includes(permission)
-        ? prev.filter((p) => p !== permission)
-        : [...prev, permission]
-    )
-
-  return (
-    <div className="mt-3 rounded-2xl border border-white/8 bg-white/4 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-ivory/45">
-          {t('platformMore.team.permissionsFor', { name: account.name })}
-        </span>
-        {dirty ? (
-          <span className="text-[11.5px] font-medium text-gold">{t('dashboard.unsaved')}</span>
-        ) : null}
-      </div>
-
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        {ALL_PERMISSIONS.map((permission) => {
-          const checked = draft.includes(permission)
-          return (
-            <label
-              key={permission}
-              className={cx(
-                'flex min-h-10 cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-2.5 text-[13px] transition',
-                checked
-                  ? 'border-flame/50 bg-flame/12 text-ivory'
-                  : 'border-white/10 text-ivory/60 hover:bg-white/6'
-              )}
-            >
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={() => toggle(permission)}
-                className="h-4 w-4 shrink-0 accent-flame"
-              />
-              <span className="min-w-0 truncate">{t(permKey(permission))}</span>
-            </label>
-          )
-        })}
-      </div>
-
-      <div className="mt-3 flex items-center gap-3">
-        <Button
-          size="sm"
-          className="h-10"
-          variant="accent"
-          icon="save"
-          disabled={!dirty}
-          onClick={() => {
-            const next = ALL_PERMISSIONS.filter((p) => draft.includes(p))
-            updateAccount(account.id, (a) => {
-              a.permissions = next
-            })
-            showToast({
-              tone: 'success',
-              title: t('toast.updated'),
-              message: t('platformMore.team.permissionsSaved', { name: account.name }),
-            })
-          }}
-        >
-          {t('admin.savePermissions')}
-        </Button>
-        <span className="text-[12px] text-ivory/45">
-          {t('platformMore.team.superAdminNote')}
-        </span>
-      </div>
-    </div>
-  )
-}
+type User = { id: string; name: string; email: string; role: string; restaurant_id?: string; status: string; created_at: string }
 
 export default function TeamTab() {
-  const { t } = useI18n()
-  const accounts = useAuthStore((s) => s.accounts)
-  const session = useAuthStore((s) => s.session)
-  const addAccount = useAuthStore((s) => s.addAccount)
-  const restaurants = useStore((s) => s.restaurants)
-  const showToast = useStore((s) => s.showToast)
+  const { data, loading, error } = useAdminData<User>('/api/platform/admin/users')
+  const [q, setQ] = useState('')
+  const [filter, setFilter] = useState<'all' | 'super_admin' | 'client' | 'other'>('all')
+  const rows = useMemo(() => {
+    let d = data.filter(x => (x.name + ' ' + x.email + ' ' + x.role).toLowerCase().includes(q.toLowerCase()))
+    if (filter === 'super_admin') d = d.filter(x => x.role === 'super_admin')
+    if (filter === 'client') d = d.filter(x => x.role === 'client')
+    if (filter === 'other') d = d.filter(x => x.role !== 'super_admin' && x.role !== 'client')
+    return d
+  }, [data, q, filter])
 
-  const canAddSuper = session?.role === 'super_admin'
-  const [open, setOpen] = useState(false)
-  const [role, setRole] = useState<'admin' | 'super_admin'>('admin')
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-
-  const trimmedName = name.trim()
-  const trimmedEmail = email.trim()
-
-  const submit = () => {
-    if (!trimmedName || !trimmedEmail) return
-    addAccount({ name: trimmedName, email: trimmedEmail, role })
-    showToast({
-      tone: 'success',
-      title: t('toast.created'),
-      message: t('platformMore.team.addedMsg', { name: trimmedName }),
-    })
-    setName('')
-    setEmail('')
-    setRole('admin')
-    setOpen(false)
-  }
+  if (loading) return <Panel>Loading users…</Panel>
+  if (error) return <Panel>Error: {error}</Panel>
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#13142b] to-[#1a1540] p-6 sm:p-8">
+        <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-flame/20 blur-[80px]" />
+        <div className="relative z-10 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-ivory sm:text-3xl">Team & Access</h1>
+            <p className="mt-1 text-sm text-ivory/50">Platform administrators and staff.</p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {(['all','super_admin','client','other'] as const).map(f => (
+              <button key={f} onClick={() => setFilter(f)} className={`rounded-full px-3 py-1 text-xs font-medium transition ${filter===f ? 'bg-flame text-white' : 'bg-white/10 text-ivory/70 hover:bg-white/15'}`}>{f === 'all' ? 'All' : f === 'super_admin' ? 'Super Admin' : f === 'client' ? 'Clients' : 'Others'}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <Panel>
-        <PanelHeading
-          title={t('admin.team')}
-          description={t('platformMore.team.superAdminNote')}
-          actions={
-            <Button variant="accent" icon="plus" onClick={() => setOpen(true)}>
-              {canAddSuper ? t('admin.addSuperAdmin') : t('admin.addAdmin')}
-            </Button>
-          }
-        />
-
-        <div className="mt-4">
-          <DemoNote>{t('platformMore.access.restrictedNote')}</DemoNote>
-        </div>
-
-        <div className="mt-5 space-y-5">
-          {ROLE_GROUPS.map((group) => {
-            const list = accounts.filter((a) => a.role === group)
-            if (list.length === 0) return null
-            return (
-              <div key={group}>
-                <div className="flex items-center gap-3">
-                  <Badge tone={ROLE_TONE[group]}>{t(roleKey(group))}</Badge>
-                  <span className="text-[12px] text-ivory/45">{list.length}</span>
-                  <span className="h-px flex-1 bg-white/8" />
-                </div>
-
-                <ul className="mt-3 space-y-3">
-                  {list.map((account) => {
-                    const restaurant = account.restaurantId
-                      ? restaurants.find((r) => r.id === account.restaurantId)
-                      : undefined
-                    return (
-                      <li key={account.id} className="rounded-2xl border border-white/10 bg-white/4 p-4">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/8 text-[12.5px] font-semibold text-ivory/80">
-                            {initials(account.name)}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-[13.5px] font-medium text-ivory">
-                              {account.name}
-                            </div>
-                            <div className="truncate text-[11.5px] text-ivory/45">
-                              {account.email}
-                              {restaurant ? ` · ${restaurant.name}` : ''}
-                            </div>
-                          </div>
-                          <Badge tone={account.status === 'active' ? 'moss' : 'rose'}>
-                            {account.status === 'active'
-                              ? t('common.active')
-                              : t('common.suspended')}
-                          </Badge>
-                        </div>
-
-                        {account.role === 'admin' ? (
-                          <PermissionEditor account={account} />
-                        ) : account.role === 'super_admin' ? (
-                          <div className="mt-3 flex items-center gap-2 text-[12px] text-ivory/50">
-                            <Icon name="info" size={14} className="text-flame-light" />
-                            {t('platformMore.team.superAdminNote')}
-                          </div>
-                        ) : null}
-                      </li>
-                    )
-                  })}
-                </ul>
-              </div>
-            )
-          })}
-        </div>
+        <PanelHeading title="Admin Users" description="Search and manage platform staff." actions={
+          <div className="relative w-full sm:w-72">
+            <Icon name="search" size={14} className="absolute left-3 top-2.5 text-ivory/40" />
+            <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Search users…" className="pl-9 bg-white/6 border-white/10 text-ivory placeholder:text-ivory/40" />
+          </div>
+        } />
+        {rows.length ? (
+          <div className="mt-4 overflow-x-auto rounded-xl border border-white/10 bg-[#0f1220]">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/10 bg-white/5 text-[11px] uppercase tracking-wider text-ivory/40">
+                  <th className="px-4 py-3 text-left font-medium">Name</th>
+                  <th className="px-4 py-3 text-left font-medium">Email</th>
+                  <th className="px-4 py-3 text-left font-medium">Role</th>
+                  <th className="px-4 py-3 text-left font-medium">Status</th>
+                  <th className="px-4 py-3 text-left font-medium">Created</th>
+                  <th className="px-4 py-3 text-right font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(x => (
+                  <tr key={x.id} className="border-b border-white/5 hover:bg-white/5 transition">
+                    <td className="px-4 py-3 font-medium text-ivory">{x.name}</td>
+                    <td className="px-4 py-3 text-ivory/80">{x.email}</td>
+                    <td className="px-4 py-3"><Badge tone={x.role==='super_admin'?'flame':'gold'}>{x.role}</Badge></td>
+                    <td className="px-4 py-3"><Badge tone={x.status==='active'?'moss':'rose'}>{x.status}</Badge></td>
+                    <td className="px-4 py-3 text-ivory/50">{new Date(x.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button onClick={() => alert('Delete action: confirm to remove ' + x.email)} className="text-rose/70 hover:text-rose text-xs font-medium">Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <DarkEmpty title="No users found" message="Try adjusting your search or filter." />}
       </Panel>
-
-      {/* add member modal */}
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        title={role === 'super_admin' ? t('admin.addSuperAdmin') : t('admin.addAdmin')}
-        description={t('platformMore.team.superAdminNote')}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              variant="accent"
-              icon="plus"
-              disabled={!trimmedName || !trimmedEmail}
-              onClick={submit}
-            >
-              {t('common.add')}
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <Field label={t('common.name')}>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t('platformMore.team.namePh')}
-            />
-          </Field>
-          <Field label={t('auth.email')}>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={t('platformMore.team.emailPh')}
-            />
-          </Field>
-          <Field label={t('admin.role')}>
-            {canAddSuper ? (
-              <Segmented<'admin' | 'super_admin'>
-                full
-                value={role}
-                onChange={setRole}
-                ariaLabel={t('admin.role')}
-                options={[
-                  { value: 'admin', label: t('admin.roleAdmin') },
-                  { value: 'super_admin', label: t('admin.roleSuperAdmin') },
-                ]}
-              />
-            ) : (
-              <div className="flex items-center gap-2 rounded-xl border border-sand bg-cream/60 px-3.5 py-3 text-sm text-espresso">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-flame/12 text-flame-dark">
-                  <Icon name="settings" size={15} />
-                </span>
-                {t('admin.roleAdmin')}
-              </div>
-            )}
-          </Field>
-          <Field label={t('admin.permissions')} hint={t('platformMore.team.superAdminNote')}>
-            <div className="flex flex-wrap gap-2">
-              {ALL_PERMISSIONS.map((permission) => (
-                <Badge key={permission} tone="outline">
-                  {t(permKey(permission))}
-                </Badge>
-              ))}
-            </div>
-          </Field>
-        </div>
-      </Modal>
     </div>
   )
 }

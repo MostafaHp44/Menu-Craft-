@@ -3,8 +3,6 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Order, OrderStatus, Restaurant } from '../lib/types.ts'
 import {
-  createSeedOrders,
-  createSeedRestaurants,
   rollOrdersToToday,
 } from '../lib/demoData.ts'
 
@@ -27,10 +25,6 @@ interface OrdersState {
   resetOrders: () => void
 }
 
-function seed(): Order[] {
-  return rollOrdersToToday(createSeedOrders(createSeedRestaurants()))
-}
-
 function orderTotal(lines: Order['lines']): number {
   return lines.reduce((sum, line) => sum + line.price * line.qty, 0)
 }
@@ -38,7 +32,7 @@ function orderTotal(lines: Order['lines']): number {
 export const useOrdersStore = create<OrdersState>()(
   persist(
     (set) => ({
-      orders: seed(),
+      orders: [] as Order[],
 
       addOrder: (input) => {
         const order: Order = {
@@ -80,7 +74,7 @@ export const useOrdersStore = create<OrdersState>()(
 
       removeOrder: (id) => set((s) => ({ orders: s.orders.filter((o) => o.id !== id) })),
 
-      resetOrders: () => set({ orders: seed() }),
+      resetOrders: () => set({ orders: [] }),
     }),
     {
       name: 'menucraft-orders-v1',
@@ -90,6 +84,10 @@ export const useOrdersStore = create<OrdersState>()(
         const stored = (persisted ?? {}) as Partial<OrdersState>
         const orders = Array.isArray(stored.orders) && stored.orders.length > 0 ? stored.orders : current.orders
         return { ...current, ...stored, orders: rollOrdersToToday(orders) }
+      },
+      migrate: (persistedState: unknown) => {
+        // schema is forward-compatible; older payloads are normalised by `merge`
+        return persistedState
       },
     }
   )
