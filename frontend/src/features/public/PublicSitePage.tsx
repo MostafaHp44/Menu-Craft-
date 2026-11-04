@@ -27,9 +27,7 @@ import type {
 } from '../../shared/types/public';
 import {
   cartSignature,
-  requiredOptionGroups,
   useCartStore,
-  type CartLine,
   type CartOptionSel,
 } from './publicCart';
 import { RestaurantSite } from '../../templates/site/RestaurantSite.tsx';
@@ -307,81 +305,81 @@ export default function PublicSitePage() {
 /* الرأس                                                                */
 /* ------------------------------------------------------------------ */
 
-function PublicHeader(props: {
-  name: string;
-  logoText: string;
-  tagline: string;
-  heroImage: string;
-  onOpenCart: () => void;
-  cartCount: number;
-  cartSubtotal: number;
-  currency: string;
-}) {
-  const { t } = useI18n();
-  return (
-    <header className="relative overflow-hidden bg-ink-ink text-white">
-      {props.heroImage ? (
-        <div
-          className="absolute inset-0 opacity-30 bg-cover bg-center"
-          style={{ backgroundImage: `url(${props.heroImage})` }}
-          aria-hidden
-        />
-      ) : null}
-      <div className="relative mx-auto max-w-5xl px-4 pt-5 pb-9">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary text-[15px] font-bold uppercase">
-              {(props.logoText || props.name || 'DM').slice(0, 2).toUpperCase()}
-            </span>
-            <div className="min-w-0">
-              <h1 className="font-display text-lg font-semibold leading-tight truncate">{props.name}</h1>              <p className="text-[12px] text-white/70 truncate">{props.tagline || t('publicUi.brandTag')}</p>
-            </div>
-          </div>
-          <LangSwitcher onLight />
-        </div>
+// function PublicHeader(props: {
+//   name: string;
+//   logoText: string;
+//   tagline: string;
+//   heroImage: string;
+//   onOpenCart: () => void;
+//   cartCount: number;
+//   cartSubtotal: number;
+//   currency: string;
+// }) {
+//   const { t } = useI18n();
+//   return (
+//     <header className="relative overflow-hidden bg-ink-ink text-white">
+//       {props.heroImage ? (
+//         <div
+//           className="absolute inset-0 opacity-30 bg-cover bg-center"
+//           style={{ backgroundImage: `url(${props.heroImage})` }}
+//           aria-hidden
+//         />
+//       ) : null}
+//       <div className="relative mx-auto max-w-5xl px-4 pt-5 pb-9">
+//         <div className="flex items-start justify-between gap-3">
+//           <div className="flex items-center gap-3 min-w-0">
+//             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary text-[15px] font-bold uppercase">
+//               {(props.logoText || props.name || 'DM').slice(0, 2).toUpperCase()}
+//             </span>
+//             <div className="min-w-0">
+//               <h1 className="font-display text-lg font-semibold leading-tight truncate">{props.name}</h1>              <p className="text-[12px] text-white/70 truncate">{props.tagline || t('publicUi.brandTag')}</p>
+//             </div>
+//           </div>
+//           <LangSwitcher onLight />
+//         </div>
 
-        {/* زر السلة */}
-        <button
-          onClick={props.onOpenCart}
-          className="absolute bottom-5 end-4 flex items-center gap-2.5 rounded-full bg-white px-4 py-2.5 text-[13px] font-semibold text-ink-ink shadow-lg shadow-black/20 transition hover:scale-[1.02]"
-        >
-          <CartIcon className="h-4.5 w-4.5" />
-          {t('publicUi.cartBtn')}
-          {props.cartCount > 0 && (
-            <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold text-white">
-              {props.cartCount}
-            </span>
-          )}
-          {props.cartCount > 0 && (
-            <span className="text-[12px] text-ink-soft">{fmtPrice(props.cartSubtotal, props.currency)}</span>
-          )}
-        </button>
-      </div>
-    </header>
-  );
-}
+//         {/* زر السلة */}
+//         <button
+//           onClick={props.onOpenCart}
+//           className="absolute bottom-5 end-4 flex items-center gap-2.5 rounded-full bg-white px-4 py-2.5 text-[13px] font-semibold text-ink-ink shadow-lg shadow-black/20 transition hover:scale-[1.02]"
+//         >
+//           <CartIcon className="h-4.5 w-4.5" />
+//           {t('publicUi.cartBtn')}
+//           {props.cartCount > 0 && (
+//             <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold text-white">
+//               {props.cartCount}
+//             </span>
+//           )}
+//           {props.cartCount > 0 && (
+//             <span className="text-[12px] text-ink-soft">{fmtPrice(props.cartSubtotal, props.currency)}</span>
+//           )}
+//         </button>
+//       </div>
+//     </header>
+//   );
+// }
 
-function LangSwitcher({ onLight = false }: { onLight?: boolean }) {
-  const { lang, setLang, t } = useI18n();
-  return (
-    <div className="flex items-center gap-1" role="group" aria-label={t('publicUi.languageAria')}>
-      {LANGS.map((l) => (
-        <button
-          key={l.id}
-          onClick={() => setLang(l.id)}
-          aria-pressed={lang === l.id}
-          className={`rounded-full px-2.5 py-1 text-[12px] font-medium transition ${
-            lang === l.id
-              ? onLight ? 'bg-white text-ink-ink' : 'bg-primary text-white'
-              : onLight ? 'bg-white/15 text-white hover:bg-white/25' : 'bg-sand text-ink-soft hover:bg-stone'
-          }`}
-        >
-          {l.id === 'en' ? 'EN' : l.id === 'ar' ? 'ع' : 'کu'}
-        </button>
-      ))}
-    </div>
-  );
-}
+// function LangSwitcher({ onLight = false }: { onLight?: boolean }) {
+//   const { lang, setLang, t } = useI18n();
+//   return (
+//     <div className="flex items-center gap-1" role="group" aria-label={t('publicUi.languageAria')}>
+//       {LANGS.map((l) => (
+//         <button
+//           key={l.id}
+//           onClick={() => setLang(l.id)}
+//           aria-pressed={lang === l.id}
+//           className={`rounded-full px-2.5 py-1 text-[12px] font-medium transition ${
+//             lang === l.id
+//               ? onLight ? 'bg-white text-ink-ink' : 'bg-primary text-white'
+//               : onLight ? 'bg-white/15 text-white hover:bg-white/25' : 'bg-sand text-ink-soft hover:bg-stone'
+//           }`}
+//         >
+//           {l.id === 'en' ? 'EN' : l.id === 'ar' ? 'ع' : 'کu'}
+//         </button>
+//       ))}
+//     </div>
+//   );
+// }
 
 function CartIcon({ className = '' }: { className?: string }) {
   return (
@@ -964,7 +962,9 @@ function OrderSuccess(props: { result: OrderResult; onClose: () => void }) {
       <div className="absolute inset-0 bg-ink-ink/60 backdrop-blur-sm" />
       <div className="relative z-10 w-full max-w-sm rounded-3xl bg-white p-7 text-center shadow-2xl anim-pop">
         <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-success/15 text-success">
-          <CheckIcon className="h-7 w-7" />
+          <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="m5 12 4 4L19 6" />
+          </svg>
         </span>
         <h3 className="mt-4 font-display text-xl font-semibold">
           {isCash ? 'Order sent to cashier' : t('publicUi.orderConfirmed')}

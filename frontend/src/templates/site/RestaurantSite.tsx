@@ -108,7 +108,6 @@ export function RestaurantSite({
   onCommit,
   onStyle,
   onOpenCart,
-  onAddItem,
 }: RestaurantSiteProps) {
   const { layout } = r.design
   const enabled = r.design.sections.filter((s) => s.enabled).map((s) => s.id)

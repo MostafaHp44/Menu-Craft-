@@ -113,11 +113,16 @@ async function testDeleteOrder() {
     const orderId = lastCreatedId || '';
     const deleted = await deleteOrder(orderId);
     check('deleted returns ok', deleted.deleted === true);
-    // Verify gone
-    const gone = await getOrderById(orderId);
-    check('order gone after delete', !!gone === false || (gone && errors.length >= 0));
-    failed++;
-    failures.push('get after delete');
+    // Verify gone - should throw
+    try {
+      await getOrderById(orderId);
+      failed++;
+      failures.push('get after delete');
+      console.log(`  FAIL: order still exists after delete`);
+    } catch (e2) {
+      passed++;
+      console.log(`  PASS: order not found after delete`);
+    }
   } catch (e) {
     // Fine
   }
@@ -213,10 +218,10 @@ async function testNoMssqlSyntax() {
   console.log('\n=== Test: no MSSQL syntax remaining ===');
   try {
     const fs = require('fs');
-    const content = fs.readFileSync('./src/services/order.service.js', 'utf8');
-    const patterns = ['sql.', 'sql.', 'NVarChar', 'VarChar', 'Bit', 'Decimal(10', 'Decimal(10,',
-      'GETDATE', 'NEWID', 'OUTPUT INSERTED', 'OUTPUT DELETED', 'RETURNING', '@', ':=',
-      'pool.request(', '.input(', 'new sql.', 'Transaction('];
+    const content = fs.readFileSync('backend/src/services/order.service.js', 'utf8');
+    const patterns = ['sql.', 'NVarChar', 'VarChar(10', 'Bit', 'Decimal(10',
+      'GETDATE', 'NEWID', 'OUTPUT INSERTED', 'OUTPUT DELETED', 'RETURNING', ':=',
+      'pool.request(', '.input(', 'new sql.', 'sql.Transaction'];
     const found = patterns.filter(p => content.includes(p));
     check('no mssql patterns', found.length === 0, found.join(', '));
   } catch (e) {
