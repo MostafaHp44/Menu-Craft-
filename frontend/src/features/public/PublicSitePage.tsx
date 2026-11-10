@@ -777,7 +777,13 @@ export function CheckoutOverlay(props: {
   const [address, setAddress] = useState('');
   const [note, setNote] = useState('');
   const [paymentMethod, setPaymentMethod] = useState(props.paymentMethods[0]?.code ?? '');
-  const [selectedCheckoutBranch, setSelectedCheckoutBranch] = useState<PublicBranch | null>(null);
+  const [selectedCheckoutBranch, setSelectedCheckoutBranch] = useState<PublicBranch | null>(() => {
+    const list = props.branches;
+    if (!list || list.length === 0) return null;
+    if (list.length === 1) return list[0];
+    // الافتراضي: الفرع المختار في السلة (أو أول فرع يستقبل الطلبات)
+    return list.find((b) => b.id === props.branchId) || list.find((b) => b.acceptingOrders) || list[0] || null;
+  });
   const [sending, setSending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
