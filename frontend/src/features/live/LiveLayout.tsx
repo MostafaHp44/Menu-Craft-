@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Icon, Wordmark } from '../../shared/ui/icons.tsx'
 import { Badge, Button } from '../../shared/ui/ui.tsx'
@@ -6,7 +6,11 @@ import { LanguageSwitcher } from '../../shared/ui/LanguageSwitcher.tsx'
 import { useI18n, type TKey } from '../../shared/i18n'
 import { cx } from '../../shared/lib/utils.ts'
 import { homePathFor, useSession } from '../../shared/store/useSession.ts'
-import type { ApiRole } from '../../shared/api/client.ts'
+import { useBackendAuth } from '../../shared/store/useBackendAuth.ts'
+import { useAuthStore } from '../../shared/store/useAuth.ts'
+import { branchesApi, type ApiRole, type Branch } from '../../shared/api/client.ts'
+import { useAsync } from './useAsync.ts'
+import OrderRingNode from './OrderRingNode.tsx'
 
 interface NavItem {
   to: string
@@ -58,6 +62,13 @@ export default function LiveLayout() {
   const { t } = useI18n()
   const { pathname } = useLocation()
   const navigate = useNavigate()
+  const [ringEnabled, setRingEnabled] = useState(() => localStorage.getItem('ringEnabled') !== 'false')
+
+  // الفروع تخصم المطعم المرتبط بالمستخدم (ال’endpoint يُفلتر حسب الدور/المطعم من الخلفية)
+  const branches = useAsync<Branch[]>(() => branchesApi.list(), [user?.restaurant_id])
+  const branchList = branches.data ?? []
+  const branchLabel =
+    branchList.length === 1 ? branchList[0]?.name : branchList.length > 1 ? `${branchList[0]?.name} +${branchList.length - 1}` : null
 
   useEffect(() => {
     if (status === 'idle') void refresh()
@@ -92,6 +103,9 @@ export default function LiveLayout() {
 
   const signOut = async () => {
     await logout()
+    // تصفير باقي الجلسات لئلا يرتد المستخدم في نفس الجلسة (SignIn bounce)
+    useAuthStore.getState().signOut()
+    void useBackendAuth.getState().logout()
     navigate('/workspace/login', { replace: true })
   }
 
@@ -162,13 +176,40 @@ export default function LiveLayout() {
               </button>
               <div className="min-w-0 flex-1">
                 <p className="line-clamp-1 text-[15px] font-semibold text-charcoal">
-                  {t('live.nav.workspace')}
+                  {user.restaurant_name || t('live.nav.workspace')}
                 </p>
-                <p className="line-clamp-1 text-[11.5px] text-umber">{user.email}</p>
+                <div className="flex items-center gap-2 text-[11.5px] text-umber">
+                  {user.email}
+                  {branchLabel && (
+                    <>
+                      <span className="w-[1px] h-3.5 bg-sand/40 mx-1.5" />
+                      <span className="flex items-center gap-1">
+                        <Icon name="store" size={11} className="shrink-0" />
+                        {branchLabel}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
               <Badge tone="moss" className="hidden sm:inline-flex">
                 {user.role ? t(`live.roles.${user.role.toLowerCase()}` as TKey) : ''}
               </Badge>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !ringEnabled
+                  setRingEnabled(next)
+                  localStorage.setItem('ringEnabled', String(next))
+                }}
+                aria-pressed={ringEnabled}
+                title={ringEnabled ? 'Mute ring' : 'Enable ring'}
+                className={cx(
+                  'hidden h-9 w-9 items-center justify-center rounded-full border transition sm:flex',
+                  ringEnabled ? 'border-moss bg-moss/15 text-moss' : 'border-amber bg-amber/15 text-amber-dark'
+                )}
+              >
+                <Icon name="info" size={16} />
+              </button>
               <LanguageSwitcher className="hidden md:inline-flex" />
               <Button variant="outline" size="sm" icon="logout" className="hidden sm:inline-flex" onClick={signOut}>
                 {t('live.nav.signOut')}
@@ -211,6 +252,7 @@ export default function LiveLayout() {
           </main>
         </div>
       </div>
+      <OrderRingNode scope="staff" />
     </div>
   )
 }
@@ -224,7 +266,9 @@ export function WorkspaceHome() {
 export function RoleGate({ roles, children }: { roles: ApiRole[]; children: ReactNode }) {
   const user = useSession((state) => state.user)
   if (!user) return null
-  if (!roles.includes(user.role as ApiRole)) {
+  const role = (user.role || '').toLowerCase()
+  const allowed = roles.some((r) => r.toLowerCase() === role)
+  if (!allowed) {
     return <Navigate to={homePathFor(user)} replace />
   }
   return <>{children}</>

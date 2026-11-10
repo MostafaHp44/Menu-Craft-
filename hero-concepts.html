@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hero Concepts — Digital Menu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;400;600;700;800;900&family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#0a0a0a;color:#fff;font-family:Inter,system-ui,sans-serif;overflow-x:hidden}
+  .nav{position:fixed;top:0;left:0;right:0;z-index:99;display:flex;justify-content:space-between;align-items:center;padding:18px 24px;backdrop-filter:blur(14px);background:rgba(10,10,10,.55);border-bottom:1px solid rgba(255,255,255,.08)}
+  .nav b{letter-spacing:.18em;text-transform:uppercase;font-size:11px}
+  .nav span{font-size:11px;color:#888}
+  section{position:relative;min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:70px 24px;overflow:hidden}
+  .num{position:absolute;top:76px;left:24px;font-family:Montserrat;font-weight:900;font-size:13px;letter-spacing:.3em;color:#ffb020}
+  .name{position:absolute;top:76px;right:24px;font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:rgba(255,255,255,.5)}
+  .note{position:absolute;bottom:24px;left:24px;right:24px;text-align:center;font-size:13px;color:rgba(255,255,255,.55);max-width:640px;margin:auto}
+  .bg{position:absolute;inset:0;background-size:cover;background-position:center}
+  .bg:after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,.25), rgba(0,0,0,.75))}
+  .content{position:relative;z-index:2}
+  h1{font-family:Montserrat;line-height:.95;letter-spacing:-.03em}
+  .cta{display:inline-flex;align-items:center;gap:8px;margin-top:28px;padding:14px 26px;border-radius:999px;font-weight:700;font-size:14px;text-decoration:none}
+  /* 1 */
+  .s1 h1{font-size:clamp(44px,9vw,110px);font-weight:900}
+  .s1 h1 em{font-family:"Playfair Display";font-style:italic;font-weight:500;color:#ffb020}
+  /* 2 */
+  .s2 h1{font-size:clamp(52px,10vw,120px);font-weight:900;text-transform:uppercase}
+  .s2 .accent{color:#55b8ff}
+  .s2 .float{position:absolute;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);backdrop-filter:blur(8px);border-radius:14px;padding:10px 14px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;animation:float 6s ease-in-out infinite}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+  /* 3 */
+  .s3 h1{font-size:clamp(40px,8vw,96px);font-weight:200}
+  .s3 h1 b{font-weight:800}
+  .s3 .phone{margin:34px auto 0;width:min(280px,80vw);border:1px solid rgba(255,255,255,.25);border-radius:24px;padding:14px;background:rgba(255,255,255,.06);backdrop-filter:blur(10px)}
+  /* 4 */
+  .s4{background:#0d0d0d}
+  .s4 h1{font-size:clamp(56px,12vw,150px);font-weight:200;letter-spacing:.02em}
+  /* 5 */
+  .s5 h1{font-size:clamp(42px,8vw,100px);font-weight:800}
+  .s5 .amber{background:linear-gradient(120deg,#ffb020,#ff6b35);-webkit-background-clip:text;background-clip:text;color:transparent}
+  /* 6 */
+  .s6 h1{font-size:clamp(44px,9vw,110px);font-weight:900;text-transform:lowercase}
+  /* 7 */
+  .s7 h1{font-size:clamp(52px,10vw,120px);font-weight:900}
+  .s7 .g{color:#3ddc84}.s7 .o{color:#ff8f1f}
+  /* 8 */
+  .s8 h1{font-size:clamp(48px,9vw,110px);font-weight:900;text-transform:uppercase}
+  .s8 .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:22px}
+  .s8 .cell{border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:12px 16px;background:rgba(255,255,255,.05)}
+  /* 9 */
+  .s9 h1{font-size:clamp(48px,9vw,110px);font-weight:800}
+  /* 10 */
+  .s10 h1{font-size:clamp(44px,8vw,96px);font-weight:900}
+  .s10 mark{background:#ffb020;color:#111;padding:0 10px;border-radius:6px}
+  /* 11 */
+  .s11 h1{font-size:clamp(42px,8vw,96px);font-weight:800}
+  .s11 .case{display:inline-block;border:2px solid #fff;border-radius:999px;padding:2px 18px}
+  /* 12 */
+  .s12 h1{font-size:clamp(40px,8vw,96px);font-weight:900;letter-spacing:-.04em}
+  @media (max-width:640px){.num{top:90px}.name{top:90px}}
+</style>
+</head>
+<body>
+<div class="nav"><b>Digital Menu — Hero Concepts</b><span>Scroll · pick a number</span></div>
+
+<section class="s1"><div class="bg" style="background-image:url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1600&q=80')"></div><span class="num">01 / TOUCH &amp; FEEL</span><span class="name">Scan it. Taste it.</span><div class="content"><h1>Scan it.<br><em>Taste it.</em></h1><a class="cta" style="background:#ffb020;color:#111" href="#2">See the menu →</a></div><p class="note">Two words, huge type, food floating behind. Nothing else. Concept A — مطعم فاخر.</p></section>
+
+<section class="s2"><div class="bg" style="background-image:url('https://images.unsplash.com/photo-1546069901-d5bfd2cbfb1f?w=1600&q=80')"></div><span class="num">02 / TOUCH &amp; FEEL</span><span class="name">Your menu, alive.</span><div class="content"><h1>Your menu,<br><span class="accent">alive.</span></h1><a class="cta" style="background:#fff;color:#111" href="#3">Open your menu →</a></div><span class="float" style="left:12%;top:30%">QR</span><span class="float" style="right:12%;top:38%;animation-delay:1s">ORDER</span><span class="float" style="left:18%;bottom:28%;animation-delay:2s">PAY</span><p class="note">Parallax + floating chips (QR / Order / Pay). Concept A — برجر / بيتزا / صيني.</p></section>
+
+<section class="s3" id="3"><div class="bg" style="background-image:url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=1600&q=80')"></div><span class="num">03 / TOUCH &amp; FEEL</span><span class="name">Type less. Order more.</span><div class="content"><h1>Type less.<br><b>Order more.</b></h1><div class="phone"><div style="display:flex;justify-content:space-between"><span>🍕 Margherita</span><b>$12</b></div><div style="margin-top:10px;background:#fff;color:#111;border-radius:999px;padding:10px;text-align:center;font-weight:700">Add to cart</div></div></div><p class="note">Mobile-first: the phone UI pops as part of the hero. Concept A — Mobile-first.</p></section>
+
+<section class="s4"><span class="num">04 / MINIMAL LUXE</span><span class="name">Dine Digital.</span><div class="content"><h1>Dine<br>Digital.</h1><a class="cta" style="border:1px solid rgba(255,255,255,.3);color:#fff" href="#5">See the menu</a></div><p class="note">Huge negative space, thin weight. Pure prestige. Concept B — Mass prestige.</p></section>
+
+<section class="s5"><div class="bg" style="background-image:url('https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=1600&q=80')"></div><span class="num">05 / MINIMAL LUXE</span><span class="name">The menu that appelaes.</span><div class="content"><h1>The menu that<br><span class="amber">appelaes.</span></h1><a class="cta" style="background:#ffb020;color:#111" href="#6">Taste it →</a></div><p class="note">Latin warmth + copper gradient. Concept B — Fine dining.</p></section>
+
+<section class="s6"><div class="bg" style="background-image:url('https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=1600&q=80')"></div><span class="num">06 / MINIMAL LUXE</span><span class="name">Digital is on your plate.</span><div class="content"><h1>Digital is<br>on your plate<span style="color:#ff4d4d">.</span></h1><p style="margin-top:14px;color:rgba(255,255,255,.7)">QR · staff · payments — one scan.</p></div><p class="note">Unexpected hook that starts a conversation. Concept B — young brands.</p></section>
+
+<section class="s7"><div class="bg" style="background-image:url('https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=1600&q=80')"></div><span class="num">07 / FUN &amp; FOOD</span><span class="name">Hot. Fresh. Yours.</span><div class="content"><h1><span class="g">Hot.</span><br><span class="o">Fresh.</span><br>Yours.</h1><a class="cta" style="background:#3ddc84;color:#06281a" href="#8">Order now →</a></div><p class="note">Three stacked words, hot colors. Concept C — colorful, food forward.</p></section>
+
+<section class="s8"><div class="bg" style="background-image:url('https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=1600&q=80')"></div><span class="num">08 / FUN &amp; FOOD</span><span class="name">Eat like a boss.</span><div class="content"><h1>Eat like<br>a boss.</h1><div class="row"><div class="cell">Scan</div><div class="cell">Order</div><div class="cell">Pay</div><div class="cell">Enjoy</div></div></div><p class="note">Gamification: Scans / Orders / Plans in one row. Concept C — Web2 energy.</p></section>
+
+<section class="s9"><div class="bg" style="background-image:url('https://images.unsplash.com/photo-1484723091739-30a097e8f929?w=1600&q=80')"></div><span class="num">09 / FUN &amp; FOOD</span><span class="name">Made to order.</span><div class="content"><h1>Made<br>to order.</h1><a class="cta" style="background:#fff;color:#111" href="#10">Start yours →</a></div><p class="note">Chai / Matcha / Bar vibe. Concept C — drinks &amp; cafés.</p></section>
+
+<section class="s10"><div class="bg" style="background-image:url('https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=1600&q=80')"></div><span class="num">10 / BENTO &amp; AWARDS</span><span class="name">Win an award for your menu.</span><div class="content"><h1>Win an award<br>for your <mark>menu</mark>.</h1><a class="cta" style="background:#ffb020;color:#111" href="#11">See templates →</a></div><p class="note">Award-style highlight on one word. Concept D — agencies love it.</p></section>
+
+<section class="s11"><div class="bg" style="background-image:url('https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=1600&q=80')"></div><span class="num">11 / BENTO &amp; AWARDS</span><span class="name">Case of the month?</span><div class="content"><h1><span class="case">Case</span> of<br>the month?</h1><p style="margin-top:16px;color:rgba(255,255,255,.7)">3 restaurants · 42 dishes · 1 QR — screenshot this.</p></div><p class="note">Case-study ticket under the headline. Concept D — case-studies.</p></section>
+
+<section class="s12"><div class="bg" style="background-image:url('https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?w=1600&q=80')"></div><span class="num">12 / BENTO &amp; AWARDS</span><span class="name">Open. Close. Digital.</span><div class="content"><h1>Open.<br>Close.<br>Digital.</h1><a class="cta" style="background:#fff;color:#111" href="#1">Back to top →</a></div><p class="note">Bento / city rhythm, white on dark. Concept D — urban bento.</p></section>
+
+</body>
+</html>

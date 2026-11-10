@@ -2,8 +2,10 @@ const {
   getActiveTemplates,
   getAllTemplates,
   createTemplate,
+  updateTemplate,
   deleteTemplate
 } = require('../services/template.service');
+const { listOverrides } = require('../services/templateMedia.service');
 
 /** أخطاء التحقق (zod) تُعرض كطلب خاطئ 400 بدل 500 */
 function httpStatus(err) {
@@ -17,11 +19,13 @@ function httpMessage(err) {
   return err.message;
 }
 
-/** الزائر: القوالب الفعّالة فقط */
+/** الزائر: القوالب الفعّالة فقط + تعديلات الصور/الهيرو */
 async function listPublicHandler(request, reply) {
   try {
     const templates = await getActiveTemplates();
-    return reply.send({ ok: true, data: templates });
+    let overrides = [];
+    try { overrides = await listOverrides(); } catch (_) { overrides = []; }
+    return reply.send({ ok: true, data: templates, overrides });
   } catch (err) {
     return reply.status(httpStatus(err)).send({ ok: false, error: httpMessage(err) });
   }
@@ -49,6 +53,15 @@ async function createHandler(request, reply) {
   }
 }
 
+async function updateCustomHandler(request, reply) {
+  try {
+    const template = await updateTemplate(request.params.id, request.body || {});
+    return reply.send({ ok: true, data: template });
+  } catch (err) {
+    return reply.status(httpStatus(err)).send({ ok: false, error: httpMessage(err) });
+  }
+}
+
 async function deleteHandler(request, reply) {
   try {
     const result = await deleteTemplate(request.params.id);
@@ -68,5 +81,6 @@ module.exports = {
   listPublicHandler,
   listAllHandler,
   createHandler,
-  deleteHandler
+  updateCustomHandler,
+  deleteHandler,
 };

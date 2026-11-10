@@ -3,9 +3,11 @@ import { useI18n } from '../../shared/i18n'
 import { Badge, Button, Card, Field, Input, Modal, Toggle } from '../../shared/ui/ui.tsx'
 import { useStore } from '../../shared/store/useStore.ts'
 import { useBackendAuth } from '../../shared/store/useBackendAuth.ts'
+import { apiFetch } from '../../shared/lib/api.service.ts'
 
 interface Branch {
   id: string
+  name?: string | null
   name_en?: string | null
   name_ar?: string | null
   name_ku?: string | null
@@ -36,8 +38,18 @@ function truthy(value: boolean | number | undefined): boolean {
   return value === true || value === 1
 }
 
+/** `opening_hours` is stored as a JSON string (json_valid check) — unwrap for display */
+function formatHours(value: string | null | undefined): string {
+  if (!value) return ''
+  try {
+    const parsed = JSON.parse(value)
+    if (typeof parsed === 'string') return parsed
+  } catch { /* plain string fallback */ }
+  return value
+}
+
 function branchName(branch: Branch): string {
-  return branch.name_en || branch.name_ar || branch.name_ku || '—'
+  return branch.name || branch.name_en || branch.name_ar || branch.name_ku || '—'
 }
 
 export default function BranchesPage() {
@@ -65,9 +77,9 @@ export default function BranchesPage() {
 
   useEffect(() => {
     if (!backendUser || backendStatus !== 'ready') return
-    fetch('/api/sites', { credentials: 'include' })
-      .then(r => r.json()).then(p => {
-        const list = (p?.sites || p?.data || [])
+    apiFetch<{ ok: boolean; data?: any[] }>('/api/sites')
+      .then((p) => {
+        const list = (p?.data || []) as any[]
         const mapped = list.map((s:any) => ({ id: String(s.id || s.restaurant_id || ''), name: s.name || s.restaurantName || '—' })).filter((s:any)=>s.id)
         if (mapped.length) {
           setRestaurantsList(mapped)
@@ -102,13 +114,11 @@ export default function BranchesPage() {
     setLoading(true)
     setLoadError(false)
 
-    fetch(`/api/branches?restaurantId=${encodeURIComponent(restaurantId)}`, {
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-    })
-      .then(async (res) => {
-        const payload = await res.json().catch(() => null)
-        if (!res.ok || !payload?.ok) throw new Error(payload?.error || `HTTP ${res.status}`)
+    apiFetch<{ ok: boolean; data?: Branch[]; error?: string }>(
+      `/api/branches?restaurantId=${encodeURIComponent(restaurantId)}`
+    )
+      .then((payload) => {
+        if (!payload?.ok) throw new Error(payload?.error || 'load failed')
         return (payload.data || []) as Branch[]
       })
       .then((data) => {
@@ -142,7 +152,7 @@ export default function BranchesPage() {
       name: branchName(branch) === '—' ? '' : branchName(branch),
       address: branch.address || '',
       phone: branch.phone || '',
-      openingHours: branch.opening_hours || '',
+      openingHours: formatHours(branch.opening_hours) || '',
       acceptingOrders: branch.accepting_orders === undefined ? true : truthy(branch.accepting_orders),
     })
     setFormError('')
@@ -175,14 +185,16 @@ export default function BranchesPage() {
         openingHours: form.openingHours.trim() || null,
         acceptingOrders: form.acceptingOrders,
       }
-      const res = await fetch(editing ? `/api/branches/${encodeURIComponent(editing.id)}` : '/api/branches', {
-        method: editing ? 'PUT' : 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      const payload = await res.json().catch(() => null)
-      if (!res.ok || !payload?.ok) throw new Error(payload?.error || `HTTP ${res.status}`)
+      const isEdit = Boolean(editing)
+      const payload = await apiFetch<{ ok: boolean; error?: string }>(
+        isEdit ? `/api/branches/${encodeURIComponent(editing!.id)}` : '/api/branches',
+        {
+          method: isEdit ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        }
+      )
+      if (!payload?.ok) throw new Error(payload?.error || 'save failed')
 
       setModalOpen(false)
       setEditing(null)
@@ -283,9 +295,9 @@ export default function BranchesPage() {
                           <Badge tone="outline">{t('common.inactive')}</Badge>
                         )}
                       </div>
-                      {branch.opening_hours ? (
+                      {formatHours(branch.opening_hours) ? (
                         <span className="mt-0.5 block text-xs text-umber/50">
-                          {branch.opening_hours}
+                          {formatHours(branch.opening_hours)}
                         </span>
                       ) : null}
                     </td>

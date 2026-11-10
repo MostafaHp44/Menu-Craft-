@@ -40,7 +40,17 @@ export function SplitText({ text, className = '', mode = 'words', delay = 0 }: P
       },
     })
 
+    /* Safety net: if the scroll-timeline toggle never fires on touch, reveal */
+    /* the words so content is never left stuck at opacity 0. */
+    const safety = window.setTimeout(() => {
+      targets.forEach((t) => {
+        const o = parseFloat(getComputedStyle(t).opacity)
+        if (o < 0.3) gsap.set(t, { y: '0%', opacity: 1 })
+      })
+    }, 2500)
+
     return () => {
+      window.clearTimeout(safety)
       tween.scrollTrigger?.kill()
       tween.kill()
       gsap.set(targets, { clearProps: 'all' })

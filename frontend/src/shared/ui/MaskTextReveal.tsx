@@ -35,7 +35,17 @@ export function MaskTextReveal({ lines, className = '' }: Props) {
       },
     })
 
+    /* Safety net: if the scroll-timeline toggle never fires on touch, reveal */
+    /* the lines so content is never left stuck at yPercent 120. */
+    const safety = window.setTimeout(() => {
+      targets.forEach((t) => {
+        const o = parseFloat(getComputedStyle(t).opacity)
+        if (o < 0.3) gsap.set(t, { yPercent: 0 })
+      })
+    }, 2500)
+
     return () => {
+      window.clearTimeout(safety)
       tween.scrollTrigger?.kill()
       tween.kill()
       gsap.set(targets, { clearProps: 'all' })

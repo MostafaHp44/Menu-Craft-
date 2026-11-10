@@ -13,10 +13,13 @@ export function ManualOrderModal({
   restaurant,
   open,
   onClose,
+  onCreated,
 }: {
   restaurant: Restaurant
   open: boolean
   onClose: () => void
+  /** يُستدعى بعد إنشاء الطلب فعليًا في الخادم (لتحديث القوائم) */
+  onCreated?: () => void
 }) {
   const { t } = useI18n()
   const addOrder = useOrdersStore((s) => s.addOrder)
@@ -28,6 +31,7 @@ export function ManualOrderModal({
   const [query, setQuery] = useState('')
   const [categoryId, setCategoryId] = useState<string>(ALL)
   const [qty, setQty] = useState<Record<string, number>>({})
+  const [saving, setSaving] = useState(false)
 
   // fresh draft every time the composer opens
   useEffect(() => {
@@ -66,21 +70,38 @@ export function ManualOrderModal({
       return copy
     })
 
-  const submit = () => {
-    if (chosen.length === 0) return
+  const submit = async () => {
+    if (chosen.length === 0 || saving) return
     const lines: OrderLine[] = chosen.map((item) => ({
       itemId: item.id,
       name: item.name,
       price: item.price,
       qty: qty[item.id] ?? 0,
     }))
-    const order = addOrder({ restaurantId: restaurant.id, channel: 'counter', table, customer, lines, note })
-    showToast({
-      title: t('toast.created'),
-      message: t('orders.orderNo', { no: order.number }),
-      tone: 'success',
-    })
-    onClose()
+    setSaving(true)
+    try {
+      // طلب حقيقي في قاعدة البيانات — الأسعار يُعيد الخادم حسابها بنفسه
+      const order = await addOrder({
+        restaurantId: restaurant.id,
+        channel: 'counter',
+        table,
+        customer,
+        lines,
+        note,
+      })
+      showToast({
+        title: t('toast.created'),
+        message: t('orders.orderNo', { no: order.number }),
+        tone: 'success',
+      })
+      onClose()
+      onCreated?.()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      showToast({ title: t('common.error'), message, tone: 'error' })
+    } finally {
+      setSaving(false)
+    }
   }
 
   const categoryOptions = [
@@ -100,7 +121,7 @@ export function ManualOrderModal({
           <Button variant="ghost" size="md" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button variant="accent" size="md" icon="check" disabled={chosen.length === 0} onClick={submit}>
+          <Button variant="accent" size="md" icon="check" disabled={chosen.length === 0 || saving} loading={saving} onClick={submit}>
             {t('common.add')}
           </Button>
         </>

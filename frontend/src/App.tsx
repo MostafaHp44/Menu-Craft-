@@ -18,6 +18,7 @@ import SettingsPage from './features/client/SettingsPage.tsx'
 import BranchesPage from './features/client/BranchesPage.tsx'
 import TeamPage from './features/client/TeamPage.tsx'
 import DashboardTemplates from './features/client/TemplatesPage.tsx'
+import MyTemplatesPage from './features/client/MyTemplatesPage.tsx'
 import WebsitesPage from './features/client/WebsitesPage.tsx'
 import SubscriptionPage from './features/client/SubscriptionPage.tsx'
 import Editor from './features/client/Editor.tsx'
@@ -44,6 +45,7 @@ import PublicSitePage from './features/public/PublicSitePage.tsx'
 import PublicTrackingPage from './features/public/OrderTrackingPage.tsx'
 import { useBackendAuth } from './shared/store/useBackendAuth.ts'
 import AdminLogin from './features/admin/AdminLogin.tsx'
+import { AdminGate, PanelGate } from './shared/auth/panels.tsx'
 
 function BackendSessionBootstrap() {
   useEffect(() => {
@@ -80,12 +82,19 @@ export default function App() {
           <Route path="/templates" element={<Templates />} />
           <Route path="/templates/:id" element={<TemplatePreview />} />
           <Route path="/signin" element={<SignIn />} />
+          {/* المحرر البصري — متاح للجيست كتجربة (التسجيل بيظهر فقط عند الـ Publish
+              عبر AuthModal داخل المحرر)، والداشبورد نفسه بيظل محمي بـ PanelGate */}
           <Route path="/dashboard/editor" element={<Editor />} />
           {/* الموقع العام للزائر (مطعم منشور عبر slug) */}
           <Route path="/site/:slug" element={<PublicSitePage />} />
           {/* تتبع الطلب للضيف برمز التتبع الآمن */}
           <Route path="/orders/:id" element={<PublicTrackingPage />} />
-<Route path="/dashboard" element={<DashboardLayout />}>
+{/* لوحة الكلاينت (أصحاب المطاعم) — لا يدخلها غيرهم */}
+<Route path="/dashboard" element={
+              <PanelGate panel="client">
+                <DashboardLayout />
+              </PanelGate>
+            }>
             <Route index element={<Overview />} />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="earnings" element={<EarningsPage />} />
@@ -93,6 +102,7 @@ export default function App() {
             <Route path="menu" element={<MyMenu />} />
             <Route path="design" element={<DesignBranding />} />
             <Route path="templates" element={<DashboardTemplates />} />
+            <Route path="my-templates" element={<MyTemplatesPage />} />
             <Route path="websites" element={<WebsitesPage />} />
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="qr-code" element={<QrCodePage />} />
@@ -103,9 +113,29 @@ export default function App() {
           </Route>
           <Route path="/menu-demo" element={<MenuDemo />} />
           <Route path="/workspace/login" element={<LiveLogin />} />
-          <Route path="/admin/subscription-requests" element={<SubscriptionRequestsPage />} />
-          <Route path="/admin/revenue" element={<RevenuePage />} />
-           <Route path="/workspace" element={<LiveLayout />}>
+          {/* لوحة السوبر أدمن — لا يدخلها غيره */}
+          <Route
+            path="/admin/subscription-requests"
+            element={
+              <AdminGate>
+                <SubscriptionRequestsPage />
+              </AdminGate>
+            }
+          />
+          <Route
+            path="/admin/revenue"
+            element={
+              <AdminGate>
+                <RevenuePage />
+              </AdminGate>
+            }
+          />
+           {/* لوحة الموظفين (كاشير/مطبخ/نادل) — لا يدخلها غيرهم */}
+            <Route path="/workspace" element={
+              <PanelGate panel="staff">
+                <LiveLayout />
+              </PanelGate>
+            }>
             <Route index element={<WorkspaceHome />} />
             <Route
               path="overview"
@@ -181,7 +211,14 @@ export default function App() {
             />
             <Route path="account" element={<LiveAccount />} />
           </Route>
-          <Route path="/worker" element={<WorkerBoard />} />
+          <Route
+            path="/worker"
+            element={
+              <PanelGate panel="client">
+                <WorkerBoard />
+              </PanelGate>
+            }
+          />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />

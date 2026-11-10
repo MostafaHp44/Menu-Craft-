@@ -33,7 +33,10 @@ function httpMessage(err) {
   if (err?.name === 'ZodError') {
     return err.errors?.[0]?.message || 'بيانات غير صالحة';
   }
-  return err.message;
+  const status = err?.status || err?.statusCode || 500;
+  // خطأ داخلي (5xx) — لا تُعرض رسالته للعميل (P1)، التفاصيل في السجل فقط
+  if (status >= 500) return 'Internal Server Error';
+  return err.message || 'Bad Request';
 }
 
 async function listClientsHandler(request, reply) {

@@ -7,6 +7,7 @@ import { LanguageSwitcher } from '../ui/LanguageSwitcher.tsx'
 import { MarketingThemeCustomizer } from './MarketingThemeCustomizer.tsx'
 
 import { useAuthStore } from '../store/useAuth.ts'
+import { useBackendAuth } from '../store/useBackendAuth.ts'
 import { useI18n, type TKey } from '../i18n'
 
 interface NavItem {
@@ -24,6 +25,8 @@ const NAV: NavItem[] = [
 export function MarketingHeader({ solid = false, themeEnabled = false }: { solid?: boolean; themeEnabled?: boolean }) {
   const { t } = useI18n()
   const session = useAuthStore((s) => s.session)
+  const backendUser = useBackendAuth((s) => s.user)
+  const signedIn = Boolean(session || backendUser)
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const { pathname, hash } = useLocation()
@@ -70,7 +73,7 @@ export function MarketingHeader({ solid = false, themeEnabled = false }: { solid
           {themeEnabled ? <MarketingThemeCustomizer /> : null}
           {/* phones get the switcher inside the drawer so the bar never overflows */}
           <LanguageSwitcher className="hidden sm:inline-flex" />
-          {session ? (
+          {signedIn ? (
             <Button to="/dashboard" size="sm" className="hidden sm:inline-flex">Dashboard</Button>
           ) : (
             <Button to="/signin" variant="ghost" size="sm" className="hidden sm:inline-flex">
@@ -98,6 +101,12 @@ export function MarketingHeader({ solid = false, themeEnabled = false }: { solid
             <span className="text-[13px] font-medium text-clay">{t('common.language')}</span>
             <LanguageSwitcher />
           </div>
+          {themeEnabled ? (
+            <div className="flex items-center justify-between gap-3 border-b border-sand/70 py-3">
+              <span className="text-[13px] font-medium text-clay">Theme</span>
+              <MarketingThemeCustomizer />
+            </div>
+          ) : null}
           <nav className="flex flex-col" aria-label={t('web.header.mobileNav')}>
             {NAV.map((item) => (
               <Link
@@ -108,12 +117,14 @@ export function MarketingHeader({ solid = false, themeEnabled = false }: { solid
                 {t(item.key)}
               </Link>
             ))}
-            <Link
-              to="/signin"
-              className="border-b border-sand/70 py-3.5 text-[15px] font-medium text-charcoal"
-            >
-              {t('nav.signIn')}
-            </Link>
+            {signedIn ? null : (
+              <Link
+                to="/signin"
+                className="border-b border-sand/70 py-3.5 text-[15px] font-medium text-charcoal"
+              >
+                {t('nav.signIn')}
+              </Link>
+            )}
             <Link to="/dashboard" className="py-3.5 text-[15px] font-medium text-charcoal">
               {t('web.header.dashboardDemo')}
             </Link>

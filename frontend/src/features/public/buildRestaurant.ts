@@ -14,6 +14,12 @@ import type {
   PublicMenuItem,
 } from '../../shared/types/public';
 
+// Helper: merge restaurant field with template sample fallback
+function withTemplateFallback<T>(restaurantField: T | string | null | undefined, templateSample: T): T {
+  if (restaurantField == null || restaurantField === '') return templateSample;
+  return restaurantField as T;
+}
+
 // Derive the exact language type expected by resolveLang.
 type Lang = Parameters<typeof resolveLang>[1];
 
@@ -73,6 +79,7 @@ function buildMenu(menu: PublicMenuCategory[], lang: Lang): MenuCategory[] {
       price: typeof it.price === 'number' ? it.price : 0,
       compareAt: it.compareAt == null ? null : Number(it.compareAt),
       image: it.image || '',
+      imageFit: (it as any).imageFit || undefined,
       featured: !!it.featured,
       popular: !!it.popular,
       available: it.available !== false,
@@ -130,6 +137,14 @@ export function buildRestaurant(
           ],
   } as DesignConfiguration;
 
+  // ---- Fallback to template sample when restaurant data is empty ----
+  const sample = tmpl.sample;
+  const rr = r as any;
+  const fallbackTagline = withTemplateFallback(rr.tagline, sample.tagline);
+  const fallbackDescription = withTemplateFallback(rr.description, sample.description);
+  const fallbackLogoText = withTemplateFallback(rr.logoText, sample.logoText);
+  const fallbackHeroImage = withTemplateFallback(rr.heroImage, (sample as any).heroImage) as any;
+
   const hoursRaw = Array.isArray(r.hours) ? r.hours : [];
 
   const hours: OpeningHour[] = hoursRaw.map((h: any) => {
@@ -147,13 +162,17 @@ export function buildRestaurant(
     id: r.id || '',
     name: resolveLang(r.name, resolvedLang) || 'Restaurant',
     slug: r.slug || '',
-    tagline: resolveLang(r.tagline ?? '', resolvedLang) || '',
-    description: resolveLang(r.description ?? '', resolvedLang) || '',
-    logoText: resolveLang(r.logoText ?? '', resolvedLang) || '',
+    tagline: fallbackTagline,
+    description: fallbackDescription,
+    logoText: fallbackLogoText,
     logoStyle: (r.logoStyle as any) || 'monogram',
-    heroImage: r.heroImage || '',
+    heroImage: fallbackHeroImage,
+    heroImageFit: (rr as any).heroImageFit || undefined,
     heroVideo: r.heroVideo || '',
     gallery: Array.isArray(r.gallery) ? r.gallery.map(String) : [],
+    galleryFits: Array.isArray((rr as any).galleryFits)
+      ? (rr as any).galleryFits.map((f: any) => (f && typeof f === 'object' ? f : null))
+      : undefined,
     phone: r.phone || '',
     email: r.email || '',
     address: r.address || '',

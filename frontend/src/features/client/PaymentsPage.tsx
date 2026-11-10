@@ -118,7 +118,7 @@ export default function PaymentsPage() {
     closeAdd()
     showToast({
       title: t('kitchenMore.methodAdded'),
-      message: t('payments.demoNotice'),
+      message: t('payments.liveNote'),
       tone: 'success',
     })
   }
@@ -147,11 +147,11 @@ export default function PaymentsPage() {
         </Button>
       </div>
 
-      {/* demo notice */}
-      <div className="flex items-start gap-2.5 rounded-2xl border border-gold/35 bg-gold/8 px-4 py-3">
-        <Icon name="info" size={16} className="mt-0.5 shrink-0 text-gold" />
+      {/* live settings notice */}
+      <div className="flex items-start gap-2.5 rounded-2xl border border-moss/35 bg-moss/8 px-4 py-3">
+        <Icon name="info" size={16} className="mt-0.5 shrink-0 text-moss" />
         <p className="min-w-0 text-[13px] leading-relaxed text-espresso">
-          {t('payments.demoNotice')}
+          {t('payments.liveNote')}
         </p>
       </div>
 

@@ -8,7 +8,8 @@ import { useI18n, type TKey } from '../../shared/i18n'
 import { cx, money, timeAgo, tx } from '../../shared/lib/utils.ts'
 import { useOrderedOrders, useOrdersStore } from '../../shared/store/useOrders.ts'
 import { useActiveRestaurant, useStore } from '../../shared/store/useStore.ts'
-import { useAuthStore } from '../../shared/store/useAuth.ts'
+import { useBackendAuth } from '../../shared/store/useBackendAuth.ts'
+import { useSession } from '../../shared/store/useSession.ts'
 import type { Order, OrderStatus } from '../../shared/lib/types.ts'
 
 /** status → column chrome (received = gold · preparing = flame · served = moss) */
@@ -150,7 +151,18 @@ function BoardColumn({
 }) {
   const { t } = useI18n()
   const advance = useOrdersStore((s) => s.advance)
+  const showToast = useStore((s) => s.showToast)
   const tone = TONES[status]
+
+  // كل تغيير حالة يمرّ بالخادم (PATCH) ويفرض عليه صلاحيات الدور وآلة الحالة
+  const handleAdvance = async (id: string) => {
+    try {
+      await advance(id)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      showToast({ title: t('common.error'), message, tone: 'error' })
+    }
+  }
   const actionLabel =
     status === 'received'
       ? t('orders.markPreparing')
@@ -186,7 +198,7 @@ function BoardColumn({
               key={order.id}
               order={order}
               actionLabel={actionLabel}
-              onAdvance={() => advance(order.id)}
+              onAdvance={() => void handleAdvance(order.id)}
             />
           ))}
         </AnimatePresence>
@@ -207,14 +219,18 @@ export default function WorkerBoard() {
   const { t, lang } = useI18n()
   const navigate = useNavigate()
   const activeRestaurant = useActiveRestaurant()
-  const session = useAuthStore((s) => s.session)
+  // الجلسة الحقيقية هي جلسة الباك إند (HttpOnly cookie) — لا شيء من localStorage
+  const user = useSession((s) => s.user)
   const restaurants = useStore((s) => s.restaurants)
   // a signed-in worker always follows THEIR restaurant's kitchen — not the active one
+  const userRestaurantId =
+    useBackendAuth((s) => s.user?.restaurant_id || s.user?.restaurantId) ||
+    user?.restaurant_id ||
+    undefined
   const restaurant =
-    session?.role === 'worker' && session.restaurantId
-      ? restaurants.find((r) => r.id === session.restaurantId) ?? activeRestaurant
+    userRestaurantId
+      ? restaurants.find((r) => r.id === userRestaurantId) ?? activeRestaurant
       : activeRestaurant
-  const signOut = useAuthStore((s) => s.signOut)
   const orders = useOrderedOrders(restaurant.id)
 
   const [now, setNow] = useState(() => new Date())
@@ -239,7 +255,10 @@ export default function WorkerBoard() {
   )
 
   const handleSignOut = () => {
-    signOut()
+    // خروج كامل: كوكي الباك إند (إبطال توكن التحديث) + مسح الجلسة والطلبات
+    void useBackendAuth.getState().logout()
+    void useSession.getState().logout()
+    useOrdersStore.getState().reset()
     navigate('/')
   }
 

@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useI18n } from '../../../shared/i18n'
 import { Icon } from '../../../shared/ui/icons.tsx'
 import { Badge, Button, Field, IconButton, Img, Input, Modal, Select } from '../../../shared/ui/ui.tsx'
 import { usePlatformStore } from '../../../shared/store/usePlatform.ts'
 import { useStore } from '../../../shared/store/useStore.ts'
-import { TEMPLATES, TEMPLATE_CATEGORIES, getTemplate } from '../../../templates/data/templates.ts'
+import { TEMPLATES, TEMPLATE_CATEGORIES, getTemplate, allTemplates } from '../../../templates/data/templates.ts'
 import { DarkEmpty, DemoNote, Panel, PanelHeading } from '../parts.tsx'
+import TemplateMediaEditor from './TemplateMediaEditor.tsx'
 
 const CATEGORIES = TEMPLATE_CATEGORIES.filter((c) => c !== 'All')
 
@@ -14,12 +15,19 @@ export default function TemplatesTab() {
   const customTemplates = usePlatformStore((s) => s.customTemplates)
   const addTemplate = usePlatformStore((s) => s.addTemplate)
   const removeTemplate = usePlatformStore((s) => s.removeTemplate)
+  const refreshOverrides = usePlatformStore((s) => s.refreshOverrides)
+  const overrides = usePlatformStore((s) => s.templateOverrides)
   const showToast = useStore((s) => s.showToast)
 
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [baseId, setBaseId] = useState(TEMPLATES[0].id)
   const [category, setCategory] = useState<string>(CATEGORIES[0])
+  const [editing, setEditing] = useState<string | null>(null)
+
+  useEffect(() => {
+    void refreshOverrides()
+  }, [refreshOverrides])
 
   const maxUsage = Math.max(...TEMPLATES.map((tpl) => tpl.usageCount), 1)
   const trimmed = name.trim()
@@ -51,15 +59,21 @@ export default function TemplatesTab() {
         />
 
         <div className="mt-5 space-y-3.5">
-          {TEMPLATES.map((tpl) => (
+          {allTemplates().map((tpl) => (
             <div key={tpl.id}>
               <div className="flex items-baseline justify-between gap-3 text-[13px]">
                 <span className="text-ivory/85">
                   {tpl.name}
                   <span className="ms-2 text-ivory/40">{tpl.category}</span>
+                  {overrides[tpl.id] ? <Badge tone="flame" className="ms-2">معدّل</Badge> : null}
                 </span>
-                <span className="font-semibold text-ivory">
-                  {tpl.usageCount.toLocaleString()}
+                <span className="flex items-center gap-3">
+                  <span className="font-semibold text-ivory">
+                    {tpl.usageCount.toLocaleString()}
+                  </span>
+                  <Button size="sm" variant="outline" icon="settings" onClick={() => setEditing(tpl.id)}>
+                    تعديل الصور والهيرو
+                  </Button>
                 </span>
               </div>
               <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-white/8">
@@ -121,26 +135,48 @@ export default function TemplatesTab() {
                       </span>
                     </div>
                   </div>
-                  <IconButton
-                    icon="trash"
-                    tone="onDark"
-                    className="h-10 w-10"
-                    label={t('common.remove')}
-                    onClick={() => {
-                      removeTemplate(custom.name)
-                      showToast({
-                        tone: 'info',
-                        title: t('toast.deleted'),
-                        message: t('platformMore.templates.removedMsg', { name: custom.name }),
-                      })
-                    }}
-                  />
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" icon="settings" onClick={() => setEditing(custom.id || custom.name)}>
+                      تعديل
+                    </Button>
+                    <IconButton
+                      icon="trash"
+                      tone="onDark"
+                      className="h-10 w-10"
+                      label={t('common.remove')}
+                      onClick={() => {
+                        removeTemplate(custom.name)
+                        showToast({
+                          tone: 'info',
+                          title: t('toast.deleted'),
+                          message: t('platformMore.templates.removedMsg', { name: custom.name }),
+                        })
+                      }}
+                    />
+                  </div>
                 </li>
               )
             })}
           </ul>
         )}
       </Panel>
+
+      {/* template media editor (hero images/videos, preview, gallery, layout) */}
+      <Modal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title="تعديل القالب — الصور والهيرو"
+        description="غيّر الصور، الهيرو، الفيديو (ديسكتوب 16:9 / موبايل 9:16)، المعرض، والتخطيط."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setEditing(null)}>
+              {t('common.cancel')}
+            </Button>
+          </>
+        }
+      >
+        {editing ? <TemplateMediaEditor baseId={editing} onClose={() => setEditing(null)} /> : null}
+      </Modal>
 
       {/* add template modal */}
       <Modal

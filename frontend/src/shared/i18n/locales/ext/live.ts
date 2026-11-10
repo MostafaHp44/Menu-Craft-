@@ -34,6 +34,8 @@ const en = {
       ownerHint: 'Use your owner email and password.',
       employeeHint: 'Use the email and temporary password from the owner.',
       backToSite: 'Back to website',
+      wrongPanel: 'This sign-in is for restaurant staff only (cashier, kitchen, waiter). Owners sign in at /signin and the platform admin at /admin/login.',
+      goToPanel: 'Go to my dashboard',
     },
     common: {
       refresh: 'Refresh',
@@ -628,6 +630,8 @@ const ar: Deep<typeof en> = {
       ownerHint: 'استخدم بريد المالك وكلمة المرور.',
       employeeHint: 'استخدم البريد وكلمة المرور المؤقتة من صاحب المطعم.',
       backToSite: 'العودة للموقع',
+      wrongPanel: 'هذا الدخول مخصص لموظفي المطعم فقط (كاشير/مطبخ/نادل). أصحاب المطاعم يدخلون من /signin والسوبر أدمن من /admin/login.',
+      goToPanel: 'الذهاب إلى لوحتي',
     },
     common: {
       refresh: 'تحديث',
@@ -1222,6 +1226,8 @@ const ku: Deep<typeof en> = {
       ownerHint: 'خاوەنانی چێشتخانە ئیمەیل و وشەی نهێنی خۆیان بەکاردەهێنن.',
       employeeHint: 'هەژماری کاشێر، چێشتخانە و وەیتەر زانیارییەکانی خاوەن بەکاردەهێنن.',
       backToSite: 'گەڕانەوە بۆ ماڵپەڕ',
+      wrongPanel: 'ئەم چوونەژوورەوەیە تەنها بۆ کارمەنانی چێشتخانەیە (کاشێر/چێشتخانە/وەیتەر). خاوەنەکان لە /signin و سوپەر ئەدمین لە /admin/login دەچنە ژوورەوە.',
+      goToPanel: 'بڕۆ بۆ داشبۆردەکەم',
     },
     common: {
       refresh: 'نوێکردنەوە',

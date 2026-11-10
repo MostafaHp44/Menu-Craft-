@@ -328,16 +328,14 @@ function CreateEmployeeModal({
     setBusy(true)
     setError('')
     try {
-      const created = await employeesApi.create({
+      await employeesApi.create({
         name: name.trim(),
         email: email.trim(),
         role,
-        temporaryPassword: password,
-        branch_access_type: accessType,
+        password,
+        branchAccessType: accessType,
+        branchIds: accessType === 'assigned' ? selected : [],
       })
-      if (accessType === 'assigned') {
-        await employeesApi.setBranches(created.employeeId, accessType, selected)
-      }
       useStore.getState().showToast({ title: t('live.team.created'), tone: 'success' })
       onSaved()
     } catch (reason) {

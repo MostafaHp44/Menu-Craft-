@@ -5,6 +5,7 @@
 const { getMySQLPool } = require('../config/mysql');
 const { orderingSettingsFromRow } = require('./order.service');
 const { tx, isValidSourceLang, VALID_LANGS } = require('./translate.service');
+const { parseFit } = require('./imageFit.service');
 
 function resolveTranslated(nameObj, lang, sourceLang) {
   if (nameObj && typeof nameObj === 'object' && (nameObj.en !== undefined || nameObj.ar !== undefined || nameObj.ku !== undefined)) {
@@ -37,6 +38,7 @@ function mapItemRow(i, lang = 'en') {
     price: Number(i.price || 0),
     compareAt: i.compare_at !== null && i.compare_at !== undefined ? Number(i.compare_at) : null,
     image: i.image || '',
+    imageFit: parseFit(i.image_fit),
     featured: Boolean(i.featured),
     popular: Boolean(i.popular),
     available: i.available === null || i.available === undefined ? true : Boolean(i.available),
@@ -115,11 +117,13 @@ function availablePaymentMethods(settings) {
 }
 
 async function getPublicMenuBySlug(slug, lang = 'en') {
+  const { ensureRestaurantFitColumns } = require('./imageFit.service');
+  await ensureRestaurantFitColumns();
   const pool = await getMySQLPool();
   const [result] = await pool.execute(
     `SELECT id, name_en, name_ar, name_ku, slug, status, templateId, design, menu, draft_menu, published_menu, language, ordering, updated_at, created_at,
       tagline_en, tagline_ar, tagline_ku, description_en, description_ar, description_ku,
-      logoText_en, logoText_ar, logoText_ku, logoStyle, heroImage, heroVideo, gallery,
+      logoText_en, logoText_ar, logoText_ku, logoStyle, heroImage, hero_image_fit, heroVideo, gallery, gallery_fits,
       phone, email, address, hours, socials
       FROM Restaurants WHERE slug = ? AND LOWER(status) = 'published'`,
     [slug]
@@ -170,6 +174,7 @@ async function getPublicMenuBySlug(slug, lang = 'en') {
         price: Number(i.price || 0),
         compareAt: i.compareAt ?? (i.compare_at !== undefined ? Number(i.compare_at) : null),
         image: i.image || '',
+        imageFit: parseFit(i.image_fit || i.imageFit),
         featured: Boolean(i.featured),
         popular: Boolean(i.popular),
         available: i.available === undefined ? true : Boolean(i.available),
@@ -188,8 +193,10 @@ async function getPublicMenuBySlug(slug, lang = 'en') {
       logoText: { en: r.logoText_en, ar: r.logoText_ar, ku: r.logoText_ku },
       logoStyle: r.logoStyle || 'monogram',
       heroImage: r.heroImage || '',
+      heroImageFit: parseFit(r.hero_image_fit),
       heroVideo: r.heroVideo || '',
       gallery: parseJson(r.gallery, []),
+      galleryFits: parseJson(r.gallery_fits, null),
       phone: r.phone || '',
       email: r.email || '',
       address: r.address || '',

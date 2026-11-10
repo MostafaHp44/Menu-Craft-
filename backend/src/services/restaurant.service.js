@@ -1,5 +1,19 @@
-const { getPool, sql } = require('../config/db');
+/**
+ * Restaurant service — MariaDB / mysql2 version.
+ * Restaurant service (MariaDB / mysql2).
+ *
+ * Notes:
+ *  - MariaDB `Restaurants` has no reserved-word columns, so no [brackets].
+ *  - JSON-ish columns (gallery, hours, socials, design, menu, ordering, stats,
+ *    draft_menu, published_menu) are LONGTEXT → values are stringified on write.
+ *  - Foreign keys point at Restaurants from 11 tables, so DELETE surfaces a
+ *    409 instead of a raw driver error when the restaurant is still referenced.
+ */
+const { getMySQLPool } = require('../config/mysql');
 const { z } = require('zod');
+const { ensureRestaurantFitColumns } = require('./imageFit.service');
+const { getTemplateSampleMenu } = require('../data/templateSamples');
+const { syncMenuItemsFromJson } = require('./menuSync.service');
 
 const restaurantSchema = z.object({
   name: z.string().min(1).optional(),
@@ -19,6 +33,8 @@ const restaurantSchema = z.object({
   logoText_ku: z.string().optional(),
   logoStyle: z.string().optional(),
   heroImage: z.string().optional(),
+  heroImageFit: z.any().optional(),
+  galleryFits: z.any().optional(),
   heroVideo: z.string().nullable().optional(),
   gallery: z.any().optional(),
   phone: z.string().optional(),
@@ -26,53 +42,59 @@ const restaurantSchema = z.object({
   address: z.string().optional(),
   hours: z.any().optional(),
   socials: z.any().optional(),
-  templateId: z.string().optional(),
+  templateId: z.string().nullish().optional(),
   design: z.any().optional(),
   menu: z.any().optional(),
   language: z.enum(['ar', 'en', 'ku']).optional(),
   ordering: z.any().optional(),
   stats: z.any().optional(),
   draft_menu: z.any().optional(),
-  published_menu: z.any().optional()
+  published_menu: z.any().optional(),
+  copy: z.any().optional(),
+  inline: z.any().optional()
 });
 
-/** خريطة الحقول: اسم الحقل في الطلب ← عمود الجدول + نوعه */
+/** request field → table column (and whether the value is JSON text) */
 const FIELD_MAP = {
-  name: { column: 'name_en', type: () => sql.NVarChar },
-  name_ar: { column: 'name_ar', type: () => sql.NVarChar },
-  name_ku: { column: 'name_ku', type: () => sql.NVarChar },
-  slug: { column: 'slug', type: () => sql.NVarChar },
-  status: { column: 'status', type: () => sql.NVarChar },
-  plan: { column: '[plan]', type: () => sql.NVarChar },
-  tagline_en: { column: 'tagline_en', type: () => sql.NVarChar },
-  tagline_ar: { column: 'tagline_ar', type: () => sql.NVarChar },
-  tagline_ku: { column: 'tagline_ku', type: () => sql.NVarChar },
-  description_en: { column: 'description_en', type: () => sql.NVarChar },
-  description_ar: { column: 'description_ar', type: () => sql.NVarChar },
-  description_ku: { column: 'description_ku', type: () => sql.NVarChar },
-  logoText_en: { column: 'logoText_en', type: () => sql.NVarChar },
-  logoText_ar: { column: 'logoText_ar', type: () => sql.NVarChar },
-  logoText_ku: { column: 'logoText_ku', type: () => sql.NVarChar },
-  logoStyle: { column: 'logoStyle', type: () => sql.NVarChar },
-  heroImage: { column: 'heroImage', type: () => sql.NVarChar },
-  heroVideo: { column: 'heroVideo', type: () => sql.NVarChar },
-  gallery: { column: 'gallery', type: () => sql.NVarChar, json: true },
-  phone: { column: 'phone', type: () => sql.NVarChar },
-  email: { column: 'email', type: () => sql.NVarChar },
-  address: { column: 'address', type: () => sql.NVarChar },
-  hours: { column: 'hours', type: () => sql.NVarChar, json: true },
-  socials: { column: 'socials', type: () => sql.NVarChar, json: true },
-  templateId: { column: 'templateId', type: () => sql.NVarChar },
-  design: { column: 'design', type: () => sql.NVarChar, json: true },
-  menu: { column: 'menu', type: () => sql.NVarChar, json: true },
-  language: { column: 'language', type: () => sql.NVarChar },
-  ordering: { column: 'ordering', type: () => sql.NVarChar, json: true },
-  stats: { column: 'stats', type: () => sql.NVarChar, json: true },
-  draft_menu: { column: 'draft_menu', type: () => sql.NVarChar, json: true },
-  published_menu: { column: 'published_menu', type: () => sql.NVarChar, json: true }
+  name: { column: 'name_en' },
+  name_ar: { column: 'name_ar' },
+  name_ku: { column: 'name_ku' },
+  slug: { column: 'slug' },
+  status: { column: 'status' },
+  plan: { column: 'plan' },
+  tagline_en: { column: 'tagline_en' },
+  tagline_ar: { column: 'tagline_ar' },
+  tagline_ku: { column: 'tagline_ku' },
+  description_en: { column: 'description_en' },
+  description_ar: { column: 'description_ar' },
+  description_ku: { column: 'description_ku' },
+  logoText_en: { column: 'logoText_en' },
+  logoText_ar: { column: 'logoText_ar' },
+  logoText_ku: { column: 'logoText_ku' },
+  logoStyle: { column: 'logoStyle' },
+  heroImage: { column: 'heroImage' },
+  heroImageFit: { column: 'hero_image_fit', json: true },
+  galleryFits: { column: 'gallery_fits', json: true },
+  heroVideo: { column: 'heroVideo' },
+  gallery: { column: 'gallery', json: true },
+  phone: { column: 'phone' },
+  email: { column: 'email' },
+  address: { column: 'address' },
+  hours: { column: 'hours', json: true },
+  socials: { column: 'socials', json: true },
+  templateId: { column: 'templateId' },
+  design: { column: 'design', json: true },
+  menu: { column: 'menu', json: true },
+  language: { column: 'language' },
+  ordering: { column: 'ordering', json: true },
+  stats: { column: 'stats', json: true },
+  draft_menu: { column: 'draft_menu', json: true },
+  published_menu: { column: 'published_menu', json: true },
+  copy: { column: 'copy', json: true },
+  inline: { column: 'inline', json: true }
 };
 
-/** قيم JSON تُخزَّن كنص داخل NVARCHAR(MAX) */
+/** LONGTEXT columns store JSON as text */
 function toDbValue(key, value) {
   const def = FIELD_MAP[key];
   if (def && def.json && value !== null && typeof value === 'object') {
@@ -81,48 +103,49 @@ function toDbValue(key, value) {
   return value;
 }
 
+function notFound() {
+  const err = new Error('المطعم غير موجود');
+  err.status = 404;
+  err.code = 'RESTAURANT_NOT_FOUND';
+  return err;
+}
+
+async function withConnection(fn) {
+  await ensureRestaurantFitColumns();
+  const pool = await getMySQLPool();
+  const connection = await pool.getConnection();
+  try {
+    return await fn(connection);
+  } finally {
+    connection.release();
+  }
+}
+
 async function getAllRestaurants() {
-  const pool = await getPool();
-  const result = await pool.request().query(`
-    SELECT *
-    FROM Restaurants
-    ORDER BY created_at DESC
-  `);
-  return result.recordset;
+  return withConnection(async (c) => {
+    const [rows] = await c.execute('SELECT * FROM Restaurants ORDER BY created_at DESC');
+    return rows;
+  });
 }
 
 async function getRestaurantById(id) {
-  const pool = await getPool();
-  const result = await pool.request()
-    .input('id', sql.VarChar, id)
-    .query('SELECT * FROM Restaurants WHERE id = @id');
-
-  if (result.recordset.length === 0) {
-    const err = new Error('المطعم غير موجود');
-    err.status = 404;
-    throw err;
-  }
-  return result.recordset[0];
+  return withConnection(async (c) => {
+    const [rows] = await c.execute('SELECT * FROM Restaurants WHERE id = ?', [id]);
+    if (rows.length === 0) throw notFound();
+    return rows[0];
+  });
 }
 
 async function getRestaurantBySlug(slug) {
-  const pool = await getPool();
-  const result = await pool.request()
-    .input('slug', sql.NVarChar, slug)
-    .query('SELECT * FROM Restaurants WHERE slug = @slug');
-
-  if (result.recordset.length === 0) {
-    const err = new Error('المطعم غير موجود');
-    err.status = 404;
-    throw err;
-  }
-  return result.recordset[0];
+  return withConnection(async (c) => {
+    const [rows] = await c.execute('SELECT * FROM Restaurants WHERE slug = ?', [slug]);
+    if (rows.length === 0) throw notFound();
+    return rows[0];
+  });
 }
 
 async function createRestaurant(input, userId) {
   const parsed = restaurantSchema.parse(input ?? {});
-  const pool = await getPool();
-  const now = new Date().toISOString();
 
   if (!parsed.name || !parsed.slug) {
     const err = new Error('اسم المطعم والرابط المختصر مطلوبان');
@@ -130,132 +153,192 @@ async function createRestaurant(input, userId) {
     throw err;
   }
 
-  const existing = await pool.request()
-    .input('slug', sql.NVarChar, parsed.slug)
-    .query('SELECT id FROM Restaurants WHERE slug = @slug');
-  if (existing.recordset.length > 0) {
-    const err = new Error('هذا الرابط المختصر مستخدم مسبقاً');
-    err.status = 400;
-    throw err;
-  }
+  return withConnection(async (c) => {
+    const [existing] = await c.execute('SELECT id FROM Restaurants WHERE slug = ?', [parsed.slug]);
+    if (existing.length > 0) {
+      const err = new Error('هذا الرابط المختصر مستخدم مسبقاً');
+      err.status = 400;
+      err.code = 'SLUG_TAKEN';
+      throw err;
+    }
 
-  const keys = Object.keys(FIELD_MAP).filter((k) => parsed[k] !== undefined);
-  const columns = ['id', ...keys.map((k) => FIELD_MAP[k].column)];
-  const placeholders = ['@__id', ...keys.map((k) => `@${k}`)];
-  const newId = `rst-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    const keys = Object.keys(FIELD_MAP).filter((k) => parsed[k] !== undefined);
+    const columns = ['id', ...keys.map((k) => FIELD_MAP[k].column)];
+    const placeholders = ['?', ...keys.map(() => '?')];
+    const newId = `rst-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    const values = [newId, ...keys.map((k) => toDbValue(k, parsed[k]))];
 
-  const request = pool.request();
-  request.input('__id', sql.NVarChar, newId);
-  keys.forEach((k) => request.input(k, FIELD_MAP[k].type(), toDbValue(k, parsed[k])));
-  request.input('__createdAt', sql.DateTime, now);
+    await c.execute(
+      `INSERT INTO Restaurants (${columns.join(', ')}, created_at, updated_at)
+       VALUES (${placeholders.join(', ')}, NOW(), NOW())`,
+      values
+    );
 
-  const result = await request.query(`
-    INSERT INTO Restaurants (${columns.join(', ')}, created_at, updated_at)
-    OUTPUT INSERTED.id
-    VALUES (${placeholders.join(', ')}, @__createdAt, @__createdAt)
-  `);
-  void result; // المعرف مولّد مسبقًا (newId)
+    if (userId) {
+      // link ownership (multi-site) + legacy default link only when the user has no site yet
+      const { linkUserToSite } = require('./site.service');
+      await linkUserToSite(userId, newId, true);
+      await c.execute(
+        'UPDATE Users SET restaurant_id = COALESCE(restaurant_id, ?) WHERE id = ?',
+        [newId, userId]
+      );
+    }
 
-  if (userId) {
-    // ربط الملكية (متعدد المواقع) — وربط افتراضي قديم فقط لو لم يكن للمستخدم موقع بعد
-    const { linkUserToSite } = require('./site.service');
-    await linkUserToSite(userId, newId, true);
-    await pool.request()
-      .input('userId', sql.NVarChar, userId)
-      .input('restaurantId', sql.NVarChar, newId)
-      .query('UPDATE Users SET restaurant_id = COALESCE(restaurant_id, @restaurantId) WHERE id = @userId');
-  }
-
-  return getRestaurantById(newId);
+    const [rows] = await c.execute('SELECT * FROM Restaurants WHERE id = ?', [newId]);
+    return rows[0];
+  });
 }
 
 async function updateRestaurant(id, input) {
   const parsed = restaurantSchema.partial().parse(input ?? {});
-  const pool = await getPool();
 
-  const fields = [];
-  const values = [];
-  let paramIndex = 1;
+  return withConnection(async (c) => {
+    // تغيير الـ slug: تحقق من الصيغة والتفرد قبل أي كتابة —
+    // بدون هذا، نسخ رابط مطعم آخر يرجع ER_DUP_ENTRY (500) عند المس
+    if (parsed.slug !== undefined && parsed.slug !== null) {
+      if (!/^[a-z0-9-]{3,32}$/.test(parsed.slug)) {
+        const err = new Error('الرابط المختصر يجب أن يكون 3–32 حرفاً من أحرف صغيرة وأرقام وشرطات');
+        err.status = 400;
+        err.code = 'INVALID_SLUG';
+        throw err;
+      }
+      const [taken] = await c.execute('SELECT id FROM Restaurants WHERE slug = ? AND id <> ?', [parsed.slug, id]);
+      if (taken.length > 0) {
+        const err = new Error('هذا الرابط المختصر مستخدم مسبقاً');
+        err.status = 400;
+        err.code = 'SLUG_TAKEN';
+        throw err;
+      }
+    }
 
-  Object.keys(FIELD_MAP).forEach((key) => {
-    if (parsed[key] === undefined) return;
-    const def = FIELD_MAP[key];
-    const paramName = `p${paramIndex++}`;
-    fields.push(`${def.column} = @${paramName}`);
-    values.push({ name: paramName, type: def.type(), value: toDbValue(key, parsed[key]) });
+    const fields = [];
+    const values = [];
+
+    Object.keys(FIELD_MAP).forEach((key) => {
+      if (parsed[key] === undefined) return;
+      fields.push(`${FIELD_MAP[key].column} = ?`);
+      values.push(toDbValue(key, parsed[key]));
+    });
+
+    if (fields.length === 0) {
+      const err = new Error('لا توجد بيانات للتعديل');
+      err.status = 400;
+      throw err;
+    }
+
+    fields.push('updated_at = NOW()');
+    values.push(id);
+
+    const [result] = await c.execute(
+      `UPDATE Restaurants SET ${fields.join(', ')} WHERE id = ?`,
+      values
+    );
+    if (result.affectedRows === 0) throw notFound();
+
+    // المزامنة مع جدولي العرض (MenuCategories/MenuItems) — الموقع العام يقرأ
+    // منهما أولاً، فلا بد أن يظهر ما يراه المالك في المحرر على الموقع مباشرة.
+    if (parsed.draft_menu !== undefined) {
+      await syncMenuItemsFromJson(id, parsed.draft_menu);
+    } else if (parsed.published_menu !== undefined) {
+      await syncMenuItemsFromJson(id, parsed.published_menu);
+    }
+
+    const [rows] = await c.execute('SELECT * FROM Restaurants WHERE id = ?', [id]);
+    return rows[0];
   });
-
-  if (fields.length === 0) {
-    const err = new Error('لا توجد بيانات للتعديل');
-    err.status = 400;
-    throw err;
-  }
-
-  fields.push('updated_at = GETDATE()');
-
-  const request = pool.request();
-  request.input('id', sql.VarChar, id);
-  values.forEach(v => request.input(v.name, v.type, v.value));
-
-  const result = await request.query(`
-    UPDATE Restaurants
-    SET ${fields.join(', ')}
-    OUTPUT INSERTED.id
-    WHERE id = @id
-  `);
-
-  if (result.recordset.length === 0) {
-    const err = new Error('المطعم غير موجود');
-    err.status = 404;
-    throw err;
-  }
-
-  return getRestaurantById(id);
 }
 
+/** Atomic: copy draft_menu → published_menu, then set status = published */
 async function publishRestaurant(id) {
-  // Atomic: copy draft_menu -> published_menu, then set status = published
-  const pool = await getPool();
-  // Get current draft
-  const draftRes = await pool.request().input('id', sql.VarChar, id).query('SELECT draft_menu FROM Restaurants WHERE id = @id');
-  const draftMenu = draftRes.recordset[0]?.draft_menu ?? null;
-  const result = await pool.request()
-    .input('id', sql.VarChar, id)
-    .input('draft_menu', sql.NVarChar, draftMenu)
-    .query(`UPDATE Restaurants SET published_menu = @draft_menu, status = 'published', updated_at = GETDATE() OUTPUT INSERTED.id WHERE id = @id`);
-  if (result.recordset.length === 0) {
-    const err = new Error('المطعم غير موجود');
-    err.status = 404;
-    throw err;
-  }
-  return getRestaurantById(id);
+  return withConnection(async (c) => {
+    const [result] = await c.execute(
+      `UPDATE Restaurants
+         SET published_menu = draft_menu, status = 'published', updated_at = NOW()
+       WHERE id = ?`,
+      [id]
+    );
+    if (result.affectedRows === 0) throw notFound();
+
+    const [rows] = await c.execute('SELECT * FROM Restaurants WHERE id = ?', [id]);
+    // مزامنة النسخة المنشورة مع جدولي العرض حتى يقرأها الموقع العام
+    await syncMenuItemsFromJson(id, rows[0].published_menu);
+    return rows[0];
+  });
 }
 
 async function unpublishRestaurant(id) {
-  const pool = await getPool();
-  const result = await pool.request()
-    .input('id', sql.VarChar, id)
-    .query(`UPDATE Restaurants SET status = 'draft', updated_at = GETDATE() OUTPUT INSERTED.id WHERE id = @id`);
-  if (result.recordset.length === 0) {
-    const err = new Error('المطعم غير موجود');
-    err.status = 404;
-    throw err;
-  }
-  return getRestaurantById(id);
+  return withConnection(async (c) => {
+    const [result] = await c.execute(
+      `UPDATE Restaurants SET status = 'draft', updated_at = NOW() WHERE id = ?`,
+      [id]
+    );
+    if (result.affectedRows === 0) throw notFound();
+
+    const [rows] = await c.execute('SELECT * FROM Restaurants WHERE id = ?', [id]);
+    return rows[0];
+  });
 }
 
 async function deleteRestaurant(id) {
-  const pool = await getPool();
-  const result = await pool.request()
-    .input('id', sql.VarChar, id)
-    .query('DELETE FROM Restaurants OUTPUT DELETED.id WHERE id = @id');
+  return withConnection(async (c) => {
+    try {
+      const [result] = await c.execute('DELETE FROM Restaurants WHERE id = ?', [id]);
+      if (result.affectedRows === 0) throw notFound();
+      return { deleted: true, id };
+    } catch (err) {
+      // ER_ROW_IS_REFERENCED_2 (1451) — still referenced by orders/users/etc.
+      if (err.errno === 1451 || err.errno === 1452) {
+        const e = new Error('لا يمكن حذف المطعم لوجود بيانات مرتبطة به');
+        e.status = 409;
+        e.code = 'RESTAURANT_IN_USE';
+        throw e;
+      }
+      throw err;
+    }
+  });
+}
 
-  if (result.recordset.length === 0) {
-    const err = new Error('المطعم غير موجود');
-    err.status = 404;
-    throw err;
-  }
-  return { deleted: true, id };
+/**
+ * استيراد منيو التمبلت إلى قاعدة البيانات.
+ * القاعدة: منيو التمبلت يُستورد فقط عند "أول مرة" — أي عندما لا يملك الموقع
+ * أي منيو بعد — أو عند الطلب الصريح (force). بعدها يبقى منيو المالك كما هو
+ * وتُطبَّق ألوان/تصميم التمبلت فقط (وفق ما يعرضه صفحة القوالب).
+ */
+async function importTemplateSampleMenu(id, templateId, force = false, design = null) {
+  return withConnection(async (c) => {
+    const [rows] = await c.execute('SELECT id, draft_menu FROM Restaurants WHERE id = ?', [id]);
+    if (rows.length === 0) throw notFound();
+
+    let existing = null;
+    try {
+      existing = rows[0].draft_menu ? JSON.parse(rows[0].draft_menu) : null;
+    } catch {
+      existing = null;
+    }
+    const hasMenu = Array.isArray(existing) && existing.some((cat) => Array.isArray(cat.items) && cat.items.length > 0);
+
+    const shouldImport = Boolean(force) || !hasMenu;
+    const sampleMenu = shouldImport ? getTemplateSampleMenu(templateId) : null;
+    const importMenu = shouldImport && Array.isArray(sampleMenu) && sampleMenu.length > 0;
+
+    const fields = ['templateId = ?', 'design = ?', 'updated_at = NOW()'];
+    const values = [templateId, design ? JSON.stringify(design) : null];
+    if (importMenu) {
+      fields.unshift('draft_menu = ?');
+      values.unshift(JSON.stringify(sampleMenu));
+    }
+    values.push(id);
+
+    await c.execute(`UPDATE Restaurants SET ${fields.join(', ')} WHERE id = ?`, values);
+
+    // أول استيراد: ينزل منيو التمبلت فوراً إلى جدولي العرض فيظهر على الموقع
+    if (importMenu) {
+      await syncMenuItemsFromJson(id, sampleMenu);
+    }
+
+    const [updated] = await c.execute('SELECT * FROM Restaurants WHERE id = ?', [id]);
+    return updated[0];
+  });
 }
 
 module.exports = {
@@ -266,5 +349,6 @@ module.exports = {
   updateRestaurant,
   publishRestaurant,
   unpublishRestaurant,
-  deleteRestaurant
+  deleteRestaurant,
+  importTemplateSampleMenu
 };

@@ -20,14 +20,6 @@ export interface BackendUser {
 /** Non-sensitive hint that a backend cookie probably exists (the cookie itself is HttpOnly). */
 const AUTH_HINT_KEY = 'menucraft.backend.authed'
 
-function hasAuthHint(): boolean {
-  try {
-    return localStorage.getItem(AUTH_HINT_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
 function setAuthHint(on: boolean) {
   try {
     if (on) localStorage.setItem(AUTH_HINT_KEY, '1')
@@ -69,50 +61,80 @@ function messageOf(payload: any, fallback: string): string {
   return payload?.error || payload?.message || fallback
 }
 
+/** Re-read the session, renewing the 15-minute access token when needed. */
+async function doRefresh(
+  set: (partial: Partial<BackendAuthState>) => void
+): Promise<BackendUser | null> {
+  // Guests never hit /api/auth/me, so the console stays clean.
+  set({ status: 'loading' })
+
+  const readUser = async (): Promise<{ ok: boolean; user: BackendUser | null }> => {
+    const res = await fetch('/api/auth/me', { credentials: 'include' })
+    if (!res.ok) return { ok: false, user: null }
+    const payload = await readJson(res)
+    return { ok: true, user: payload?.data?.user ?? payload?.user ?? null }
+  }
+
+  try {
+    let result = await readUser()
+
+    // access_token only lives 15 minutes — renew it from the refresh cookie
+    // instead of dropping the session.
+    if (!result.ok) {
+      const refresh = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (refresh.ok) {
+        result = await readUser()
+      } else {
+        // The refresh token is single-use: another tab may have rotated the
+        // shared cookies a moment ago. Re-read before declaring the session
+        // dead — the new cookies are already in the jar.
+        result = await readUser()
+      }
+    }
+
+    if (!result.ok) {
+      setAuthHint(false)
+      set({ user: null, status: 'ready' })
+      return null
+    }
+
+    setAuthHint(true)
+    set({ user: result.user, status: 'ready' })
+    return result.user
+  } catch {
+    // Transient network failure — keep the hint so the next load can recover.
+    setAuthHint(false)
+    set({ user: null, status: 'ready' })
+    return null
+  }
+}
+
+/**
+ * Single-flight guard for refresh().
+ *
+ * The refresh token is single-use (revoked by the backend on use), while the
+ * cookie jar is shared: React StrictMode mounts effects twice in dev and every
+ * open tab bootstraps on load. Concurrent refreshes therefore race — the loser
+ * gets 401 and would otherwise wipe a perfectly valid session.
+ */
+let refreshInFlight: Promise<BackendUser | null> | null = null
+
 export const useBackendAuth = create<BackendAuthState>()((set) => ({
   user: null,
   status: 'idle',
 
   refresh: async () => {
-    // Guests never hit /api/auth/me, so the console stays clean.
-    if (!hasAuthHint()) {
-      set({ user: null, status: 'ready' })
-      return null
-    }
-    set({ status: 'loading' })
-
-    const readUser = async (): Promise<{ ok: boolean; user: BackendUser | null }> => {
-      const res = await fetch('/api/auth/me', { credentials: 'include' })
-      if (!res.ok) return { ok: false, user: null }
-      const payload = await readJson(res)
-      return { ok: true, user: payload?.data?.user ?? payload?.user ?? null }
-    }
-
+    if (refreshInFlight) return refreshInFlight
+    const run = doRefresh(set)
+    refreshInFlight = run
     try {
-      let result = await readUser()
-
-      // access_token only lives 15 minutes — renew it from the refresh cookie
-      // instead of dropping the session.
-      if (!result.ok) {
-        const refresh = await fetch('/api/auth/refresh', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-        })
-        if (refresh.ok) result = await readUser()
-      }
-
-      if (!result.ok) {
-        setAuthHint(false)
-        set({ user: null, status: 'ready' })
-        return null
-      }
-
-      set({ user: result.user, status: 'ready' })
-      return result.user
-    } catch {
-      set({ user: null, status: 'ready' })
-      return null
+      return await run
+    } finally {
+      if (refreshInFlight === run) refreshInFlight = null
     }
   },
 

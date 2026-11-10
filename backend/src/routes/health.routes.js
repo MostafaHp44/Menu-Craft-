@@ -18,56 +18,46 @@ function healthRoutes(fastify, opts, done) {
   });
 
   // GET /api/health/ready - Dependency readiness check
-  // Checks SQL Server and Redis connectivity using existing connection pools.
-  // Returns 200 if all required dependencies are healthy.
-  // Returns 503 if a required dependency is unavailable.
+  // Checks MariaDB connectivity (business data + rate-limit store) using the
+  // existing connection pool. Returns 200 if healthy, 503 otherwise.
   fastify.get('/health/ready', async (request, reply) => {
     try {
       let ready = true;
       const checks = [];
 
       // Check SQL Server connectivity using existing pool promise
-      const { getPool } = require('../config/db');
-      const poolPromise = getPool();
+      const { getMySQLPool } = require('../config/mysql');
+      const poolPromise = getMySQLPool();
 
-      // SQL Server check - short timeout
+      // MariaDB check - short timeout
       let sqlHealthy = false;
       try {
-        const timeout = setTimeout(() => {
-          sqlHealthy = false;
-        }, 3000); // 3 second timeout
-        // Attempt a lightweight query to verify connectivity
+        const timeout = setTimeout(() => { sqlHealthy = false; }, 3000);
         const pool = await poolPromise;
         if (pool) {
-          // Execute a simple query to verify the pool is functional
-          const result = await pool.request().query('SELECT 1 AS healthy');
-          sqlHealthy = result.recordset.length > 0;
+          const connection = await pool.getConnection();
+          try {
+            const [rows] = await connection.execute('SELECT 1 AS healthy');
+            sqlHealthy = rows.length > 0;
+          } finally { connection.release(); }
         }
         clearTimeout(timeout);
-      } catch (err) {
-        sqlHealthy = false;
-      }
+      } catch (err) { sqlHealthy = false; }
 
       checks.sql = sqlHealthy;
 
-      let redisHealthy = false;
+      // Rate-limit/denylist store lives in the same MariaDB — probe the table.
+      let storeHealthy = false;
       try {
-        const { getRedisClient } = require('../middleware/rateLimiter');
-        const redis = getRedisClient();
-        if (redis && redis.status === 'ready') {
-          const pong = await redis.ping();
-          redisHealthy = pong === 'PONG';
-        } else {
-          // Development may run without Redis using the in-memory fallback.
-          redisHealthy = process.env.NODE_ENV !== 'production';
-        }
+        const { pingStore } = require('../middleware/rateLimiter');
+        storeHealthy = await pingStore();
       } catch (err) {
-        redisHealthy = process.env.NODE_ENV !== 'production';
+        storeHealthy = false;
       }
 
-      checks.redis = redisHealthy;
+      checks.store = storeHealthy;
 
-      const allHealthy = checks.sql && checks.redis;
+      const allHealthy = checks.sql && checks.store;
 
       if (allHealthy) {
         return reply.code(200).send({

@@ -6,15 +6,50 @@ import type {
   PaymentProviderId,
   PlatformProvider,
   SubscriptionRecord,
+  TemplateOverride,
 } from '../lib/types.ts'
+import { isSubscriptionActive } from '../lib/types.ts'
 import {
   PLATFORM_PROVIDERS,
   PLANS,
   createSeedPayments,
   createSeedSubscriptions,
 } from '../lib/demoData.ts'
-import { registerCustomTemplates } from '../../templates/data/templates.ts'
-import { platformAPI, planAPI, templateAPI } from '../lib/api.service.ts'
+import { registerCustomTemplates, registerTemplateOverrides } from '../../templates/data/templates.ts'
+import { platformAPI, planAPI, templateAPI, restaurantAPI } from '../lib/api.service.ts'
+
+/**
+ * يدفع حالة وسائل الدفع المحلية إلى قاعدة البيانات (عمود ordering الكائني)
+ * بحيث تُطبَّق فعليًا على الـ Checkout العام — الخادم يتحقق من `enabled`
+ * عند كل طلب، فالإيقاف هنا يمنع ظهور الوسيلة فورًا ودون عمل إضافي.
+ */
+async function syncPaymentOrdering(restaurantId: string, methods: PaymentMethod[]) {
+  const family = (...providers: PaymentProviderId[]) =>
+    methods.filter((m) => providers.includes(m.provider) && m.enabled)
+  const cashOn = family('cash')
+  const cardOn = family('card')
+  const walletOn = family('wallet')
+  const bankOn = family('bank')
+  try {
+    await restaurantAPI.update(restaurantId, {
+      ordering: {
+        paymentMethods: {
+          cash: { enabled: cashOn.length > 0 },
+          cash_at_pickup: { enabled: cashOn.length > 0 },
+          card: { enabled: cardOn.length > 0 },
+          wallet: { enabled: walletOn.length > 0 },
+          bank_transfer: {
+            enabled: bankOn.length > 0,
+            instructions: bankOn[0]?.account || '',
+          },
+        },
+      },
+    })
+  } catch (err) {
+    // الموقع محلي (لم يُنشأ على السيرفر بعد) أو خطأ شبكة — الحالة المحلية تبقى فعالة بعد الحفظ/النشر
+    console.error('syncPaymentOrdering error', err)
+  }
+}
 
 export interface NewTemplateInput {
   /** server id — absent until the record is persisted */
@@ -44,6 +79,8 @@ interface PlatformState {
   plans: { id: string; name: string; price: number; currency: string; interval_type: string; max_restaurants: number; max_menu_items: number; features: string[]; is_active: boolean }[]
   /** ids of templates the super admin created in this demo */
   customTemplates: NewTemplateInput[]
+  /** per-template media overrides from DB, keyed by baseTemplateId */
+  templateOverrides: Record<string, TemplateOverride>
 
   fetchSubscriptions: () => Promise<void>
   fetchSubscription: (restaurantId: string) => Promise<void>
@@ -65,6 +102,9 @@ interface PlatformState {
   addTemplate: (input: NewTemplateInput) => Promise<void>
   removeTemplate: (name: string) => Promise<void>
   refreshTemplates: () => Promise<void>
+  refreshOverrides: () => Promise<void>
+  saveOverride: (baseId: string, body: Partial<TemplateOverride>) => Promise<TemplateOverride>
+  deleteOverride: (baseId: string) => Promise<void>
 
   /** Plans management */
   addPlan: (input: PlanInput) => Promise<void>
@@ -129,6 +169,7 @@ export const usePlatformStore = create<PlatformState>()(
         is_active: true,
       })),
       customTemplates: [],
+      templateOverrides: {},
 
       fetchSubscriptions: async () => {
         try {
@@ -317,7 +358,7 @@ export const usePlatformStore = create<PlatformState>()(
       cancelSubscription: async (restaurantId) => {
         try {
           await platformAPI.updateSubscription(restaurantId, {
-            status: 'expired',
+            status: 'cancelled',
             autoRenew: false,
           })
         } catch (err) {
@@ -326,7 +367,7 @@ export const usePlatformStore = create<PlatformState>()(
         set((s) => ({
           subscriptions: s.subscriptions.map((r) =>
             r.restaurantId === restaurantId
-              ? { ...r, autoRenew: false, status: 'expired' as const }
+              ? { ...r, autoRenew: false, status: 'cancelled' as const }
               : r
           ),
         }))
@@ -434,7 +475,7 @@ export const usePlatformStore = create<PlatformState>()(
         set((s) => ({ plans: s.plans.filter((p) => p.id !== id) }))
       },
 
-      addPayment: (restaurantId, input) =>
+      addPayment: (restaurantId, input) => {
         set((s) => {
           const current = s.payments[restaurantId] ?? []
           const method: PaymentMethod = {
@@ -445,9 +486,11 @@ export const usePlatformStore = create<PlatformState>()(
             enabled: true,
           }
           return { payments: { ...s.payments, [restaurantId]: [...current, method] } }
-        }),
+        })
+        void syncPaymentOrdering(restaurantId, get().payments[restaurantId] ?? [])
+      },
 
-          togglePayment: (restaurantId, id) =>
+      togglePayment: (restaurantId, id) => {
         set((s) => ({
           payments: {
             ...s.payments,
@@ -455,9 +498,11 @@ export const usePlatformStore = create<PlatformState>()(
               m.id === id ? { ...m, enabled: !m.enabled } : m
             ),
           },
-        })),
+        }))
+        void syncPaymentOrdering(restaurantId, get().payments[restaurantId] ?? [])
+      },
 
-      removePayment: (restaurantId, id) =>
+      removePayment: (restaurantId, id) => {
         set((s) => ({
           payments: {
             ...s.payments,
@@ -465,7 +510,9 @@ export const usePlatformStore = create<PlatformState>()(
               (m) => m.id !== id
             ),
           },
-        })),
+        }))
+        void syncPaymentOrdering(restaurantId, get().payments[restaurantId] ?? [])
+      },
 
       setProviderEnabled: (id, enabled) =>
         set((s) => ({
@@ -510,6 +557,9 @@ export const usePlatformStore = create<PlatformState>()(
         try {
           const res = await templateAPI.getPublic()
           if (res.ok && Array.isArray(res.data)) {
+            const overrides = Array.isArray(res.overrides) ? res.overrides : []
+            const map: Record<string, TemplateOverride> = {}
+            for (const o of overrides) map[o.baseTemplateId] = o
             set({
               customTemplates: res.data.map((t: any) => ({
                 id: t.id,
@@ -517,12 +567,54 @@ export const usePlatformStore = create<PlatformState>()(
                 name: t.name,
                 category: t.category ?? undefined,
               })),
+              templateOverrides: map,
             })
           }
         } catch (err) {
           // عرض القوالب الأساسية يكمل حتى لو فشل جلب النسخ المخصصة
           console.error('refreshTemplates error', err)
         }
+      },
+
+      refreshOverrides: async () => {
+        try {
+          // Public list ships overrides too — reuse it (no auth needed) so guests merge them
+          const res = await templateAPI.getPublic()
+          if (res.ok) {
+            const list = (res.overrides || []) as TemplateOverride[]
+            const map: Record<string, TemplateOverride> = {}
+            for (const o of list) map[o.baseTemplateId] = o
+            set({ templateOverrides: map })
+          }
+        } catch (err) {
+          console.error('refreshOverrides error', err)
+        }
+      },
+
+      saveOverride: async (baseId, body) => {
+        const res = await templateAPI.saveOverride(baseId, {
+          hero_title: body.heroTitle,
+          hero_subtitle: body.heroSubtitle,
+          hero_image: body.heroImage,
+          hero_image_mobile: body.heroImageMobile,
+          hero_video_desktop: body.heroVideoDesktop,
+          hero_video_mobile: body.heroVideoMobile,
+          preview_image: body.previewImage,
+          gallery: body.gallery,
+          design: body.design,
+        })
+        const saved = res.data as TemplateOverride
+        set((s) => ({ templateOverrides: { ...s.templateOverrides, [baseId]: saved } }))
+        return saved
+      },
+
+      deleteOverride: async (baseId) => {
+        await templateAPI.deleteOverride(baseId)
+        set((s) => {
+          const next = { ...s.templateOverrides }
+          delete next[baseId]
+          return { templateOverrides: next }
+        })
       },
     }),
     {
@@ -544,6 +636,8 @@ export const usePlatformStore = create<PlatformState>()(
           providers: stored.providers ?? current.providers,
           plans: stored.plans ?? current.plans,
           customTemplates: stored.customTemplates ?? current.customTemplates,
+          // templateOverrides are runtime-only (from server) — never wipe a fetched map on rehydrate
+          templateOverrides: current.templateOverrides,
         }
       },
     }
@@ -551,6 +645,7 @@ export const usePlatformStore = create<PlatformState>()(
 )
 
 registerCustomTemplates(() => usePlatformStore.getState().customTemplates)
+registerTemplateOverrides(() => usePlatformStore.getState().templateOverrides)
 
 export function useSubscription(restaurantId: string): SubscriptionRecord | undefined {
   return usePlatformStore((s) => s.subscriptions.find((r) => r.restaurantId === restaurantId))
@@ -560,12 +655,29 @@ export function isSubscriptionLive(id: string | undefined): boolean {
   const record = usePlatformStore
     .getState()
     .subscriptions.find((r) => r.restaurantId === id)
-  return Boolean(record && record.status !== 'expired')
+  return isSubscriptionActive(record?.status)
 }
 
 export function useIsSubscribed(restaurantId: string | undefined): boolean {
   const record = useSubscription(restaurantId ?? '')
-  return Boolean(record && record.status !== 'expired')
+  return isSubscriptionActive(record?.status)
+}
+
+/** للاستخدام في المكونات - يعيد true إذا كان الاشتراك نشطاً */
+export function useSubscriptionStatus(restaurantId: string | undefined): { 
+  isActive: boolean; 
+  isSuspended: boolean; 
+  status: string | undefined;
+  record: SubscriptionRecord | undefined;
+} {
+  const record = useSubscription(restaurantId ?? '')
+  const status = record?.status
+  return {
+    isActive: isSubscriptionActive(status),
+    isSuspended: !isSubscriptionActive(status) && Boolean(status),
+    status,
+    record
+  }
 }
 
 export function usePayments(restaurantId: string): PaymentMethod[] {

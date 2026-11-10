@@ -84,6 +84,7 @@ const SUB_STATUS_KEY: Record<SubscriptionStatus, TKey> = {
   trialing: 'platformMore.subs.trialing',
   past_due: 'platformMore.subs.pastDue',
   expired: 'platformMore.subs.expired',
+  cancelled: 'platformMore.subs.cancelled',
 }
 
 const SUB_STATUS_TONE: Record<SubscriptionStatus, 'moss' | 'gold' | 'flame' | 'rose'> = {
@@ -91,6 +92,7 @@ const SUB_STATUS_TONE: Record<SubscriptionStatus, 'moss' | 'gold' | 'flame' | 'r
   trialing: 'gold',
   past_due: 'flame',
   expired: 'rose',
+  cancelled: 'rose',
 }
 
 export function SubscriptionStatusBadge({ status }: { status: SubscriptionStatus }) {

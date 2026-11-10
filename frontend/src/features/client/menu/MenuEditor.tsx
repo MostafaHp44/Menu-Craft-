@@ -2,14 +2,22 @@ import { useEffect, useMemo, useState } from 'react'
 import { Icon } from '../../../shared/ui/icons.tsx'
 import { Badge, Button, EmptyState, Field, IconButton, Img, Input, Modal, Toggle } from '../../../shared/ui/ui.tsx'
 import { ImagePicker } from '../../../shared/ui/ImagePicker.tsx'
+import { ImageEditPanel } from '../design/ImageEditPanel.tsx'
+import { useI18n } from '../../../shared/i18n'
 import { IMG } from '../../../shared/lib/images.ts'
 import { cx, money, uid } from '../../../shared/lib/utils.ts'
 import type { MenuItem } from '../../../shared/lib/types.ts'
 import { useStore } from '../../../shared/store/useStore.ts'
+import { useBackendRestaurantId } from '../../../shared/store/useBackendAuth.ts'
 
 /* ------------------------------------------------------------------ *
  * Shared menu CRUD surface — used by /dashboard/menu and by the
  * visual editor's "Menu" panel. Always edits the working draft.
+ *
+ * Save / Publish are wired to the real backend:
+ *   Save    → PUT    /api/restaurants/:id  { draft_menu }
+ *   Publish → PATCH  /api/restaurants/:id/publish   (draft_menu → published_menu)
+ * The public site reads published_menu, so the edit becomes visible there.
  * ------------------------------------------------------------------ */
 
 interface Props {
@@ -36,7 +44,6 @@ function newItem(): MenuItem {
 export function MenuEditor({ compact = false, showActions = false }: Props) {
   const draft = useStore((s) => s.draft)
   const dirty = useStore((s) => s.dirty)
-  const beginEdit = useStore((s) => s.beginEdit)
   const updateDraft = useStore((s) => s.updateDraft)
   const saveDraft = useStore((s) => s.saveDraft)
   const discardDraft = useStore((s) => s.discardDraft)
@@ -44,10 +51,67 @@ export function MenuEditor({ compact = false, showActions = false }: Props) {
 
   const [editing, setEditing] = useState<{ categoryId: string; item: MenuItem } | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
+
+  /** Tenant id of the signed-in owner — the only restaurant this editor may write to. */
+  const restaurantId = useBackendRestaurantId()
+
+  /**
+   * Persist the working draft to the real backend (MariaDB).
+   * Returns false when the write failed so the caller can surface it.
+   */
+  const pushToServer = async (publish: boolean): Promise<boolean> => {
+    const current = useStore.getState().draft
+    if (!restaurantId) {
+      showToast({ title: 'No restaurant linked to this account', tone: 'error' })
+      return false
+    }
+    setSyncing(true)
+    try {
+      const saveRes = await fetch(`/api/restaurants/${encodeURIComponent(restaurantId)}`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draft_menu: current?.menu ?? [] }),
+      })
+      const saveJson = await saveRes.json().catch(() => null)
+      if (!saveRes.ok || saveJson?.ok === false) {
+        throw new Error(saveJson?.error || `Save failed (HTTP ${saveRes.status})`)
+      }
+      if (publish) {
+        const pubRes = await fetch(`/api/restaurants/${encodeURIComponent(restaurantId)}/publish`, {
+          method: 'PATCH',
+          credentials: 'include',
+        })
+        const pubJson = await pubRes.json().catch(() => null)
+        if (!pubRes.ok || pubJson?.ok === false) {
+          throw new Error(pubJson?.error || `Publish failed (HTTP ${pubRes.status})`)
+        }
+      }
+      showToast({
+        title: publish ? 'Published to your live site' : 'Draft saved to server',
+        tone: 'success',
+      })
+      return true
+    } catch (err) {
+      showToast({
+        title: publish ? 'Publish failed' : 'Server save failed',
+        message: err instanceof Error ? err.message : String(err),
+        tone: 'error',
+      })
+      return false
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  const loadDraftFromBackend = useStore((s) => s.loadDraftFromBackend)
 
   useEffect(() => {
-    if (!draft) beginEdit()
-  }, [draft, beginEdit])
+    if (restaurantId) {
+      void loadDraftFromBackend()
+    }
+  }, [restaurantId, loadDraftFromBackend])
 
   const stats = useMemo(() => {
     if (!draft) return { categories: 0, items: 0, available: 0 }
@@ -310,14 +374,31 @@ export function MenuEditor({ compact = false, showActions = false }: Props) {
             {dirty ? 'You have unsaved changes to this menu.' : 'Everything is saved.'}
           </p>
           <div className="flex gap-2">
-            <Button size="sm" variant="ghost" disabled={!dirty} onClick={() => discardDraft()}>
+            <Button size="sm" variant="ghost" disabled={!dirty || syncing} onClick={() => discardDraft()}>
               Discard
             </Button>
-            <Button size="sm" variant="outline" icon="save" disabled={!dirty} onClick={() => saveDraft()}>
-              Save changes
+            <Button
+              size="sm"
+              variant="outline"
+              icon="save"
+              disabled={!dirty || syncing}
+              onClick={() => {
+                saveDraft()
+                void pushToServer(false)
+              }}
+            >
+              {syncing ? 'Saving…' : 'Save changes'}
             </Button>
-            <Button size="sm" icon="send" onClick={() => useStore.getState().publishDemo()}>
-              Publish demo
+            <Button
+              size="sm"
+              icon="send"
+              disabled={syncing}
+              onClick={() => {
+                useStore.getState().publishDemo()
+                void pushToServer(true)
+              }}
+            >
+              Publish
             </Button>
           </div>
         </div>
@@ -373,6 +454,7 @@ function ItemModal({
   onClose: () => void
   onChange: (patch: Partial<MenuItem>) => void
 }) {
+  const { t } = useI18n()
   const [tab, setTab] = useState<'details' | 'photo'>('details')
 
   if (!state) return null
@@ -481,6 +563,13 @@ function ItemModal({
             <span className="text-[11.5px] text-clay">Bundled library · works offline</span>
           </div>
           <ImagePicker value={item.image} onSelect={(src) => onChange({ image: src })} />
+          <ImageEditPanel
+            title={t('design.imageEdit.photoEdit')}
+            value={item.image}
+            fit={item.imageFit}
+            onChange={(src) => onChange({ image: src })}
+            onFitChange={(fit) => onChange({ imageFit: fit })}
+          />
           <div className="mt-4 flex items-center gap-3 rounded-xl border border-sand p-3">
             <Img src={item.image} alt="Current dish" className="h-16 w-16 rounded-lg border border-sand object-cover" />
             <div className="min-w-0">

@@ -10,25 +10,25 @@ import { cx, tx } from '../../shared/lib/utils.ts'
 import { useActiveRestaurant, useStore } from '../../shared/store/useStore.ts'
 import { isPlatformAdmin, useAuthStore } from '../../shared/store/useAuth.ts'
 
-const NAV: Array<{ to: string; label: TKey; icon: string; end?: boolean }> = [
+const NAV: Array<{ to: string; label: TKey; icon: string; end?: boolean; requiresActiveSub?: boolean }> = [
   { to: '/dashboard', label: 'dashboard.overview', icon: 'home', end: true },
+  { to: '/dashboard/templates', label: 'dashboard.templates', icon: 'layers', requiresActiveSub: true },
+  { to: '/dashboard/my-templates', label: 'dashboard.myTemplates', icon: 'palette', requiresActiveSub: true },
   { to: '/dashboard/orders', label: 'dashboard.orders', icon: 'list' },
   { to: '/dashboard/earnings', label: 'dashboard.earnings', icon: 'chart' },
-  { to: '/dashboard/reports', label: 'dashboard.reports',   icon: 'activity' },
-  { to: '/dashboard/menu', label: 'dashboard.myMenu',       icon: 'utensils' },
-  { to: '/dashboard/branches', label: 'branches.title',     icon: 'mapPin' },
-  { to: '/dashboard/design', label: 'dashboard.design',     icon: 'palette' },
-  { to: '/dashboard/templates', label: 'dashboard.templates',icon: 'layers' },
-  { to: '/dashboard/websites', label: 'dashboard.websites', icon: 'globe' },
-  { to: '/dashboard/payments', label: 'dashboard.payments', icon: 'card' },
-  { to: '/dashboard/qr-code', label: 'dashboard.qrCode', icon: 'qr' },
+  { to: '/dashboard/reports', label: 'dashboard.reports', icon: 'activity' },
+  { to: '/dashboard/menu', label: 'dashboard.myMenu', icon: 'utensils', requiresActiveSub: true },
+  { to: '/dashboard/branches', label: 'branches.title', icon: 'mapPin', requiresActiveSub: true },
+  // { to: '/dashboard/design', label: 'dashboard.design', icon: 'palette' },
+  { to: '/dashboard/payments', label: 'dashboard.payments', icon: 'card', requiresActiveSub: true },
+  { to: '/dashboard/qr-code', label: 'dashboard.qrCode', icon: 'qr', requiresActiveSub: true },
   { to: '/dashboard/subscription', label: 'dashboard.subscription', icon: 'tag' },
-  { to: '/dashboard/team', label: 'dashboard.team', icon: 'users' },
+  { to: '/dashboard/team', label: 'dashboard.team', icon: 'users', requiresActiveSub: true },
   { to: '/dashboard/settings', label: 'dashboard.settings', icon: 'settings' },
 ]
 
 /** what the phone bottom bar shows before "More" */
-const MOBILE_PRIMARY = ['/dashboard', '/dashboard/orders', '/dashboard/menu', '/dashboard/reports']
+const MOBILE_PRIMARY = ['/dashboard', '/dashboard/templates', '/dashboard/my-templates', '/dashboard/orders']
 
 const TITLES: Record<string, { title: TKey; sub: TKey }> = {
   '/dashboard': { title: 'dashboard.overview', sub: 'dashboard.subOverview' },
@@ -38,7 +38,8 @@ const TITLES: Record<string, { title: TKey; sub: TKey }> = {
   '/dashboard/menu': { title: 'menuTab.title', sub: 'dashboard.subMenu' },
   '/dashboard/design': { title: 'dashboard.design', sub: 'dashboard.subDesign' },
   '/dashboard/templates': { title: 'dashboard.templates', sub: 'dashboard.subTemplates' },
-  '/dashboard/websites': { title: 'dashboard.websites', sub: 'dashboard.subWebsites' },
+  '/dashboard/my-templates': { title: 'dashboard.myTemplates', sub: 'dashboard.subMyTemplates' },
+  // '/dashboard/websites': { title: 'dashboard.websites', sub: 'dashboard.subWebsites' },
   '/dashboard/payments': { title: 'payments.title', sub: 'dashboard.subPayments' },
   '/dashboard/qr-code': { title: 'dashboard.qrCode', sub: 'dashboard.subQr' },
   '/dashboard/subscription': { title: 'subscription.title', sub: 'dashboard.subSubscription' },
@@ -49,9 +50,18 @@ const TITLES: Record<string, { title: TKey; sub: TKey }> = {
 
 import { useDashboardTheme } from '../../shared/lib/dashboardTheme'
 import { useBackendAuth } from '../../shared/store/useBackendAuth.ts';
+import { usePlatformStore, useSubscriptionStatus } from '../../shared/store/usePlatform.ts';
+import { useSession } from '../../shared/store/useSession.ts';
 
 export default function DashboardLayout() {
   const restaurant = useActiveRestaurant()
+  // المصدر الحقيقي: restaurant_id من جلسة الباك إند — الـ ID المحلي (rst-...)
+  // مش موجود في السيرفر، فهنتعرض لـ 403 وهنفضل شايفين الحالة المحلية القديمة
+  const backendRid = useBackendAuth((s) => s.user?.restaurant_id || s.user?.restaurantId || '')
+  const restaurantId = backendRid || restaurant.id
+  const { isActive, status: subStatus } = useSubscriptionStatus(restaurantId)
+  const fetchSubscription = usePlatformStore((s) => s.fetchSubscription)
+  const [subChecked, setSubChecked] = useState(false)
   useDashboardTheme()
   const restaurants = useStore((s) => s.restaurants)
   const activeId = useStore((s) => s.activeId)
@@ -77,6 +87,35 @@ export default function DashboardLayout() {
     setSwitcherOpen(false)
     setMoreOpen(false)
   }, [pathname])
+
+  /* جلب الاشتراك من السيرفر عند فتح الداشبورد — السوبر أدمن قد يكون قفل/ألغى
+     الباقة، فالـ store المحلي قديم ولا يعكس الحقيقة. بعد الجلب نقرر القفل.
+     يعاد الجلب عند التنقل وعند عودة التركيز (back/focus) حتى يفتح القفل
+     تلقائياً بعد موافقة السوبر أدمن على طلب اشتراك جديد. */
+  const loadSub = async () => {
+    try {
+      await fetchSubscription(restaurantId)
+    } finally {
+      setSubChecked(true)
+    }
+  }
+  useEffect(() => {
+    void loadSub()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restaurantId])
+  useEffect(() => {
+    const onFocus = () => { void loadSub() }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restaurantId])
+
+  /* القفل الكامل: أي اشتراك غير نشط (cancelled/expired/past_due أو مفيش اشتراك
+     أصلاً) يقفل الداشبورد — ما عدا صفحة الاشتراك عشان يطلب تجديد.
+     القفل يفتح فقط بعد موافقة السوبر أدمن على طلب جديد (يرجع نشطاً من السيرفر). */
+  const locked = subChecked && !isActive
+  const isSubPage = pathname === '/dashboard/subscription'
+  const showLock = locked && !isSubPage
 
   // team management is owner-only — hide the item for worker sessions
   const navItems =
@@ -159,28 +198,36 @@ export default function DashboardLayout() {
             {t('dashboard.workspace')}
           </p>
           <ul className="space-y-0.5">
-            {navItems.map((item) => (
-              <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  end={item.end}
-                  className={({ isActive }) =>
-                    cx(
-                      'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition',
-                      isActive
-                        ? 'bg-flame text-white shadow-[0_10px_24px_-16px_rgba(232,87,31,0.95)]'
-                        : 'text-ivory/62 hover:bg-white/6 hover:text-ivory'
-                    )
-                  }
-                >
-                  <Icon name={item.icon} size={17} />
-                  <span className="flex-1">{t(item.label)}</span>
-                  {item.to === '/dashboard/menu' && dirty ? (
-                    <span className="h-1.5 w-1.5 rounded-full bg-gold" title={t('dashboard.unsaved')} />
-                  ) : null}
-                </NavLink>
-              </li>
-            ))}
+            {navItems.map((item) => {
+              const disabled = locked && item.to !== '/dashboard/subscription'
+              return (
+                <li key={item.to}>
+                  <NavLink
+                    to={item.to}
+                    end={item.end}
+                    className={({ isActive }) =>
+                      cx(
+                        'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition',
+                        disabled
+                          ? 'text-ivory/30 cursor-not-allowed'
+                          : isActive
+                          ? 'bg-flame text-white shadow-[0_10px_24px_-16px_rgba(232,87,31,0.95)]'
+                          : 'text-ivory/62 hover:bg-white/6 hover:text-ivory'
+                      )
+                    }
+                    aria-disabled={disabled}
+                  >
+                    <Icon name={item.icon} size={17} className={disabled ? 'opacity-50' : ''} />
+                    <span className="flex-1">{t(item.label)}</span>
+                    {item.to === '/dashboard/menu' && dirty ? (
+                      <span className="h-1.5 w-1.5 rounded-full bg-gold" title={t('dashboard.unsaved')} />
+                    ) : disabled ? (
+                      <Icon name="lock" size={13} className="text-ivory/30" title={t('dashboard.subscriptionRequired')} />
+                    ) : null}
+                  </NavLink>
+                </li>
+              )
+            })}
             {isPlatformAdmin(session) ? (
               <li className="pt-2">
                 <NavLink
@@ -250,6 +297,8 @@ export default function DashboardLayout() {
               onClick={() => {
                 signOut()
                 void useBackendAuth.getState().logout()
+                // امسح جلسة الموظفين أيضاً حتى لا تُفتح اللوحة بدون دخول
+                useSession.getState().setUser(null)
                 navigate('/')
               }}
               aria-label={t('dashboard.signOut')}
@@ -303,27 +352,87 @@ export default function DashboardLayout() {
 
             <div className="flex items-center gap-2">
               <LanguageSwitcher className="hidden md:inline-flex" />
-              <Button to="/menu-demo" variant="outline" size="sm" icon="external" className="hidden sm:inline-flex">
+              <Button to="/menu-demo" variant="outline" size="sm" icon="external" className="hidden sm:inline-flex" disabled={locked} aria-disabled={locked}>
                 {publicUrl(restaurant.slug)}
               </Button>
-              <Button to="/dashboard/qr-code" variant="outline" size="sm" icon="qr" className="hidden md:inline-flex">
+              <Button to="/dashboard/qr-code" variant="outline" size="sm" icon="qr" className="hidden md:inline-flex" disabled={locked} aria-disabled={locked}>
                 {t('dashboard.qrCode')}
               </Button>
-              <Button to="/dashboard/editor" size="sm" icon="pencil">
+              <Button
+                size="sm"
+                icon="pencil"
+                disabled={locked}
+                onClick={() => !locked && window.open('/dashboard/editor', '_blank')}
+                aria-disabled={locked}
+              >
                 {t('dashboard.openEditor')}
               </Button>
             </div>
           </div>
         </header>
 
+        {/* ------------------------- suspended subscription banner ------------------------ */}
+        {locked && !isSubPage && (
+          <div className="border-b border-rose/30 bg-rose/10 px-5 lg:px-8 py-3">
+            <div className="mx-auto max-w-[1180px] flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3 text-[13px] text-rose">
+                <Icon name="alert" size={16} className="shrink-0" />
+                <span className="font-medium">
+                  {subStatus === 'cancelled'
+                    ? t('flow.cancelledNotice')
+                    : subStatus === 'past_due'
+                    ? t('flow.pastDueNotice')
+                    : t('flow.expiredNotice')}
+                </span>
+              </div>
+              <Button size="sm" variant="danger" icon="refresh" onClick={() => navigate('/dashboard/subscription')}>
+                {t('subscription.renew')}
+              </Button>
+            </div>
+          </div>
+        )}
+
         <main className="min-w-0 flex-1 px-5 pb-28 pt-7 lg:px-8 lg:pb-9 lg:pt-9">
           <div className="mx-auto w-full max-w-[1180px]">
-            <Outlet />
+            {showLock ? (
+              /* القفل الكامل — لا محتوى حتى يوافق السوبر أدمن على طلب اشتراك جديد.
+                 صفحة الاشتراك وحدها مفتوحة من خلال isSubPage. */
+              <div className="flex flex-col items-center justify-center rounded-3xl border border-sand bg-paper px-6 py-16 text-center">
+                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-rose/12 text-rose">
+                  <Icon name="lock" size={28} />
+                </span>
+                <h2 className="mt-5 text-[20px] font-semibold text-charcoal">
+                  {t('dashboard.subscriptionRequired')}
+                </h2>
+                <p className="mt-2 max-w-md text-[13.5px] leading-relaxed text-umber">
+                  {subStatus === 'cancelled'
+                    ? t('flow.cancelledNotice')
+                    : subStatus === 'past_due'
+                    ? t('flow.pastDueNotice')
+                    : t('flow.expiredNotice')}
+                </p>
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                  <Button variant="accent" size="md" icon="tag" onClick={() => navigate('/dashboard/subscription')}>
+                    {t('subscription.renew')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="md"
+                    icon="refresh"
+                    onClick={() => { void loadSub() }}
+                  >
+                    {t('common.retry')}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Outlet />
+            )}
           </div>
         </main>
 
         <footer className="border-t border-sand px-5 pb-24 pt-5 text-[12px] text-clay lg:px-8 lg:pb-5">
-          Digital Menu prototype · all restaurants, analytics, plans and URLs are simulated demo data.
+          Digital Menu · restaurant numbers come from your published store.
         </footer>
       </div>
 
@@ -335,6 +444,7 @@ export default function DashboardLayout() {
         <ul className="mx-auto flex max-w-lg items-stretch justify-between px-2 pb-[env(safe-area-inset-bottom)]">
           {primary.map((item) => {
             const active = isPrimaryActive(item.to)
+            const disabled = locked && item.to !== '/dashboard/subscription'
             return (
               <li key={item.to} className="flex-1">
                 <NavLink
@@ -342,8 +452,9 @@ export default function DashboardLayout() {
                   end={item.end}
                   className={cx(
                     'flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-xl text-[10.5px] font-semibold transition',
-                    active ? 'text-flame' : 'text-clay'
+                    disabled ? 'text-clay/40' : active ? 'text-flame' : 'text-clay'
                   )}
+                  aria-disabled={disabled}
                 >
                   <span
                     className={cx(
@@ -351,9 +462,10 @@ export default function DashboardLayout() {
                       active ? 'bg-flame/12' : ''
                     )}
                   >
-                    <Icon name={item.icon} size={18} />
+                    <Icon name={item.icon} size={18} className={disabled ? 'opacity-40' : ''} />
                   </span>
                   {t(item.label)}
+                  {disabled && <Icon name="lock" size={10} className="text-clay/40 -mt-1" title={t('dashboard.subscriptionRequired')} />}
                 </NavLink>
               </li>
             )
@@ -415,6 +527,7 @@ export default function DashboardLayout() {
               <ul className="grid grid-cols-2 gap-2">
                 {navItems.map((item) => {
                   const active = pathname === item.to || pathname.startsWith(`${item.to}/`)
+                  const disabled = locked && item.to !== '/dashboard/subscription'
                   return (
                     <li key={item.to}>
                       <NavLink
@@ -422,13 +535,17 @@ export default function DashboardLayout() {
                         end={item.end}
                         className={cx(
                           'flex items-center gap-2.5 rounded-2xl border px-3.5 py-3 text-[13.5px] font-medium transition',
-                          active
+                          disabled
+                            ? 'border-sand/50 bg-paper/50 text-umber/40 cursor-not-allowed'
+                            : active
                             ? 'border-charcoal bg-charcoal text-ivory'
                             : 'border-sand bg-paper text-espresso'
                         )}
+                        aria-disabled={disabled}
                       >
-                        <Icon name={item.icon} size={17} />
+                        <Icon name={item.icon} size={17} className={disabled ? 'opacity-40' : ''} />
                         <span className="line-clamp-1">{t(item.label)}</span>
+                        {disabled && <Icon name="lock" size={13} className="text-umber/40 ml-auto" title={t('dashboard.subscriptionRequired')} />}
                       </NavLink>
                     </li>
                   )
@@ -466,7 +583,7 @@ export default function DashboardLayout() {
                 ) : null}
                 <li>
                   <NavLink
-                    to="/workspace"
+                    to="/workspace/login"
                     className="flex items-center gap-2.5 rounded-2xl border border-flame/35 bg-flame/8 px-3.5 py-3 text-[13.5px] font-medium text-flame transition"
                   >
                     <Icon name="activity" size={17} />
@@ -481,7 +598,10 @@ export default function DashboardLayout() {
                 className="mt-4"
                 icon="logout"
                 onClick={() => {
+                  // خروج كامل لأي دور: كوكي + كل الجلسات — لا يعود المستخدم
                   signOut()
+                  void useBackendAuth.getState().logout()
+                  useSession.getState().setUser(null)
                   navigate('/')
                 }}
               >
@@ -491,6 +611,7 @@ export default function DashboardLayout() {
           </motion.div>
         ) : null}
       </AnimatePresence>
+
     </div>
   )
 }

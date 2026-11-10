@@ -178,7 +178,7 @@ export const useAuthStore = create<AuthState>()(
         const account: UserAccount = {
           id: `u-${Date.now().toString(36)}-${accountCounter++}`,
           name: role === 'worker' ? 'Kitchen staff' : 'New account',
-          email: `${role}@menucraft.demo`,
+          email: `${role}@menudigital.demo`,
           role,
           restaurantId: role === 'client' || role === 'worker' ? useStore.getState().activeId : undefined,
           permissions: role === 'admin' ? ['clients', 'sales'] : undefined,
@@ -199,14 +199,26 @@ export const useAuthStore = create<AuthState>()(
 
         let restaurantId: string
         if (draft) {
-          /* the visitor was editing — their draft BECOMES the new client's restaurant */
+          /* the visitor was editing — their draft BECOMES the new client's restaurant.
+             الـ menu IDs (seed-cat-17…) هي مفاتيح عالمية في القاعدة — لازم تتجدّد
+             عند التبنّي، وإلا الـ Publish يضرب Duplicate entry */
           const displayName = input.restaurantName.trim() || tx(draft.name)
           restaurantId = `rst-${slugify(displayName)}-${Date.now().toString(36)}`
+          const stamp = Date.now().toString(36)
+          const remappedMenu = (draft.menu || []).map((cat, ci) => {
+            const newCatId = `cat-${stamp}-${ci}`
+            const items = (cat.items || []).map((it: any, ii: number) => ({
+              ...it,
+              id: `${newCatId}-item-${ii}`,
+            }))
+            return { ...cat, id: newCatId, items }
+          })
           const restaurant: Restaurant = {
             ...draft,
             id: restaurantId,
             name: displayName,
             slug: input.restaurantName.trim() ? slugify(input.restaurantName) : draft.slug,
+            menu: remappedMenu,
             status: 'draft',
             plan: 'trial',
             updatedAt: now,

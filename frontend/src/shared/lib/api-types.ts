@@ -1,27 +1,30 @@
-export type PlanCode = 'trial' | 'professional' | 'business';
+export type PlanCode = 'trial' | 'starter' | 'professional' | 'business';
 
-export interface SubscriptionSummary {
-  planCode: PlanCode;
-  status: 'trialing' | 'active' | 'past_due' | 'cancelled' | 'expired';
-  currentPeriodEnd: string | null;
+export interface SiteCard {
+  id: string;
+  name?: string | null;
+  name_en?: string | null;
+  name_ar?: string | null;
+  name_ku?: string | null;
+  slug: string;
+  status: string;
+  templateId?: string | null;
+  updated_at?: string | null;
+  itemCount: number;
+  categoryCount: number;
 }
 
-export interface SiteSummary {
+export interface SitePlanSummary {
   maxSites: number; // -1 means unlimited
   used: number;
   remaining: number | null;
   unlimited: boolean;
-  subscription: SubscriptionSummary;
-}
-
-export interface SiteCard {
-  id: string;
-  name: { en?: string; ar?: string; ku?: string } | string;
-  slug: string;
-  status: string;
-  templateId: string | null;
-  updatedAt: string | null;
-  itemCount: number;
-  orderCount: number;
-  categoryCount: number;
+  canCreate?: boolean;
+  plan?: { id?: string; name?: string; price?: number } | null;
+  subscription?: {
+    status: 'trialing' | 'active' | 'past_due' | 'cancelled' | 'expired';
+    renewsAt: string | null;
+    daysLeft: number | null;
+    isTrial: boolean;
+  } | null;
 }

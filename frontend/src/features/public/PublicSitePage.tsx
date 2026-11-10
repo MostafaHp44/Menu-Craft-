@@ -15,9 +15,10 @@
  *    التسعير النهائي في الخادم، ثم تتبع برمز orderToken.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { resolveLang, useI18n, type Lang } from '../../shared/i18n';
 import { guestOrderAPI, menuAPI } from '../../shared/lib/api.service';
+import type { Restaurant } from '../../shared/lib/types';
 import type {
   PublicBranch,
   PublicMenuItem,
@@ -31,6 +32,27 @@ import {
 } from './publicCart';
 import { RestaurantSite } from '../../templates/site/RestaurantSite.tsx';
 import { buildRestaurant } from './buildRestaurant';
+import { useStore } from '../../shared/store/useStore';
+
+/* ------------------------------------------------------------------ */
+/* helper: find restaurant in store by slug                           */
+/* ------------------------------------------------------------------ */
+function getRestaurantBySlug(slug: string, restaurants: Restaurant[]): Restaurant | undefined {
+  return restaurants.find((r) => r.slug === slug);
+}
+
+/**
+ * إعدادات الطلب الافتراضية للعرض من الـ store (الـ draft لا يحمل إعدادات الطلب).
+ */
+const DEFAULT_ORDERING: PublicMenuResponse['ordering'] = {
+  enabled: true,
+  currency: 'USD',
+  fulfillment: { delivery: true, pickup: true },
+  deliveryFee: 0,
+  minOrder: 0,
+  promo: null,
+  paymentMethods: [],
+};
 
 /* ------------------------------------------------------------------ */
 /* مساعدات                                                              */
@@ -71,6 +93,9 @@ export default function PublicSitePage() {
   const [search] = useSearchParams();
   const { t, lang, setLang } = useI18n();
 
+  const store = useStore();
+  const restaurants = store.restaurants;
+
   const [data, setData] = useState<PublicMenuResponse | null>(null);
   const [branches, setBranches] = useState<PublicBranch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,8 +108,8 @@ export default function PublicSitePage() {
 
   /* تخصيص صنف */
   const [customizeItem, setCustomizeItem] = useState<PublicMenuItem | null>(null);
-  const [justAdded, setJustAdded] = useState<string | null>(null);
-  const [selectedCat, setSelectedCat] = useState<string>('all');
+  const [_justAdded, setJustAdded] = useState<string | null>(null);
+  // const [selectedCat, setSelectedCat] = useState<string>('all');
 
   /* QR deep link?table=&mode=dinein&lang= — يُقرأ مرة */
   const deepLink = useMemo<DeepLink>(() => ({
@@ -96,13 +121,54 @@ export default function PublicSitePage() {
     setLoading(true);
     setError(null);
     setData(null);
-    menuAPI.getPublicMenu(slug).then((menu) => {
-      setData(menu);
-      setLoading(false);
-    }).catch((e: { status?: number; message?: string }) => {
-      setError(e?.status === 404 ? '404' : (e?.message || 'error'));
-      setLoading(false);
-    });
+
+    /** احتياطي: نفس ما يعرضه /menu-demo (الـ store المحلي) — ليس خطأ */
+    const storeRestaurant = getRestaurantBySlug(slug, restaurants);
+    const applyStoreFallback = (): boolean => {
+      if (!storeRestaurant) return false;
+      setData({
+        restaurant: {
+          id: storeRestaurant.id,
+          name: storeRestaurant.name,
+          slug: storeRestaurant.slug,
+          templateId: storeRestaurant.templateId,
+          design: storeRestaurant.design,
+          tagline: storeRestaurant.tagline,
+          description: storeRestaurant.description,
+          logoText: storeRestaurant.logoText,
+          logoStyle: storeRestaurant.logoStyle,
+          heroImage: storeRestaurant.heroImage,
+          heroVideo: storeRestaurant.heroVideo || '',
+          gallery: storeRestaurant.gallery,
+          phone: storeRestaurant.phone,
+          email: storeRestaurant.email,
+          address: storeRestaurant.address,
+          hours: storeRestaurant.hours,
+          socials: storeRestaurant.socials,
+          status: storeRestaurant.status,
+          copy: storeRestaurant.copy,
+          inline: storeRestaurant.inline,
+        },
+        menu: storeRestaurant.menu,
+        ordering: DEFAULT_ORDERING,
+      } as unknown as PublicMenuResponse);
+      return true;
+    };
+
+    // المصدر الأساسي: النسخة المنشورة في قاعدة البيانات (GET /api/public/menu/:slug)
+    menuAPI
+      .getPublicMenu(slug)
+      .then((menu) => {
+        setData(menu);
+      })
+      .catch((e: { status?: number; message?: string }) => {
+        // لا سجل منشور لهذا الـ slug → نرجع للـ store ثم للافتراضي (ليس404)
+        if (!applyStoreFallback()) {
+          setError(e?.status === 404 ? '404' : e?.message || 'error');
+        }
+      })
+      .finally(() => setLoading(false));
+
     menuAPI.getPublicBranches(slug).then(setBranches).catch(() => setBranches([]));
   };
 
@@ -145,7 +211,17 @@ export default function PublicSitePage() {
     window.setTimeout(() => setJustAdded(null), 1400);
   };
 
-  const restaurantObj = useMemo(() => buildRestaurant(data || { restaurant: { id: '', name: '', slug: '', templateId: 'urban-cafe', design: {} as any, menu: [], ordering: {} as any } } as any, lang), [data, lang]);
+  const [restaurantObj, setRestaurantObj] = useState(() => {
+    // Initial render uses store data if available, otherwise fallback
+    const initialData = data || { restaurant: { id: '', name: '', slug: '', templateId: 'urban-cafe', design: {} as any, menu: [], ordering: {} as any } } as any;
+    return buildRestaurant(initialData, lang);
+  });
+  // Recompute restaurantObj whenever the store data or API data updates, ensuring the selected template design is always applied
+  useEffect(() => {
+    if (data) {
+      setRestaurantObj(buildRestaurant(data, lang));
+    }
+  }, [data]);
 
   /* ------------------------------------------------------------------ */
   /* حالات التحميل/الخطأ                                                  */
@@ -243,6 +319,7 @@ export default function PublicSitePage() {
           slug={slug}
           restaurantId={data.restaurant.id}
           currency={currency}
+          lang={lang}
           branches={branches}
           branchId={selectedBranch?.id ?? cart.branchId}
           branchName={selectedBranch ? resolveLang(selectedBranch.name, lang) : ''}
@@ -687,6 +764,7 @@ export function CheckoutOverlay(props: {
   fulfillmentOptions: { delivery: boolean; pickup: boolean };
   paymentMethods: Array<{ code: string; label: string }>;
   tableFromLink: string;
+  lang: Lang;
   onClose: () => void;
   onPlaced: (res: OrderResult) => void;
 }) {
@@ -698,7 +776,8 @@ export function CheckoutOverlay(props: {
   const [table, setTable] = useState(props.tableFromLink);
   const [address, setAddress] = useState('');
   const [note, setNote] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState(props.paymentMethods[0]?.code ?? 'cash');
+  const [paymentMethod, setPaymentMethod] = useState(props.paymentMethods[0]?.code ?? '');
+  const [selectedCheckoutBranch, setSelectedCheckoutBranch] = useState<PublicBranch | null>(null);
   const [sending, setSending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -720,8 +799,8 @@ export function CheckoutOverlay(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fulfillment]);
 
-  /* لا وسائل دفع جاهزة → خيار افتراضي without تسليم */
-  const methods = props.paymentMethods.length > 0 ? props.paymentMethods : [{ code: 'cash', label: 'Cash' }];
+  /* لا وسائل دفع مفعّلة من صاحب المطعم → لا نعرض أي وسيلة وهمية */
+  const methods = props.paymentMethods;
   const onlineCodes = new Set(['card', 'wallet']);
   const onlineMethods = methods.filter((m) => onlineCodes.has(m.code));
   const activePaymentMethods = fulfillment === 'delivery' ? onlineMethods : methods;
@@ -734,12 +813,17 @@ export function CheckoutOverlay(props: {
   const submit = async () => {
     setFormError(null);
     if (subtotal <= 0) { setFormError(t('publicUi.orderFailed')); return; }
+    if (activePaymentMethods.length === 0) { setFormError('No payment methods are currently enabled by this restaurant.'); return; }
     if (name.trim().length < 2) {
       setFormError(t('publicUi.orderFailed'));
       return;
     }
     if (phone.trim().length < 5) {
       setFormError(t('publicUi.orderFailed'));
+      return;
+    }
+    if (props.branches.length > 1 && !selectedCheckoutBranch) {
+      setFormError(t('publicUi.branchRequired'));
       return;
     }
     if (fulfillment === 'delivery' && (!deliveryAllowed || activePaymentMethods.length === 0)) {
@@ -766,6 +850,7 @@ export function CheckoutOverlay(props: {
       const payload = {
         restaurantId: props.restaurantId,
         slug: props.slug,
+        branchId: props.branches.length > 1 ? selectedCheckoutBranch?.id : undefined,
         customer: {
           name: name.trim(),
           phone: phone.trim(),
@@ -848,6 +933,52 @@ export function CheckoutOverlay(props: {
             </Field>
           )}
 
+          {/* اختيار الفرع (عند وجود فروع متعددة) */}
+          {props.branches.length > 1 && (
+            <Field label={t('publicUi.branchLabel')}>
+              <div className="flex flex-wrap gap-2">
+                {props.branches.map((b) => {
+                  const active = selectedCheckoutBranch?.id === b.id;
+                  return (
+                    <Choice
+                      key={b.id}
+                      active={active}
+                      disabled={!b.acceptingOrders}
+                      onClick={() => setSelectedCheckoutBranch(b)}
+                    >
+                      {resolveLang(b.name, props.lang)}{!b.acceptingOrders ? ' (مغلق)' : ''}
+                    </Choice>
+                  );
+                })}
+              </div>
+              {props.branches.length > 1 && !selectedCheckoutBranch && (
+                <p className="mt-1 rounded-lg bg-rose/10 px-3 py-2 text-[12px] font-medium text-rose-dark">✕ {t('publicUi.branchRequired')}</p>
+              )}
+            </Field>
+          )}
+
+          {/* الأصناف في الطلب */}
+          <Field label={t('publicUi.itemsLabel')}>
+            <div className="mt-1 max-h-44 space-y-2 overflow-y-auto rounded-xl border border-sand bg-cream/40 p-2">
+              {cartSub.lines.map((line) => {
+                const sig = cartSignature(line);
+                return (
+                  <div key={`${line.itemId}-${sig}`} className="flex items-center gap-2 rounded-lg border border-sand/60 bg-white/70 p-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="line-clamp-1 text-[12.5px] font-semibold text-ink-ink">{line.name}</p>
+                      <p className="text-[11px] text-ink-soft">{fmtPrice(line.price, props.currency)}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => cartSub.setQty(line.itemId, sig, line.qty - 1)} className="grid h-6 w-6 place-items-center rounded-full bg-sand text-[13px] font-bold text-ink-ink" aria-label="decrease">−</button>
+                      <span className="w-5 text-center text-[12px] font-bold">{line.qty}</span>
+                      <button onClick={() => cartSub.setQty(line.itemId, sig, line.qty + 1)} className="grid h-6 w-6 place-items-center rounded-full bg-sand text-[13px] font-bold text-ink-ink" aria-label="increase">+</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Field>
+
           {/* وسائل الدفع */}
           <Field label={t('publicUi.payLabel')}>
             <div className="flex flex-wrap gap-2">
@@ -855,7 +986,11 @@ export function CheckoutOverlay(props: {
                 <Choice key={m.code} active={paymentMethod === m.code} onClick={() => setPaymentMethod(m.code)}>{m.label}</Choice>
               ))}
               {activePaymentMethods.length === 0 && (
-                <span className="text-[12px] font-medium text-ink-soft">No online payment is configured for delivery.</span>
+                <span className="text-[12px] font-medium text-ink-soft">
+                  {fulfillment === 'delivery'
+                    ? 'No online payment is configured for delivery.'
+                    : 'No payment methods are currently enabled by this restaurant.'}
+                </span>
               )}
             </div>
           </Field>
@@ -964,14 +1099,6 @@ function OrderSuccess(props: { result: OrderResult; onClose: () => void }) {
             ? 'Please go to the cashier at your chosen branch to pay. The cashier will confirm once payment is received.'
             : t('publicUi.thanksNote')}
         </p>
-        {props.result.token ? (
-          <Link
-            to={`/orders/${encodeURIComponent(props.result.id)}?token=${encodeURIComponent(props.result.token)}`}
-            className="mt-6 block w-full rounded-full bg-primary py-3 text-[14px] font-bold text-white hover:bg-primary-dark transition"
-          >
-            {t('publicUi.trackOrder')}
-          </Link>
-        ) : null}
         <button onClick={props.onClose} className="mt-2 w-full rounded-full border border-sand py-2.5 text-[13px] font-semibold text-ink-soft hover:bg-sand/50 transition">
           ✕
         </button>

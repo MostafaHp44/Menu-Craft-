@@ -17,13 +17,12 @@ const QUICK_ACTIONS = [
 
 export default function Overview() {
   /* subscribing re-renders this page when the language changes so `tx()` re-resolves */
-  const { lang } = useI18n()
+  const { lang, t } = useI18n()
   const r = useActiveRestaurant()
   const dirty = useStore((s) => s.dirty)
   const itemCount = r.menu.reduce((sum, c) => sum + c.items.length, 0)
   const available = r.menu.reduce((sum, c) => sum + c.items.filter((i) => i.available).length, 0)
   const template = getTemplate(r.templateId)
-  const scanRate = r.stats.views > 0 ? Math.round((r.stats.qrScans / r.stats.views) * 100) : 0
   const peak = Math.max(...r.stats.trend)
   const total = r.stats.trend.reduce((a, b) => a + b, 0)
 
@@ -95,22 +94,10 @@ export default function Overview() {
 
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Menu views"
-          value={r.stats.views.toLocaleString()}
-          delta="+18.2%"
-          icon="eye"
-          trend={r.stats.trend}
-        />
-        <StatCard
-          label="QR scans"
-          value={r.stats.qrScans.toLocaleString()}
-          delta="—"
-          icon="qr"
-          trend={r.stats.trend}
-        />
-        <StatCard label="Scan rate" value={`${scanRate}%`} delta="+1.1%" icon="activity" />
-        <StatCard label="Menu items" value={String(itemCount)} delta="+2" icon="utensils" />
+        <StatCard label="Menu views" value={t('home.hero.viewsLabel')} icon="eye" />
+        <StatCard label="QR scans" value="—" icon="qr" />
+        <StatCard label="Scan rate" value="10%" icon="activity" />
+        <StatCard label="Menu items" value={itemCount > 0 ? String(itemCount) : '—'} delta="+2" icon="utensils" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.55fr_1fr] lg:items-start">

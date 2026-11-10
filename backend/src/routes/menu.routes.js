@@ -1,15 +1,6 @@
 const { getPublicMenuBySlug } = require('../services/menu.service');
+const { getMySQLPool } = require('../config/mysql');
 
-/**
- * المنيو العام — بيانات جاهزة لصفحة الطلب:
- * الأصناف + التصنيفات + إعدادات التوصيل/الاستلام + وسائل الدفع الجاهزة فقط.
- *
- * + سيرة الفروع العامة: GET /api/public/menu/:slug/branches
- *   (قراءة عامة آمنة للأطراف المقبولة — approved Phase 1 Task 01)
- */
-const { getPool, sql } = require('../config/db');
-
-/** أعمدة الفروع المقروءة للعامة فقط — أي عمود آخر لا يُكشف أبدًا */
 const SAFE_BRANCH_COLUMNS = [
   'id', 'restaurant_id', 'name_en', 'name_ar', 'name_ku', 'name',
   'address', 'phone', 'accepting_orders', 'accepts_orders', 'is_accepting_orders'
@@ -19,43 +10,47 @@ const SAFE_BRANCH_COLUMNS = [
 
 async function listPublicBranches(request, reply) {
   try {
-    const pool = await getPool();
+    const pool = await getMySQLPool();
     const slug = request.params.slug;
 
-    // المطعم يجب أن يكون منشورًا — نفس قاعدة المنيو العام
-    const rest = await pool.request()
-      .input('slug', sql.NVarChar, slug)
-      .query(`SELECT id FROM Restaurants WHERE slug = @slug AND LOWER(status) = 'published'`);
-    if (rest.recordset.length === 0) {
+    const restConn = await pool.getConnection();
+    let rest;
+    try {
+      [rest] = await restConn.execute('SELECT id FROM Restaurants WHERE slug = ? AND LOWER(status) = ?', [slug, 'published']);
+    } finally { restConn.release(); }
+    if (!rest || !rest.length) {
       return reply.status(404).send({ ok: false, error: 'المطعم غير موجود', code: 'RESTAURANT_NOT_FOUND' });
     }
-    const restaurantId = rest.recordset[0].id;
+    const restaurantId = rest[0].id;
 
-    // جدول الفروع اختياري — قد لا يكون مهيأ في كل قاعدة بيانات
-    const exists = await pool.request()
-      .query(`SELECT COUNT(*) AS n FROM sys.tables WHERE name = 'Branches'`);
-    if (!exists.recordset[0].n) {
+    const exConn = await pool.getConnection();
+    let exists;
+    try {
+      [exists] = await exConn.execute("SELECT COUNT(*) AS n FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?", ['Branches']);
+    } finally { exConn.release(); }
+    if (!exists[0].n) {
       return reply.send({ ok: true, data: [] });
     }
 
-    // الأعمدة بأسماء غير متوقعة في قواعد قديمة — نقرأ ما يوجد فقط
-    const cols = await pool.request()
-      .input('table', sql.NVarChar, 'Branches')
-      .query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @table`);
-    const columnSet = new Set(cols.recordset.map((c) => c.COLUMN_NAME));
+    const colsConn = await pool.getConnection();
+    let cols;
+    try {
+      [cols] = await colsConn.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?", ['Branches']);
+    } finally { colsConn.release(); }
+    const columnSet = new Set(cols.map((c) => c.COLUMN_NAME));
     const safe = SAFE_BRANCH_COLUMNS.filter((c) => columnSet.has(c));
     if (!safe.includes('id')) {
-      // لا يمكن إرجاع فروع بلا سطر معرف — كأن الجدول غير موجود
       return reply.send({ ok: true, data: [] });
     }
 
-    // Use only columns that actually exist in this DB
     const queryColumns = safe.join(', ');
-    const rows = await pool.request()
-      .input('restaurantId', sql.NVarChar, restaurantId)
-      .query(`SELECT ${queryColumns} FROM Branches WHERE restaurant_id = @restaurantId`);
+    const rowsConn = await pool.getConnection();
+    let rows;
+    try {
+      [rows] = await rowsConn.execute('SELECT '+queryColumns+' FROM Branches WHERE restaurant_id = ?', [restaurantId]);
+    } finally { rowsConn.release(); }
 
-    const branches = rows.recordset.map((b) => ({
+    const branches = rows.map((b) => ({
       id: String(b.id),
       name: {
         en: b.name_en !== undefined && b.name_en !== null ? b.name_en : (typeof b.name === 'string' ? b.name : ''),

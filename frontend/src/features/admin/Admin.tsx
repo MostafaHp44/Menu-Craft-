@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useI18n } from '../../shared/i18n'
@@ -5,11 +6,12 @@ import type { TKey } from '../../shared/i18n'
 import { Icon, Wordmark } from '../../shared/ui/icons.tsx'
 import { Badge, Button } from '../../shared/ui/ui.tsx'
 import { LanguageSwitcher } from '../../shared/ui/LanguageSwitcher.tsx'
-import { useAuthStore } from '../../shared/store/useAuth.ts'
 import type { AdminPermission } from '../../shared/lib/types.ts'
 import { cx } from '../../shared/lib/utils.ts'
 import { useBackendAuth } from '../../shared/store/useBackendAuth.ts'
+import { useSession } from '../../shared/store/useSession.ts'
 import { DemoNote, Panel, roleKey } from './parts.tsx'
+import OrderRingNode from '../live/OrderRingNode.tsx'
 import ClientsTab from './tabs/ClientsTab.tsx'
 import SubscriptionsTab from './tabs/SubscriptionsTab.tsx'
 import SalesTab from './tabs/SalesTab.tsx'
@@ -32,7 +34,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { id: 'clients', permission: 'clients', labelKey: 'admin.clients', icon: 'users' },
-  { id: 'subscriptions', permission: 'subscriptions', labelKey: 'admin.subscriptions', icon: 'card' },
+  { id: 'subscriptions', permission: 'subscriptions', labelKey: 'admin.subscriptions.title', icon: 'card' },
   { id: 'sales', permission: 'sales', labelKey: 'admin.sales', icon: 'chart' },
   { id: 'templates', permission: 'templates', labelKey: 'admin.templates', icon: 'layers' },
   { id: 'home', permission: 'templates', labelKey: 'platformMore.home.tab', icon: 'home' },
@@ -44,25 +46,19 @@ const TABS: TabDef[] = [
 
 export default function Admin() {
   const { t } = useI18n()
-  const session = useAuthStore((s) => s.session)
-  const signInAs = useAuthStore((s) => s.signInAs)
-  const signOut = useAuthStore((s) => s.signOut)
   const navigate = useNavigate()
   const backendUser = useBackendAuth((s) => s.user)
   const backendStatus = useBackendAuth((s) => s.status)
   const [searchParams, setSearchParams] = useSearchParams()
+  const [ringEnabled, setRingEnabled] = useState(() => localStorage.getItem('ringEnabled') !== 'false')
 
+  // بوابة الدخول: جلسة الباك إند فقط (P1) — لا جلسة محلية في localStorage
   if (backendStatus === 'idle' || backendStatus === 'loading') {
-    // If backend hasn't loaded but local auth already knows super_admin, allow it
-    const localSession = useAuthStore.getState().session
-    if (localSession?.role === 'super_admin' || localSession?.role === 'admin') return null // allow render, let content show
     return <div className="p-8">Loading session…</div>
   }
-  const localAdmin = useAuthStore.getState().session
-  if (backendUser?.role !== 'super_admin' && localAdmin?.role !== 'super_admin' && localAdmin?.role !== 'admin') return <Navigate to="/admin/login" replace />
-  // Backend super_admin is the source of truth. Legacy UI permissions do not
-  // override a verified platform session.
-  const authorized = true
+  if (backendUser?.role !== 'super_admin' && backendUser?.role !== 'admin') {
+    return <Navigate to="/admin/login" replace />
+  }
   const tabs = TABS
 
   const requested = searchParams.get('tab')
@@ -80,7 +76,10 @@ export default function Admin() {
   }
 
   const handleSignOut = () => {
-    signOut()
+    // امسح جلسة الباك إند حتى لا تُفتح اللوحة بدون دخول
+    void useBackendAuth.getState().logout()
+    // وامسح جلسة الموظفين/الكلاينت حتى لا يرد الصفحة التالية بدون تحقق (loop)
+    useSession.getState().setUser(null)
     navigate('/')
   }
 
@@ -99,15 +98,31 @@ export default function Admin() {
           </div>
 
           <div className="ms-auto flex flex-wrap items-center justify-end gap-2">
-            {session ? (
+            {backendUser ? (
               <span className="hidden items-center gap-2 rounded-full border border-white/12 bg-white/6 px-3 py-1.5 md:inline-flex">
                 <span className="max-w-[160px] truncate text-[12px] font-medium text-ivory/85">
-                  {session.name}
+                  {backendUser.name || backendUser.email}
                 </span>
-                <Badge tone="flame">{t(roleKey(session.role))}</Badge>
+                <Badge tone="flame">{t(roleKey(backendUser.role))}</Badge>
               </span>
             ) : null}
             <LanguageSwitcher tone="dark" />
+            <button
+              type="button"
+              onClick={() => {
+                const next = !ringEnabled
+                setRingEnabled(next)
+                localStorage.setItem('ringEnabled', String(next))
+              }}
+              aria-pressed={ringEnabled}
+              title={ringEnabled ? 'Mute ring' : 'Enable ring'}
+              className={cx(
+                'hidden h-9 w-9 items-center justify-center rounded-full border transition sm:flex',
+                ringEnabled ? 'border-moss bg-moss/15 text-moss' : 'border-amber bg-amber/15 text-amber-dark'
+              )}
+            >
+              <Icon name="info" size={16} />
+            </button>
             <Button to="/dashboard" size="sm" variant="light" icon="home">
               {t('nav.dashboard')}
             </Button>
@@ -162,7 +177,7 @@ export default function Admin() {
 
       {/* -------------------------------- content ------------------------------- */}
       <main className="mx-auto max-w-[1280px] px-5 py-8">
-        {!authorized || tabs.length === 0 ? (
+        {tabs.length === 0 ? (
           <Panel className="mx-auto max-w-xl text-center">
             <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/8 text-flame-light">
               <Icon name="settings" size={22} />
@@ -171,17 +186,12 @@ export default function Admin() {
               {t('platformMore.access.signInTitle')}
             </h2>
             <p className="mx-auto mt-2 max-w-md text-[13.5px] leading-relaxed text-ivory/60">
-              {authorized ? t('platformMore.access.noPermissions') : t('platformMore.access.signInSub')}
+              {t('platformMore.access.noPermissions')}
             </p>
-            <div className="mt-5 flex justify-center">
-              <Button variant="accent" icon="logout" onClick={() => signInAs('super_admin')}>
-                {t('platformMore.access.signInSuper')}
-              </Button>
-            </div>
           </Panel>
         ) : (
           <>
-            {session?.role === 'admin' ? (
+            {backendUser?.role === 'admin' ? (
               <div className="mb-5">
                 <DemoNote>{t('platformMore.access.restrictedNote')}</DemoNote>
               </div>
@@ -215,6 +225,7 @@ export default function Admin() {
       <footer className="border-t border-white/8 px-5 py-6 text-center text-[12px] text-ivory/40">
         {t('platformMore.footerNote')}
       </footer>
+      <OrderRingNode scope="admin" />
     </div>
   )
 }

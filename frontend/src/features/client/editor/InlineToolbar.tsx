@@ -4,9 +4,10 @@ import { Button, Modal } from '../../../shared/ui/ui.tsx'
 import { Icon } from '../../../shared/ui/icons.tsx'
 import { cx } from '../../../shared/lib/utils.ts'
 import { ImagePicker } from '../../../shared/ui/ImagePicker.tsx'
+import { ImageEditPanel } from '../design/ImageEditPanel.tsx'
 import { FONTS, fontName, fontStack } from '../../../templates/data/fonts.ts'
 import type { ActiveField } from '../../../templates/editor/inlineEdit.tsx'
-import type { InlineTextStyle } from '../../../shared/lib/types.ts'
+import type { ImageFit, InlineTextStyle } from '../../../shared/lib/types.ts'
 
 /**
  * Floating toolbar for Elementor-style in-place editing.
@@ -50,6 +51,8 @@ export function InlineToolbar({
 }) {
   const { t } = useI18n()
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [pendingSrc, setPendingSrc] = useState('')
+  const [pendingFit, setPendingFit] = useState<ImageFit | undefined>(undefined)
 
   if (!field) return null
 
@@ -245,13 +248,34 @@ export function InlineToolbar({
         description={t('editor.inline.pickPhotoSub')}
         size="lg"
       >
-        <ImagePicker
-          value=""
-          onSelect={(src) => {
-            onCommit(field.path, src)
-            setPickerOpen(false)
-          }}
-        />
+        <div className="space-y-4">
+          <ImagePicker
+            value={pendingSrc}
+            onSelect={(src) => setPendingSrc(src)}
+          />
+          <ImageEditPanel
+            title={t('design.imageEdit.photoEdit')}
+            value={pendingSrc}
+            fit={pendingFit}
+            onChange={(src) => setPendingSrc(src)}
+            onFitChange={(fit) => setPendingFit(fit)}
+          />
+          <div className="flex gap-2">
+            <Button full variant="dark" disabled={!pendingSrc} onClick={() => {
+              onCommit(field.path, pendingSrc)
+              const fitPath = field.path === 'heroImage' ? 'heroImageFit' : field.path.endsWith('.image') ? field.path.slice(0, -'.image'.length) + '.imageFit' : field.path + 'Fit'
+              if (pendingFit) onCommit(fitPath, pendingFit as any)
+              setPendingSrc('')
+              setPendingFit(undefined)
+              setPickerOpen(false)
+            }}>
+              {t('design.imageEdit.applied')}
+            </Button>
+            <Button variant="ghost" onClick={() => setPickerOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </>
   )

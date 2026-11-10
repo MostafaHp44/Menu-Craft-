@@ -8,7 +8,7 @@ import { Icon } from '../../shared/ui/icons.tsx'
 import { MarketingFooter } from '../../shared/chrome/MarketingFooter.tsx'
 import { MarketingHeader } from '../../shared/chrome/MarketingHeader.tsx'
 import { RestaurantSite } from '../../templates/site/RestaurantSite.tsx'
-import { Badge, Button, Img, SectionHeading, Sparkline } from '../../shared/ui/ui.tsx'
+import { Badge, Button, SectionHeading, Sparkline } from '../../shared/ui/ui.tsx'
 import { PLANS } from '../../shared/lib/demoData.ts'
 import { useCustomize } from '../../shared/lib/hooks.ts'
 import { PALETTE_PRESETS } from '../../templates/data/palettes.ts'
@@ -26,7 +26,6 @@ import { CustomCursor } from '../../shared/ui/CustomCursor.tsx'
 import { PageIntro } from '../../shared/ui/PageIntro.tsx'
 import { SectionDivider } from '../../shared/ui/SectionDivider.tsx'
 import { Marquee } from '../../shared/ui/Marquee.tsx'
-import { AnimatedCounter } from '../../shared/ui/AnimatedCounter.tsx'
 import { MagneticButton } from '../../shared/ui/MagneticButton.tsx'
 import { SplitText } from '../../shared/ui/SplitText.tsx'
 import { ParallaxLayer } from '../../shared/ui/ParallaxLayer.tsx'
@@ -102,6 +101,7 @@ function safeCopy(content: HomeContentByLang, lang: Lang): HomeContent {
       video: firstText(active.hero.video, en.hero.video, seed.hero.video),
       videoDesktop: firstText(active.hero.videoDesktop, en.hero.videoDesktop, seed.hero.videoDesktop),
       videoMobile: firstText(active.hero.videoMobile, en.hero.videoMobile, seed.hero.videoMobile),
+      variant: firstText(active.hero.variant, en.hero.variant, seed.hero.variant),
       note: firstText(active.hero.note, en.hero.note, seed.hero.note),
     },
     templates: {
@@ -180,7 +180,7 @@ export default function Home() {
 
       {/* 1 — cinematic + main hero */}
       <CinematicHero />
-      <MarketingHeader />
+      <MarketingHeader themeEnabled />
       {copy.hero.enabled ? <Hero restaurant={restaurant} hero={copy.hero} /> : null}
 
       {/* 2 — social proof */}
@@ -241,39 +241,16 @@ function Hero({ restaurant, hero }: { restaurant: Restaurant; hero: HomeContent[
   useScrollReveal(ref)
 
   return (
-    <section ref={ref} className="relative overflow-hidden pb-28 pt-[118px] lg:pt-[142px]">
+    <section ref={ref} className="relative overflow-hidden border-b border-sand bg-cream pb-28 pt-[118px] lg:pt-[142px]">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[760px] bg-[radial-gradient(ellipse_at_top,rgba(232,87,31,0.14),transparent_62%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[760px] bg-[radial-gradient(ellipse_at_top,rgba(232,87,31,0.10),transparent_62%)]"
       />
-      {hero.image ? (
-        <Img
-          src={hero.image}
-          alt=""
-          eager
-          className="pointer-events-none absolute inset-x-0 top-0 h-[760px] w-full object-cover opacity-25 [mask-image:radial-gradient(ellipse_at_top,black,transparent_62%)]"
-        />
-      ) : null}
       <div aria-hidden="true" className="grid-lines pointer-events-none absolute inset-0 opacity-70" />
 
       <div className="page relative">
         <div className="mx-auto max-w-3xl text-center">
-          <span data-reveal className="inline-flex items-center gap-2 rounded-full border border-sand bg-paper px-3.5 py-1.5 text-[12.5px] font-medium text-espresso shadow-[0_10px_24px_-20px_rgba(27,23,20,0.8)]">
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-flame text-white">
-              <Icon name="sparkles" size={11} strokeWidth={2.2} />
-            </span>
-            {hero.eyebrow}
-          </span>
-
-          <h1 data-reveal className="display-serif mt-7 text-[clamp(40px,6.6vw,82px)] leading-[1.03] text-charcoal">
-            <AccentText text={hero.title} />
-          </h1>
-
-          <p data-reveal className="mx-auto mt-6 max-w-2xl text-[17px] leading-relaxed text-espresso/85">
-            {hero.sub}
-          </p>
-
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
             <Button to="/templates" size="lg" icon="arrowRight">
               {hero.cta}
             </Button>
@@ -281,26 +258,11 @@ function Hero({ restaurant, hero }: { restaurant: Restaurant; hero: HomeContent[
               {hero.secondaryCta}
             </Button>
           </div>
-
-          <ul className="mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13.5px] text-umber">
-            {[
-              t('home.hero.bulletNoCoding'),
-              t('home.hero.bulletTemplates', { count: TEMPLATES.length }),
-              t('home.hero.bulletPublish'),
-            ].map((point) => (
-              <li key={point} className="flex items-center gap-1.5">
-                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-moss/12 text-moss">
-                  <Icon name="check" size={11} strokeWidth={3} />
-                </span>
-                {point}
-              </li>
-            ))}
-          </ul>
         </div>
 
         {/* ------------------------- product composition ------------------------ */}
         <div className="relative mx-auto mt-14 w-full max-w-[1100px] lg:mt-16">
-          <BrowserFrame url="bella.menucraft.com" badge={t('home.hero.liveBadge')}>
+          <BrowserFrame url="menudigital" badge={t('home.hero.liveBadge')}>
             <ScaledFrame width={1440} maxHeight={540}>
               <RestaurantSite
                 restaurant={restaurant}
@@ -321,10 +283,10 @@ function Hero({ restaurant, hero }: { restaurant: Restaurant; hero: HomeContent[
               </Badge>
             </div>
             <div className="mt-1 text-[22px] font-semibold tracking-[-0.02em] text-charcoal">
-              <AnimatedCounter value={12480} />
+              {t('home.hero.viewsLabel')} {restaurant.stats?.views || 0}
             </div>
             <div className="mt-1 text-flame">
-              <Sparkline values={restaurant.stats.trend} />
+              {restaurant.stats?.trend && <Sparkline values={restaurant.stats.trend} />}
             </div>
             </div>
           </ParallaxLayer>
@@ -333,14 +295,14 @@ function Hero({ restaurant, hero }: { restaurant: Restaurant; hero: HomeContent[
           <div className="absolute -start-4 bottom-6 hidden w-[218px] rounded-2xl border border-sand bg-paper p-3.5 shadow-[0_30px_60px_-40px_rgba(15,13,11,0.8)] lg:block xl:-start-12">
             <div className="flex items-center gap-3">
               <span className="rounded-lg border border-sand bg-white p-1.5">
-                <QRCodeSVG value={`https://${restaurant.slug}.menucraft.com`} size={54} level="M" />
+                <QRCodeSVG value={`https://${restaurant.slug}.menudigital.com`} size={54} level="M" />
               </span>
               <span className="min-w-0">
                 <span className="block text-[12.5px] font-semibold text-charcoal">
                   {t('home.hero.qrTitle')}
                 </span>
                 <span className="line-clamp-1 text-[11.5px] text-umber">
-                  {restaurant.slug}.menucraft.com
+                  {restaurant.slug}.menudigital.com
                 </span>
                 <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-moss">
                   <span className="h-1.5 w-1.5 rounded-full bg-moss anim-pulse-dot" />
@@ -390,14 +352,11 @@ function FeaturedTemplates({
   return (
     <section ref={ref} className="border-t border-sand bg-paper py-20 lg:py-28" id="templates">
       <div className="page">
-        <div data-reveal>
-          <SectionHeading
-            eyebrow={section.eyebrow ?? ''}
-            title={<AccentText text={section.title} accentClass="italic text-flame" />}
-            description={section.sub ?? ''}
-          />
+        <div data-reveal className="flex items-center justify-center gap-4">
+          <span aria-hidden="true" className="h-px w-16 bg-clay/60" />
+          <span className="eyebrow">{section.eyebrow ?? ''}</span>
+          <span aria-hidden="true" className="h-px w-16 bg-clay/60" />
         </div>
-
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {featured.map((template) => (
             <article
@@ -639,9 +598,9 @@ function EditorShowcase({
             </div>
           </div>
 
-          <div className="relative hidden lg:block">
+          <div className="relative">
             <BrowserFrame
-              url={`${restaurant.slug}.menucraft.com/preview`}
+              url={`${restaurant.slug}.menudigital.com/preview`}
               badge={t('home.editor.liveBadge')}
             >
               <ScaledFrame width={1440} maxHeight={560}>
@@ -698,7 +657,6 @@ function Workflow({
   useEffect(() => {
     const container = containerRef.current
     if (!container || steps.length === 0) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
     const cards = stepRefs.current.filter(Boolean) as HTMLDivElement[]
     if (cards.length === 0) return
@@ -920,12 +878,12 @@ function highlightVisual(
       return (
         <div className="flex items-center gap-4 rounded-2xl border border-sand bg-paper p-4">
           <span className="rounded-xl border border-sand bg-white p-2">
-            <QRCodeSVG value={`https://${restaurant.slug}.menucraft.com`} size={72} level="M" />
+            <QRCodeSVG value={`https://${restaurant.slug}.menudigital.com`} size={72} level="M" />
           </span>
           <span className="text-[13px] leading-relaxed text-umber">
             {t('home.highlights.scansTo')}
             <br />
-            <span className="font-medium text-charcoal">{restaurant.slug}.menucraft.com</span>
+            <span className="font-medium text-charcoal">{restaurant.slug}.menudigital.com</span>
           </span>
         </div>
       )
@@ -1016,7 +974,7 @@ export function ResponsiveShowcase({
           </div>
 
           <div className="relative">
-            <BrowserFrame url={`${restaurant.slug}.menucraft.com`} badge={t('home.showcase.liveBadge')}>
+            <BrowserFrame url={`${restaurant.slug}.menudigital.com`} badge={t('home.showcase.liveBadge')}>
               <ScaledFrame width={1440} maxHeight={470}>
                 <RestaurantSite
                   restaurant={restaurant}
@@ -1175,7 +1133,6 @@ function ClientLogos({ section }: { section: HomeContent['logos'] }) {
   /* logos strip moves horizontally with scroll */
   useEffect(() => {
     if (!trackRef.current || !ref.current) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
     const tween = gsap.fromTo(
       trackRef.current,

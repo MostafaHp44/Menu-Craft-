@@ -1,65 +1,30 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", "Cairo", "Vazirmatn", "Noto Naskh Arabic", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Playfair Display", "Cairo", "Vazirmatn", "Noto Naskh Arabic", Georgia, "Times New Roman", serif;
 
-  /* Approved identity — Primary Blue #2563EB · White #FFFFFF · Black #111827 · Off-white #F5F3EE */
-  --color-primary: #2563eb;
-  --color-primary-dark: #1d4ed8;
-  --color-offwhite: #f5f3ee;
-
-  /* Warm editorial neutral ramp (legacy utility tokens — restaurant themes may still bind) */
-  --color-ivory: #f5f3ee;
+  /* Warm editorial neutral ramp */
+  --color-ivory: #faf7f1;
   --color-paper: #fffdf9;
-  --color-cream: #f0ede4;
-  --color-sand: #e7e2d6;
+  --color-cream: #f3ece1;
+  --color-sand: #e9e1d4;
   --color-stone: #d9d0c1;
   --color-clay: #b3a794;
-  --color-umber: #6b7280;
-  --color-espresso: #374151;
-  --color-charcoal: #111827;
-  --color-ink: #111827;
-  --color-smoke: #1f2937;
+  --color-umber: #7d7263;
+  --color-espresso: #4a4137;
+  --color-charcoal: #1b1714;
+  --color-ink: #0f0d0b;
+  --color-smoke: #221d19;
 
-  /* Semantic accents (legacy token names flame/bincomed → Primary Blue family) */
-  --color-flame: #2563eb;
-  --color-flame-dark: #1d4ed8;
-  --color-flame-light: #3b82f6;
-  --gradient-hero: linear-gradient(135deg,#2563eb 0%,#1d4ed8 60%,#111827 100%);
+  /* Accents */
+  --color-flame: #0e0ad8;
+  --color-flame-dark: #c84612;
+  --color-flame-light: #f58a56;
   --color-moss: #2f7a55;
-  --color-success: #16a34a;
   --color-gold: #b98a2e;
-  --color-amber-dark: #92400e;
-  --color-rose: #e11d48;
-  --color-rose-dark: #be123c;
+  --color-rose: #b8574f;
 }
-
-@layer base {
-  :root {
-    /* Dashboard-only visual identity (set at runtime from DashboardThemes).
-       Plain CSS variables — restaurant templates never touch them. */
-    --dash-text: #111827;
-    --dash-bg: #f5f3ee;
-    --dash-border: #e7e2d6;
-  }
-}
-
-/* Marketing customizer: variables are set only while Home mounts the scoped
-   controller. Dashboard, admin and restaurant template routes never receive it. */
-html.marketing-theme-active body {
-  background-color: var(--marketing-bg);
-  color: var(--marketing-text);
-}
-html.marketing-theme-active .bg-ivory { background-color: var(--marketing-bg) !important; }
-html.marketing-theme-active .bg-paper { background-color: color-mix(in srgb, var(--marketing-bg) 92%, white) !important; }
-html.marketing-theme-active .text-charcoal,
-html.marketing-theme-active .text-espresso { color: var(--marketing-text) !important; }
-html.marketing-theme-active .border-sand { border-color: var(--marketing-border) !important; }
-html.marketing-theme-active .bg-flame,
-html.marketing-theme-active .bg-primary { background-color: var(--marketing-primary) !important; }
-html.marketing-theme-active .text-flame,
-html.marketing-theme-active .text-primary { color: var(--marketing-primary) !important; }
 
 @layer base {
   html {
@@ -76,6 +41,14 @@ html.marketing-theme-active .text-primary { color: var(--marketing-primary) !imp
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     overflow-x: hidden;
+  }
+
+  /* العربية / الكوردية: كايرو أولًا — Playfair/Inter ما عندهمش حروف عربي،
+     فبنبدّل متغيرات الفونت نفسها في RTL بدل محاولة غلبة الـ layers */
+  :root[dir="rtl"] {
+    --font-sans: "Cairo", "Vazirmatn", "Noto Naskh Arabic", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-display: "Cairo", "Vazirmatn", "Noto Naskh Arabic", Georgia, "Times New Roman", serif;
+    font-family: var(--font-sans);
   }
 
   h1,
@@ -302,7 +275,7 @@ input[type='range']::-webkit-slider-thumb {
   width: 18px;
   height: 18px;
   border-radius: 999px;
-  background: var(--color-flame, #e8571f);
+  background: var(--color-flame, #0e0ad8);
   border: 3px solid #fff;
   box-shadow: 0 1px 5px rgba(27, 23, 20, 0.3);
   cursor: pointer;
@@ -312,34 +285,8 @@ input[type='range']::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  background: var(--color-flame, #e8571f);
+  background: var(--color-flame, #0e0ad8);
   border: 3px solid #fff;
   box-shadow: 0 1px 5px rgba(27, 23, 20, 0.3);
   cursor: pointer;
-}
-
-/* ------------------------------------------------------------------------ *
- * Dashboard-only visual identity (DashboardThemes → useDashboardTheme).
- * Unlayered on purpose: these must beat Tailwind's utility layer, and they
- * only ever match inside `.dash-theme`, so restaurant templates are untouched.
- * ------------------------------------------------------------------------ */
-.dash-theme {
-  background-color: var(--dash-bg);
-  color: var(--dash-text);
-}
-
-.dash-theme .text-charcoal,
-.dash-theme .text-espresso {
-  color: var(--dash-text);
-}
-
-.dash-theme .bg-ivory {
-  background-color: var(--dash-bg);
-}
-
-.dash-theme .border-sand,
-.dash-theme .border-sand\/50,
-.dash-theme .border-sand\/70,
-.dash-theme .border-sand\/80 {
-  border-color: var(--dash-border);
 }

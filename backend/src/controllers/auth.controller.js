@@ -1,6 +1,8 @@
 const { signup, signin, refresh, getMe } = require('../services/auth.service');
 const cookie = require('cookie');
 const rateLimiter = require('../middleware/rateLimiter');
+const { verifyAccessToken, verifyRefreshToken, ACCESS_EXPIRES_SECONDS, REFRESH_EXPIRES_SECONDS } = require('../utils/token');
+const { ttlFromExp } = rateLimiter;
 
 function setAuthCookies(reply, accessToken, refreshToken) {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -11,14 +13,14 @@ function setAuthCookies(reply, accessToken, refreshToken) {
     secure: secure,
     sameSite: 'lax',
     path: '/',
-    maxAge: 900, // 15 minutes
+    maxAge: ACCESS_EXPIRES_SECONDS,
   }));
   reply.header('Set-Cookie', cookie.serialize('refresh_token', refreshToken || '', {
     httpOnly: true,
     secure: secure,
     sameSite: 'lax',
     path: '/',
-    maxAge: 604800, // 7 days
+    maxAge: REFRESH_EXPIRES_SECONDS,
   }));
 }
 
@@ -28,13 +30,38 @@ function getCookieValue(request, name) {
   return parsed[name] || null;
 }
 
+function getAccessTokenValue(request) {
+  const parsed = cookie.parse(request.headers.cookie || '');
+  if (parsed['access_token']) return parsed['access_token'];
+  const [type, token] = String(request.headers.authorization || '').split(' ');
+  return type === 'Bearer' && token ? token : null;
+}
+
+/**
+ * الحقول الظاهرة للمستخدم لازم تكون مفهومة — نخفي رسائل MySQL الخام
+ * (ER_DUP_ENTRY, ER_…) خلف رسالة عربية واضحة، ونسيب أخطاء المنطق
+ * (validation / بيانات دخول) برسالتها الأصلية.
+ */
+function sendAuthError(reply, err, fallback) {
+  const code = err.code || '';
+  const status = err.status || 500;
+  if (code === 'ER_DUP_ENTRY') {
+    return reply.status(409).send({ ok: false, error: 'البريد الإلكتروني مستخدم مسبقًا' });
+  }
+  if (status < 500) {
+    return reply.status(status).send({ ok: false, error: err.message });
+  }
+  console.error(`${fallback}:`, code || err.name || '', err.message);
+  return reply.status(500).send({ ok: false, error: fallback });
+}
+
 async function signupHandler(request, reply) {
   try {
     const result = await signup(request.body);
     setAuthCookies(reply, result.accessToken, result.refreshToken);
     return reply.send({ ok: true, user: result.user });
   } catch (err) {
-    return reply.status(err.status || 500).send({ ok: false, error: err.message });
+    return sendAuthError(reply, err, 'تعذّر إنشاء الحساب، حاول مرة أخرى');
   }
 }
 
@@ -44,7 +71,7 @@ async function signinHandler(request, reply) {
     setAuthCookies(reply, result.accessToken, result.refreshToken);
     return reply.send({ ok: true, user: result.user });
   } catch (err) {
-    return reply.status(err.status || 500).send({ ok: false, error: err.message });
+    return sendAuthError(reply, err, 'تعذّر تسجيل الدخول، حاول مرة أخرى');
   }
 }
 
@@ -71,37 +98,57 @@ async function meHandler(request, reply) {
 
 async function logoutHandler(request, reply) {
   try {
-    // Read the refresh token from the HttpOnly cookie
     const refreshToken = getCookieValue(request, 'refresh_token');
+    const accessToken = getAccessTokenValue(request);
 
-    if (!refreshToken) {
-      // No refresh token present - clear cookies anyway and succeed
-      return reply.send({ ok: true, message: 'لا يوجد توكن للLogout' });
-    }
-
-    // Revoke/consume the refresh token using atomic SET NX EX
-    // This ensures the old token can no longer be used
-    await rateLimiter.revokeRefreshToken(refreshToken);
-
-    // Clear access and refresh cookies by setting them with maxAge=0
     const isProduction = process.env.NODE_ENV === 'production';
     const secure = isProduction; // secure only in production (HTTPS)
+    const clearCookies = () => {
+      // نُرسل كلتا الكوكيز بقيمة منتهية — بدونه تظل access_token حيّة
+      // حتى 15 دقيقة فيعود المستخدم ("خرج لكن رجع") كلما أُمُر بالـ refresh
+      reply.header('Set-Cookie', cookie.serialize('access_token', '', {
+        httpOnly: true,
+        secure,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 0,
+      }));
+      reply.header('Set-Cookie', cookie.serialize('refresh_token', '', {
+        httpOnly: true,
+        secure,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 0,
+      }));
+    };
 
-    reply.header('Set-Cookie', cookie.serialize('access_token', '', {
-      httpOnly: true,
-      secure: secure,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 0, // Immediately expire
-    }));
+    // Revoke the access token itself (not just the cookies). Otherwise a stolen
+    // or already-issued access token stays valid for its remaining 15 minutes.
+    if (accessToken) {
+      try {
+        const decoded = verifyAccessToken(accessToken);
+        await rateLimiter.revokeAccessToken(
+          accessToken,
+          ttlFromExp(decoded.exp, ACCESS_EXPIRES_SECONDS)
+        );
+      } catch (_) {
+        // Already expired/invalid — its cookie is cleared below anyway.
+      }
+    }
 
-    reply.header('Set-Cookie', cookie.serialize('refresh_token', '', {
-      httpOnly: true,
-      secure: secure,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 0, // Immediately expire
-    }));
+    if (refreshToken) {
+      let refreshTtl = REFRESH_EXPIRES_SECONDS;
+      try {
+        const decoded = verifyRefreshToken(refreshToken);
+        refreshTtl = ttlFromExp(decoded.exp, REFRESH_EXPIRES_SECONDS);
+      } catch (_) {
+        // Invalid/expired token: keep the default bound for the denylist entry.
+      }
+      await rateLimiter.revokeRefreshToken(refreshToken, refreshTtl);
+    }
+
+    // Clear access and refresh cookies by setting them with maxAge=0
+    clearCookies();
 
     return reply.send({ ok: true, message: 'تم تسجيل الخروج بنجاح' });
   } catch (err) {

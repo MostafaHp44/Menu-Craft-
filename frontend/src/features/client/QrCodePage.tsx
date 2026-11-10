@@ -1,11 +1,11 @@
 import { useMemo, useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Icon } from '../../shared/ui/icons.tsx'
-import { Badge, Button, Card, Segmented, Select, StatCard } from '../../shared/ui/ui.tsx'
+import { Badge, Button, Card, Input, Segmented, Select } from '../../shared/ui/ui.tsx'
 import { publicUrl } from '../../shared/lib/hooks.ts'
 import { cx, tx } from '../../shared/lib/utils.ts'
 import { useI18n } from '../../shared/i18n'
-import { useActiveRestaurant, useStore } from '../../shared/store/useStore.ts'
+import { useActiveRestaurant } from '../../shared/store/useStore.ts'
 
 type SizeId = 'small' | 'medium' | 'large'
 type Correction = 'M' | 'Q' | 'H'
@@ -20,7 +20,6 @@ export default function QrCodePage() {
   /* subscribing re-renders on language change so `tx()` re-resolves */
   const { lang } = useI18n()
   const r = useActiveRestaurant()
-  const stats = useStore((s) => s.restaurants.find((x) => x.id === s.activeId)?.stats)
   const [size, setSize] = useState<SizeId>('medium')
   const [level, setLevel] = useState<Correction>('Q')
   const [dark, setDark] = useState(true)
@@ -32,10 +31,16 @@ export default function QrCodePage() {
   const bg = dark ? '#FAF7F1' : '#14110F'
   const px = SIZES[size].px
 
-  const payload = useMemo(
-    () => (logoIn ? url : `${url}?ref=qr`),
-    [url, logoIn]
-  )
+  /* رقم الترابيزة الاختياري — يفتح الموقع العام بوضع الطلبات على الترابيزة مباشرة */
+  const [table, setTable] = useState('')
+
+  const payload = useMemo(() => {
+    const params = new URLSearchParams()
+    if (table.trim()) params.set('table', table.trim())
+    if (lang !== 'en') params.set('lang', lang)
+    const qs = params.toString()
+    return qs ? `${url}?${qs}` : url
+  }, [url, table, lang])
 
   /* ------------------------------- downloads ------------------------------ */
 
@@ -80,26 +85,19 @@ export default function QrCodePage() {
     image.src = svgUrl
   }
 
-  const scans = stats?.qrScans ?? 0
-  const views = stats?.views ?? 1
-
   return (
     <div className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Total scans" value={scans.toLocaleString()} delta="+9.4%" icon="qr" />
-        <StatCard label="Scans from QR" value={`${Math.round((scans / views) * 100)}%`} delta="+1.1%" icon="activity" />
-        <StatCard label="Active codes" value="3" icon="printer" />
-      </div>
-
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)]">
         {/* QR canvas */}
         <Card className="overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sand/80 px-5 py-4">
             <div>
               <h2 className="text-[15.5px] font-semibold text-charcoal">Menu QR code</h2>
-              <p className="mt-0.5 font-mono text-[12.5px] text-umber">{url}</p>
+              <p className="mt-0.5 font-mono text-[12.5px] text-umber">{url}{table ? `?table=${table}` : ''}</p>
             </div>
-            <Badge tone="outline" icon="info">Simulated address</Badge>
+            <Badge tone={r.status === 'published' ? 'moss' : 'gold'}>
+              {r.status === 'published' ? 'Published site' : 'Draft — publish to go live'}
+            </Badge>
           </div>
 
           <div className="flex flex-col items-center gap-6 px-5 py-8 sm:flex-row sm:items-start sm:justify-center sm:py-10">
@@ -171,6 +169,21 @@ export default function QrCodePage() {
               </label>
 
               <div className="space-y-2.5 rounded-xl border border-sand bg-cream/50 p-3.5">
+                <label className="block">
+                  <span className="mb-1.5 block text-[12.5px] font-medium text-espresso">
+                    Table number (optional)
+                  </span>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    value={table}
+                    onChange={(e) => setTable(e.target.value.replace(/[^0-9A-Za-z-]/g, ''))}
+                    placeholder="e.g. 5 — opens dine-in for that table"
+                  />
+                  <span className="mt-1.5 block text-[11.5px] text-clay">
+                    Empty = plain menu link. With a number, guests land directly on that table's dine-in flow.
+                  </span>
+                </label>
                 <Segmented<'light' | 'dark'>
                   full
                   size="sm"
@@ -240,7 +253,7 @@ export default function QrCodePage() {
                 {
                   icon: 'qr',
                   title: 'The code encodes your address',
-                  text: `Scanning resolves to ${publicUrl(r.slug)} — configured via your deployment domain. No separate DNS record is provisioned in this prototype.`,
+                  text: `Scanning resolves to ${publicUrl(r.slug)} — deployed on your platform domain. Updates publish instantly.`,
                 },
                 {
                   icon: 'smartphone',
@@ -254,8 +267,8 @@ export default function QrCodePage() {
                 },
                 {
                   icon: 'chart',
-                  title: 'Scans are simulated',
-                  text: 'Scan counts in this demo are mock analytics used to demonstrate the dashboard.',
+                  title: 'Scans are not tracked',
+                  text: 'No visit statistics are shown below because the platform does not track QR scans yet — numbers are never invented.',
                 },
               ].map((step, i) => (
                 <li key={step.title} className="flex gap-3">
@@ -278,23 +291,19 @@ export default function QrCodePage() {
             <h3 className="text-[14.5px] font-semibold text-charcoal">Where to place it</h3>
             <div className="mt-3 space-y-2.5">
               {[
-                { place: 'Table tents', detail: 'One per table · medium size', scans: 612 },
-                { place: 'Entrance window', detail: 'Street-facing · large size', scans: 402 },
-                { place: 'Receipt footer', detail: 'Small size · high correction', scans: 270 },
+                { place: 'Table tents', detail: 'One per table · medium size · table number optional' },
+                { place: 'Entrance window', detail: 'Street-facing · large size' },
+                { place: 'Receipt footer', detail: 'Small size · high correction level' },
               ].map((row) => (
                 <div key={row.place} className="flex items-center justify-between gap-3 rounded-xl border border-sand px-3.5 py-2.5">
                   <div className="min-w-0">
                     <div className="line-clamp-1 text-[13px] font-medium text-charcoal">{row.place}</div>
                     <div className="line-clamp-1 text-[11.5px] text-umber">{row.detail}</div>
                   </div>
-                  <div className="shrink-0 text-end">
-                    <div className="text-[13.5px] font-semibold text-charcoal">{row.scans}</div>
-                    <div className="text-[11px] text-clay">scans</div>
-                  </div>
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-[11.5px] text-clay">Placement performance is simulated demo data.</p>
+            <p className="mt-3 text-[11.5px] text-clay">Pick the print size that matches the viewing distance — scan counts are not shown because the platform has no scan tracking.</p>
           </Card>
         </div>
       </div>

@@ -18,7 +18,6 @@ export function Particles({ className = '' }: { className?: string }) {
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    if (window.matchMedia('(pointer: coarse)').matches) return
 
     const canvas = canvasRef.current
     if (!canvas) return
@@ -31,7 +30,8 @@ export function Particles({ className = '' }: { className?: string }) {
     const mouse = { x: -999, y: -999 }
 
     const particles: Particle[] = []
-    const COUNT = 45
+    const isMobile = window.matchMedia('(max-width: 767px)').matches
+    const COUNT = isMobile ? 22 : 45
 
     const resize = () => {
       width = canvas.width = canvas.offsetWidth

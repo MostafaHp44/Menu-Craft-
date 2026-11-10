@@ -9,9 +9,9 @@ type Deep<T> = { [K in keyof T]: T[K] extends string ? string : Deep<T[K]> }
 
 const en = {
   platformMore: {
-    demoBadge: 'Demo data',
+    demoBadge: 'Live',
     footerNote:
-      'Digital Menu platform console · every figure on this screen is simulated for the prototype.',
+      'Digital Menu platform console · figures reflect live database records.',
     tabsLabel: 'Admin sections',
     planLabel: 'Plan',
     access: {
@@ -44,7 +44,9 @@ const en = {
       trialing: 'Trialing',
       pastDue: 'Past due',
       expired: 'Expired',
-      expireNow: 'Expire now',
+      cancelled: 'Cancelled',
+      cancelNow: 'Cancel now',
+      reactivateNow: 'Reactivate now',
       demoNote: 'Plans, dates and renewals are simulated — no payment is ever processed.',
       missingSub: 'No subscription yet',
       missingSubHint: 'This restaurant has no subscription record on the platform.',
@@ -100,6 +102,8 @@ const en = {
       noneConnected: 'No restaurant has this method connected yet.',
     },
     home: {
+      heroTitle: 'Home page hero (Hero Section)',
+      heroDesc: 'Image or video — desktop 16:9 and mobile 9:16, shows instantly to visitors.',
       tab: 'Home page',
       subtitle:
         'The public marketing home page — headline copy, sections and imagery. Edits apply to the language selected in the console header.',
@@ -148,13 +152,26 @@ const en = {
         logos: 'Client logos',
       },
     },
+    dashboard: {
+      title: 'Home',
+      subtitle: 'Platform numbers — live from the database.',
+      restaurants: 'Restaurants',
+      users: 'Users',
+      subscriptions: 'Active subscriptions',
+      orders: 'Orders',
+      revenue: 'Revenue',
+      activeClients: 'Active clients',
+      activeClientsDesc: 'Restaurants with an active or trialing subscription.',
+      noClients: 'No active clients yet.',
+      noClientsDesc: 'No restaurant is currently on an active or trialing plan.',
+    },
   },
 }
 
 const ar: Deep<typeof en> = {
   platformMore: {
-    demoBadge: 'بيانات تجريبية',
-    footerNote: 'وحدة تحكم المنصة في Digital Menu · كل رقم في هذه الشاشة محاكاة للنموذج التجريبي.',
+    demoBadge: 'مباشر',
+    footerNote: 'وحدة تحكم المنصة في Digital Menu · الأرقام تعكس سجلات قاعدة البيانات الحية.',
     tabsLabel: 'أقسام لوحة التحكم',
     planLabel: 'الخطة',
     access: {
@@ -187,7 +204,9 @@ const ar: Deep<typeof en> = {
       trialing: 'فترة تجريبية',
       pastDue: 'متأخر السداد',
       expired: 'منتهي',
-      expireNow: 'إنهاء الآن',
+      cancelled: 'ملغى',
+      cancelNow: 'إلغاء الآن',
+      reactivateNow: 'إعادة التفعيل',
       demoNote: 'الخطط والتواريخ والتجديدات محاكاة — لا تُعالج أي دفعة.',
       missingSub: 'لا يوجد اشتراك بعد',
       missingSubHint: 'لا يملك هذا المطعم سجل اشتراك على المنصة.',
@@ -240,6 +259,8 @@ const ar: Deep<typeof en> = {
       noneConnected: 'لا يوجد مطعم متصل بهذه الطريقة بعد.',
     },
     home: {
+      heroTitle: 'هيرو الهوم بيج (Hero Section)',
+      heroDesc: 'صورة أو فيديو — ديسكتوب 16:9 و موبايل 9:16، يظهر فورًا للزوار.',
       tab: 'الصفحة الرئيسية',
       subtitle:
         'صفحة التسويق العامة — نصوص العناوين والأقسام والصور. تُطبَّق التعديلات على اللغة المختارة في ترويسة لوحة التحكم.',
@@ -287,14 +308,27 @@ const ar: Deep<typeof en> = {
         logos: 'لوجوهات العملاء',
       },
     },
+    dashboard: {
+      title: 'الرئيسية',
+      subtitle: 'أرقام المنصة — مباشرة من قاعدة البيانات.',
+      restaurants: 'المطاعم',
+      users: 'المستخدمون',
+      subscriptions: 'اشتراكات نشطة',
+      orders: 'الأوردرات',
+      revenue: 'الإيرادات',
+      activeClients: 'العملاء النشطون',
+      activeClientsDesc: 'مطاعم لديها اشتراك نشط أو تجريبي.',
+      noClients: 'لا يوجد عملاء نشطون بعد.',
+      noClientsDesc: 'لا توجد مطاعم على خطة نشطة أو تجريبية حالياً.',
+    },
   },
 }
 
 const ku: Deep<typeof en> = {
   platformMore: {
-    demoBadge: 'داتای تاقیکراوە',
+    demoBadge: 'لایڤ',
     footerNote:
-      'کۆنتڕۆڵی پلاتفۆرمی Digital Menu · هەموو ژمارەیەکان لەم شاشەیەدا بۆ ئەم پێوانەی تاقیکراوە تەقەکراون.',
+      'کۆنتڕۆڵی پلاتفۆرمی Digital Menu · ژمارەکان سجلی ڕاستەقینەی بنکەی داتا دەردەخەن.',
     tabsLabel: 'بەشەکانی ئەدمین',
     planLabel: 'پلان',
     access: {
@@ -327,7 +361,9 @@ const ku: Deep<typeof en> = {
       trialing: 'تاقیکردنەوە',
       pastDue: 'قەرسدار',
       expired: 'تەواوبوو',
-      expireNow: 'ئێستا بخە بەسەرچوو',
+      cancelled: 'بەشگەڕێنراو',
+      cancelNow: 'ئێستا بخە بەسەرچوو',
+      reactivateNow: 'دووبارە چالاک بوون',
       demoNote: 'پلانەکان، ڕێکەخەکان و نوێکردنەوەکان تاقیکراون — هیچ پارەیەک نادەدرێت.',
       missingSub: 'هێشتا ئابونەتایی نییە',
       missingSubHint: 'ئەم چایەخانەیە هیچ تۆماری ئابونەتایی لە پلاتفۆرمدا نییە.',
@@ -382,6 +418,8 @@ const ku: Deep<typeof en> = {
       noneConnected: 'هیچ چایەخانەیەک بەم ڕێگایەوە پەیوەست نەکراوە.',
     },
     home: {
+      heroTitle: 'Heroی لاپەڕەی سەرەکی (Hero Section)',
+      heroDesc: 'وێنە یان ڤیدیۆ — 16:9 بۆ کۆمپیوتەر و 9:16 بۆ مۆبایل، دەستبەجێ پیشاندەدرێت بۆ سەردانکەران.',
       tab: 'لاپەڕەی سەرەکی',
       subtitle:
         'لاپەڕەی ڕیکلامی گشتی — دەقی سەردێڕ و بەشەکان و وێنەکان. دەستکارییەکان لەسەر زمانەکەی هەڵبژێردراو لە سەردێڕی کۆنتڕۆڵدا دەکرێن.',
@@ -429,6 +467,19 @@ const ku: Deep<typeof en> = {
         finalCta: 'کریای کۆتایی',
         logos: 'لۆگۆی کڕیارەکان',
       },
+    },
+    dashboard: {
+      title: 'باشبز',
+      subtitle: 'ژمارەکانی پلاتفۆرم — لە ڕاستەوخۆ لە بنکەی داتا.',
+      restaurants: 'چایەخانەکان',
+      users: 'بەکارهێنەران',
+      subscriptions: 'ئابونەت بەردەوام',
+      orders: 'دەواکارییەکان',
+      revenue: 'داهات',
+      activeClients: 'کڕیارانی چالاک',
+      activeClientsDesc: 'چایەخانەکان کە ئابونەت بەردەوام یان تاقیکراو هەن.',
+      noClients: 'هیچ کڕیار چالاکی هەیە.',
+      noClientsDesc: 'هیچ چایەخانەی لە خۆی تەواو یان تاقیکراو نییە.',
     },
   },
 }

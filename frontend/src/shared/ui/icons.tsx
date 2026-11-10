@@ -375,9 +375,11 @@ export interface IconProps {
   size?: number
   className?: string
   strokeWidth?: number
+  /** نصوص تلميح/وصف اختيارية تُعرض عند المرور بالماوس وتُقرأ لقارئات الشاشة */
+  title?: string
 }
 
-export function Icon({ name, size = 18, className, strokeWidth = 1.7 }: IconProps) {
+export function Icon({ name, size = 18, className, strokeWidth = 1.7, title }: IconProps) {
   const node = ICONS[name]
   if (!node) return null
   return (
@@ -391,9 +393,12 @@ export function Icon({ name, size = 18, className, strokeWidth = 1.7 }: IconProp
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
-      aria-hidden="true"
+      role={title ? 'img' : undefined}
+      aria-hidden={title ? undefined : 'true'}
+      aria-label={title}
       focusable="false"
     >
+      {title ? <title>{title}</title> : null}
       {node}
     </svg>
   )

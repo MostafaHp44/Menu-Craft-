@@ -354,13 +354,14 @@ export interface EdImageProps {
   eager?: boolean
   /** short name shown in the toolbar, e.g. "Hero photo" */
   label?: string
+  style?: CSSProperties
 }
 
-export function EdImage({ path, src, alt, className, eager, label }: EdImageProps) {
+export function EdImage({ path, src, alt, className, eager, label, style }: EdImageProps) {
   const ctx = useInlineEdit()
 
   if (!ctx?.enabled) {
-    return <Img src={src} alt={alt} className={className} eager={eager} />
+    return <Img src={src} alt={alt} className={className} eager={eager} style={style} />
   }
 
   const select = () => ctx.select({ path, kind: 'image', label: label ?? alt })
@@ -377,7 +378,7 @@ export function EdImage({ path, src, alt, className, eager, label }: EdImageProp
         if (event.key === 'Enter') select()
       }}
     >
-      <Img src={src} alt={alt} eager={eager} />
+      <Img src={src} alt={alt} eager={eager} style={style} />
     </span>
   )
 }

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useI18n, type TKey } from '../i18n'
+import { useBackendAuth } from '../store/useBackendAuth.ts'
 
 type FooterLink = { to: string; label: TKey } | { to: string; name: string }
 
@@ -35,6 +36,8 @@ const COLUMNS: Array<{ title: TKey; links: FooterLink[] }> = [
 
 export function MarketingFooter() {
   const { t } = useI18n()
+  const backendUser = useBackendAuth((s) => s.user)
+  const signedIn = Boolean(backendUser)
   const year = new Date().getFullYear()
 
   return (
@@ -64,16 +67,27 @@ export function MarketingFooter() {
               {t(column.title)}
             </h3>
             <ul className="mt-4 space-y-2.5">
-              {column.links.map((link) => (
-                <li key={link.to}>
-                  <Link
-                    to={link.to}
-                    className="text-sm text-umber transition hover:text-flame"
-                  >
-                    {'label' in link ? t(link.label) : link.name}
-                  </Link>
-                </li>
-              ))}
+              {column.links.map((link) => {
+                // A signed-in visitor must never be sent back to the login form.
+                const isSignIn = link.to === '/signin'
+                const to = signedIn && isSignIn ? '/dashboard' : link.to
+                const text =
+                  signedIn && isSignIn
+                    ? 'Dashboard'
+                    : 'label' in link
+                      ? t(link.label)
+                      : link.name
+                return (
+                  <li key={to}>
+                    <Link
+                      to={to}
+                      className="text-sm text-umber transition hover:text-flame"
+                    >
+                      {text}
+                    </Link>
+                  </li>
+                )
+              })}
             </ul>
           </div>
         ))}

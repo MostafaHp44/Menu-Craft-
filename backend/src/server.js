@@ -1,22 +1,21 @@
 require('dotenv').config();
 const fastify = require('./app');
-const { initRedis, closeRedis } = require('./middleware/rateLimiter');
+const { initStore, closeStore } = require('./middleware/rateLimiter');
 const healthRoutes = require('./routes/health.routes');
 const PORT = parseInt(process.env.PORT) || 3000;
 
 async function startServer() {
-  // Initialize Redis â€” this will fail startup in production if config is missing
-  // or if Redis cannot connect. In development, it may fall back to in-memory.
+  // Initialize the MariaDB-backed rate-limit/denylist store (idempotent DDL).
+  // In production a failed init exits inside initStore (fail fast); in
+  // development the limiter falls back to in-memory maps.
   try {
-    await initRedis({});
+    await initStore();
   } catch (err) {
-    // Initialization failure in production already calls process.exit(1) inside initRedis
-    // If we get here, it's a non-fatal error; retry or exit
-    fastify.log.error({ err }, 'Redis initialization failed');
+    fastify.log.error({ err }, 'Rate-limit store initialization failed');
     process.exit(1);
   }
 
-  // Register health check routes (after Redis init, before listening)
+  // Register health check routes (after store init, before listening)
   fastify.register(healthRoutes);
 
   fastify.listen({ port: PORT, host: '0.0.0.0' }, (err, address) => {
@@ -48,20 +47,20 @@ async function gracefulShutdown(signal) {
     await fastify.close().catch(() => {});
 
     try {
-      await closeRedis();
-      fastify.log.info('Redis connection closed');
+      await closeStore();
+      fastify.log.info('Rate-limit store closed');
     } catch (err) {
-      fastify.log.warn({ err }, 'Redis close warning (non-fatal)');
+      fastify.log.warn({ err }, 'Rate-limit store close warning (non-fatal)');
     }
 
-    // 3. Close SQL Server connection pool
-    // Clear the pool promise to allow garbage collection and prevent new connections
+    // 3. Close MariaDB connection pool — drain pending operations
     try {
-      const { getPool } = require('./config/db');
-      await getPool().then(() => {}).catch(() => {}); // drain pending operations
-      fastify.log.info('SQL Server pool cleared');
+      const { getMySQLPool } = require('./config/mysql');
+      const pool = await getMySQLPool();
+      if (pool) await pool.end();
+      fastify.log.info('MariaDB pool closed');
     } catch (err) {
-      fastify.log.warn('SQL Server close warning (non-fatal):', err.message);
+      fastify.log.warn('MariaDB close warning (non-fatal):', err.message);
     }
 
     fastify.log.info('Graceful shutdown complete');

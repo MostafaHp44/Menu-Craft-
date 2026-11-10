@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Icon, Wordmark } from '../../shared/ui/icons.tsx'
 import { Button, Card, Img, Input, Segmented } from '../../shared/ui/ui.tsx'
@@ -7,38 +7,28 @@ import { TEMPLATES } from '../../templates/data/templates.ts'
 import { cx, tx } from '../../shared/lib/utils.ts'
 import { useI18n } from '../../shared/i18n'
 import { useStore } from '../../shared/store/useStore.ts'
-import { isPlatformAdmin, useAuthStore, type SocialProvider } from '../../shared/store/useAuth.ts'
+import { useAuthStore } from '../../shared/store/useAuth.ts'
 import { useBackendAuth } from '../../shared/store/useBackendAuth.ts'
+import { panelForRole } from '../../shared/auth/panels.tsx'
 
 type Mode = 'signin' | 'signup'
-/** the card walks through: account form → forgot → sent → reset */
-type Step = 'account' | 'forgot' | 'sent' | 'reset'
+/** 'forgot' only shows an honest "recovery unavailable" panel — there is no backend reset endpoint. */
+type Step = 'account' | 'forgot'
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/
 const PASSWORD_MIN = 6
 
-/* --------------------------- social brand glyphs --------------------------- */
-
-function GoogleGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
-      <path
-        fill="#4285F4"
-        d="M23.5 12.3c0-.9-.1-1.5-.3-2.2H12v4.1h6.5c-.1 1.1-.8 2.7-2.4 3.8l3.7 2.9c2.3-2.1 3.7-5.2 3.7-8.6Z"
-      />
-      <path fill="#34A853" d="M12 24c3.2 0 6-1.1 7.9-2.9l-3.7-2.9c-1 .7-2.4 1.2-4.2 1.2-3.2 0-6-2.1-6.9-5.1L1.3 17c1.9 4.2 6.1 7 10.7 7Z" />
-      <path fill="#FBBC05" d="M5.1 14.3c-.3-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.3 7C.5 8.6 0 10.2 0 12s.5 3.4 1.3 5l3.8-2.7Z" />
-      <path fill="#EA4335" d="M12 4.6c1.8 0 3 .8 3.7 1.4L19 3.2C17 1.4 14.8 0 12 0 7.4 0 3.2 2.8 1.3 7l3.8 2.7C6 6.7 8.8 4.6 12 4.6Z" />
-    </svg>
-  )
-}
-
-function FacebookGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="#1877F2">
-      <path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.03 1.79-4.7 4.53-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.26h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07Z" />
-    </svg>
-  )
+/**
+ * The backend answers in Arabic, so map its known messages onto translated
+ * keys — anything unknown is shown as-is (it is already human readable).
+ */
+function localizeBackendError(raw: string, t: (k: string) => string): string {
+  if (/failed to fetch|networkerror|load failed|fetch failed/i.test(raw)) return t('flow.networkError')
+  if (/Too many requests|429/.test(raw)) return t('flow.tooManyAttempts')
+  if (/مستخدم مسبقًا|already registered|duplicate/i.test(raw)) return t('flow.emailTaken')
+  if (/غير صحيحة|wrong password|invalid credentials/i.test(raw)) return t('flow.wrongPassword')
+  if (/معطل|suspended/i.test(raw)) return t('flow.suspended')
+  return raw || t('flow.signUpFailed')
 }
 
 /* ----------------------------- password input ------------------------------ */
@@ -92,11 +82,26 @@ export default function SignIn() {
 
   const draft = useStore((s) => s.draft)
   const showToast = useStore((s) => s.showToast)
-  const signIn = useAuthStore((s) => s.signIn)
   const signUp = useAuthStore((s) => s.signUp)
   const signInWithPassword = useAuthStore((s) => s.signInWithPassword)
-  const signInWithProvider = useAuthStore((s) => s.signInWithProvider)
-  const resetPassword = useAuthStore((s) => s.resetPassword)
+  const backendUser = useBackendAuth((s) => s.user)
+  const backendStatus = useBackendAuth((s) => s.status)
+
+  // Already signed in → the login / sign-up form makes no sense on this panel.
+  // Only bounce once the session has actually been resolved, so we never bounce
+  // a returning visitor before /api/auth/me answers.
+  const signedIn = Boolean(backendUser)
+  const panel = panelForRole(backendUser?.role)
+  useEffect(() => {
+    if (!signedIn || backendStatus !== 'ready') return
+    if (panel === 'staff') {
+      // الموظفين لا يدخلون هنا أصلاً — يروحون إلى مساحة عمل الموظفين
+      navigate('/workspace', { replace: true })
+      return
+    }
+    showToast({ title: t('flow.signedInNotice'), tone: 'info' })
+    navigate(panel === 'admin' ? '/admin' : '/dashboard', { replace: true })
+  }, [signedIn, backendStatus, panel, navigate, showToast, t])
 
   const [mode, setMode] = useState<Mode>(() => {
     const query = params.get('mode')
@@ -107,73 +112,30 @@ export default function SignIn() {
   })
 
   const [step, setStep] = useState<Step>(() => {
-    // ?mode=forgot / ?mode=reset deep-link straight into the recovery flow
+    // Deep links asking for a reset land on the honest "unavailable" panel.
     const query = params.get('mode')
-    return query === 'forgot' || query === 'reset' ? query : 'account'
+    return query === 'forgot' || query === 'reset' ? 'forgot' : 'account'
   })
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirm, setConfirm] = useState('')
   const [restaurantName, setRestaurantName] = useState(() =>
     typeof draft?.name === 'string' ? draft.name : (tx(draft?.name) || '')
   )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [magicLink, setMagicLink] = useState(false)
-  const [connecting, setConnecting] = useState<SocialProvider | null>(null)
-  const [sentTo, setSentTo] = useState('')
   const [language, setLanguage] = useState<'ar' | 'en' | 'ku'>('ar')
-  const [needsAccount, setNeedsAccount] = useState(false)
 
   const switchMode = (next: Mode) => {
     setMode(next)
     setStep('account')
-    setMagicLink(false)
-    setNeedsAccount(false)
     setError('')
   }
 
   const backToAccount = () => {
     setStep('account')
-    setMagicLink(false)
-    setNeedsAccount(false)
     setError('')
-  }
-
-  const createFromEmail = () => {
-    setEmail(sentTo)
-    setMode('signup')
-    setStep('account')
-    setMagicLink(false)
-    setNeedsAccount(false)
-    setError('')
-  }
-
-  /* ------------------------------ social auth ------------------------------ */
-
-  const handleSocial = (provider: SocialProvider) => {
-    setError('')
-    setConnecting(provider)
-    window.setTimeout(() => {
-      const draftNow = useStore.getState().draft
-      const result = signInWithProvider(provider, {
-        // in "create account" mode a social sign-up must behave exactly like
-        // register — the current draft becomes the new site
-        adoptDraft: mode === 'signup',
-        restaurantName: typeof draftNow?.name === 'string' ? (draftNow?.name ?? '') : (tx(draftNow?.name) || ''),
-        templateId: draftNow?.templateId ?? TEMPLATES[0].id,
-      })
-      setConnecting(null)
-      if (!result.ok) {
-        setError(result.reason === 'suspended' ? t('flow.suspended') : t('flow.socialFailed'))
-        return
-      }
-      if (isPlatformAdmin(result.account ?? null)) navigate('/admin')
-      else if (mode === 'signup' && result.created) navigate(draftNow ? '/dashboard/editor' : '/dashboard/templates')
-      else navigate('/dashboard')
-    }, 600)
   }
 
   /* -------------------------------- submits -------------------------------- */
@@ -198,49 +160,40 @@ export default function SignIn() {
     // 1) Try the real backend first so the HttpOnly session cookie is issued.
     try {
       const backendUser = await useBackendAuth.getState().signin(email.trim(), password)
+      // فصل تام: هذه الشاشة لصاحب المطعم (owner/client) فقط
+      const role = String(backendUser?.role ?? '').toLowerCase()
+      if (role !== 'owner' && role !== 'client') {
+        await useBackendAuth.getState().logout()
+        setBusy(false)
+        setError(
+          role === 'super_admin' || role === 'admin'
+            ? t('auth.accessDeniedAdmin')
+            : t('auth.accessDeniedStaff'),
+        )
+        return
+      }
       // mirror into the prototype session when such an account exists (best effort)
       signInWithPassword(email, password)
       setBusy(false)
-      const role = backendUser?.role
-      navigate(role === 'admin' || role === 'super_admin' ? '/admin' : '/dashboard')
+      navigate('/dashboard')
       return
-    } catch {
-      // not a backend account (or wrong backend password) — fall through to the
-      // prototype accounts so the demo keeps working
-    }
-
-    const result = signInWithPassword(email, password)
-    setBusy(false)
-    if (!result.ok) {
-      if (result.reason === 'suspended') setError(t('flow.suspended'))
-      else if (result.reason === 'wrongPassword') setError(t('flow.wrongPassword'))
-      else setError(t('flow.noPasswordSet'))
-      return
-    }
-    navigate(isPlatformAdmin(result.account ?? null) ? '/admin' : '/dashboard')
-  }
-
-  const submitMagicLink = (e: FormEvent) => {
-    e.preventDefault()
-    if (!EMAIL_RE.test(email)) {
-      setError(t('flow.validEmail'))
-      return
-    }
-    setError('')
-    setBusy(true)
-    window.setTimeout(() => {
-      const result = signIn(email)
+    } catch (err) {
+      // not a backend account (or wrong password)
+      const backendError = err instanceof Error ? err.message : ''
       setBusy(false)
-      if (!result.ok) {
-        setError(result.reason === 'suspended' ? t('flow.suspended') : t('flow.validEmail'))
-        return
-      }
-      navigate(isPlatformAdmin(result.account ?? null) ? '/admin' : '/dashboard')
-    }, 450)
+      setError(localizeBackendError(backendError, t))
+      return
+    }
   }
 
   const submitSignUp = async (e: FormEvent) => {
     e.preventDefault()
+    // Validate locally first so the user always sees a message in the UI
+    // language instead of a backend string.
+    if (name.trim().length < 2) {
+      setError(t('flow.nameRequired'))
+      return
+    }
     if (!EMAIL_RE.test(email)) {
       setError(t('flow.validEmail'))
       return
@@ -249,28 +202,43 @@ export default function SignIn() {
       setError(t('flow.passwordMin'))
       return
     }
+    if (restaurantName.trim().length < 2) {
+      setError(t('flow.restaurantRequired'))
+      return
+    }
     setError('')
     setBusy(true)
-    const hadDraft = Boolean(useStore.getState().draft)
-    const templateId = useStore.getState().draft?.templateId ?? TEMPLATES[0].id
+
+    // ==== SAVE guest draft data for later restoration ====
+    const draftState = useStore.getState().draft
+    const hadDraft = Boolean(draftState)
+    // Preserve the templateId and design config that the guest customized
+    const savedTemplateId = draftState?.templateId ?? TEMPLATES[0].id
+    const savedDesign = draftState?.design // design configuration object
+    void draftState?.name
 
     // Register on the real backend first so the account + session cookie exist.
     let backendError: string | null = null
+    let backendResponse: any = null
     try {
-      await useBackendAuth.getState().signup({
+      backendResponse = await useBackendAuth.getState().signup({
         email: email.trim(),
         password,
         name,
         restaurantName,
-        templateId,
+        templateId: savedTemplateId,
         language,
       })
     } catch (err) {
-      backendError = err instanceof Error ? err.message : null
+      // fetch() only rejects on transport problems — the backend's own
+      // messages (already human readable) come back with a 4xx/5xx status.
+      backendError = localizeBackendError(err instanceof Error ? err.message : '', t)
+      backendResponse = null
     }
 
     // Keep the prototype workspace in sync (it drives the editor/templates UI).
-    signUp({ name, email, restaurantName, templateId, password })
+    // Only after the backend confirmed the account — a failed sign-up must not
+    // leave a local demo account behind.
     setBusy(false)
 
     if (backendError) {
@@ -278,75 +246,79 @@ export default function SignIn() {
       return
     }
 
-    navigate(hadDraft ? '/dashboard/editor' : '/dashboard/templates')
-  }
+    if (!backendResponse?.user) {
+      // 200 without a user payload would otherwise look like a silent success.
+      setError(t('flow.signUpFailed'))
+      return
+    }
 
-  const submitForgot = (e: FormEvent) => {
-    e.preventDefault()
-    if (!EMAIL_RE.test(email)) {
-      setError(t('flow.validEmail'))
-      return
-    }
-    setError('')
-    setBusy(true)
-    window.setTimeout(() => {
-      setBusy(false)
-      // non-enumerating demo behaviour: every email gets the "sent" state
-      setSentTo(email.trim().toLowerCase())
-      setStep('sent')
-    }, 600)
-  }
+    signUp({ name, email, restaurantName, templateId: savedTemplateId, password })
 
-  const submitReset = (e: FormEvent) => {
-    e.preventDefault()
-    const target = (sentTo || email).trim().toLowerCase()
-    if (!EMAIL_RE.test(target)) {
-      setError(t('flow.validEmail'))
-      return
-    }
-    if (password.length < PASSWORD_MIN || confirm.length < PASSWORD_MIN) {
-      setError(t('flow.passwordMin'))
-      return
-    }
-    if (password !== confirm) {
-      setError(t('flow.passwordsDontMatch'))
-      return
-    }
-    setError('')
-    setBusy(true)
-    window.setTimeout(() => {
-      const result = resetPassword(target, password)
-      if (!result.ok) {
-        setBusy(false)
-        if (result.reason === 'suspended') setError(t('flow.suspended'))
-        else {
-          // demo honesty: at this step we reveal there is no account yet
-          setError(t('flow.noAccountYet'))
-          setNeedsAccount(true)
+    // بعد التسجيل → الداشبورد علطول (بدل المحرر/القوالب)
+    // إذا كان هناك رابط يعود (من customize)، نستخدمه
+    const params = new URLSearchParams(window.location.search)
+    const redirect = params.get('redirect') || ''
+    navigate(redirect || '/dashboard')
+
+    // ==== RESTORE template customization to the new restaurant ====
+    // The backend signup creates a new restaurant; we now update it with
+    // the guest's previously selected template and design configuration.
+    if (hadDraft && savedTemplateId && backendResponse?.user?.restaurant_id) {
+      try {
+        // Use the restaurant update API to apply the saved template/design
+        const updateRes = await fetch(`/api/restaurants/${backendResponse.user.restaurant_id}`, {
+          method: 'PUT',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            templateId: savedTemplateId,
+            // Extract key design fields from the saved config; fallback to TEMPLATES[0] defaults
+            design: savedDesign
+              ? {
+                  colors: savedDesign.colors || {
+                    primary: '#1B1714',
+                    secondary: '#7D7263',
+                    accent: '#E8571F',
+                    background: '#FAF7F1',
+                    text: '#1B1714',
+                    card: '#FFFFFF',
+                    button: '#1B1714',
+                  },
+                  typography: savedDesign.typography || {
+                    heading: 'playfair',
+                    body: 'inter',
+                    menu: 'inter',
+                    headingScale: 1,
+                    bodyScale: 1,
+                    headingWeight: 600,
+                    lineHeight: 1.65,
+                  },
+                  layout: savedDesign.layout || {
+                    header: 'split',
+                    hero: 'editorial',
+                    menuLayout: 'grid',
+                    card: 'bordered',
+                    radius: 14,
+                    spacing: 1,
+                    aspect: 'landscape',
+                    theme: 'light',
+                  },
+                }
+              : undefined,
+          }),
+        })
+        const updateJson = await updateRes.json().catch(() => null)
+        if (!updateRes.ok || updateJson?.ok === false) {
+          // Non-fatal: the restaurant was created; template assignment may fail silently
+          console.warn('Failed to apply template design to new restaurant:', updateJson?.error)
         }
-        return
+      } catch (err) {
+        console.warn('Error applying template design to new restaurant:', err instanceof Error ? err.message : err)
       }
-      const signedIn = signInWithPassword(target, password)
-      setBusy(false)
-      if (!signedIn.ok) {
-        setError(t('flow.noPasswordSet'))
-        return
-      }
-      showToast({
-        title: t('flow.passwordUpdatedTitle'),
-        message: t('flow.passwordUpdatedSub'),
-        tone: 'success',
-      })
-      navigate(isPlatformAdmin(signedIn.account ?? null) ? '/admin' : '/dashboard')
-    }, 600)
+    }
   }
 
   /* --------------------------------- bits ---------------------------------- */
-
-  const socialButtons: Array<{ id: SocialProvider; label: string; glyph: ReactNode }> = [
-    { id: 'google', label: t('flow.continueWithGoogle'), glyph: <GoogleGlyph /> },
-    { id: 'facebook', label: t('flow.continueWithFacebook'), glyph: <FacebookGlyph /> },
-  ]
 
   const emailField = (
     <label className="block">
@@ -388,33 +360,25 @@ export default function SignIn() {
 
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-10">
           <span className="eyebrow">
-            {step === 'account'
-              ? mode === 'signup'
+            {step === 'forgot'
+              ? t('flow.forgotEyebrow')
+              : mode === 'signup'
                 ? t('flow.signUpTab')
-                : t('auth.signInTitle')
-              : t('flow.forgotEyebrow')}
+                : t('auth.signInTitle')}
           </span>
           <h1 className="display-serif mt-3 text-[clamp(30px,4vw,44px)] leading-[1.05] text-charcoal">
-            {step === 'account'
-              ? mode === 'signup'
+            {step === 'forgot'
+              ? t('flow.forgotTitle')
+              : mode === 'signup'
                 ? t('auth.signUpTitle')
-                : t('auth.signInSub')
-              : step === 'sent'
-                ? t('flow.sentTitle')
-                : step === 'reset'
-                  ? t('flow.resetTitle')
-                  : t('flow.forgotTitle')}
+                : t('auth.signInSub')}
           </h1>
           <p className="mt-4 text-[15px] leading-relaxed text-umber">
-            {step === 'account'
-              ? mode === 'signup'
+            {step === 'forgot'
+              ? t('flow.recoveryUnavailable')
+              : mode === 'signup'
                 ? t('flow.signUpLead')
-                : t('flow.signInLead')
-              : step === 'sent'
-                ? t('flow.sentSub', { email: sentTo })
-                : step === 'reset'
-                  ? t('flow.resetLead')
-                  : t('flow.forgotLead')}
+                : t('flow.signInLead')}
           </p>
 
           <Card className="mt-7 p-6">
@@ -437,36 +401,6 @@ export default function SignIn() {
                     {t('flow.draftBecomesSite')}
                   </p>
                 ) : null}
-
-                {/* ------------------------- social sign-in ------------------------ */}
-                <div className="mt-4 grid gap-2.5">
-                  {socialButtons.map((btn) => (
-                    <button
-                      key={btn.id}
-                      type="button"
-                      onClick={() => handleSocial(btn.id)}
-                      disabled={busy || connecting !== null}
-                      className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-sand bg-paper px-5 text-[14.5px] font-medium text-charcoal transition hover:border-clay hover:bg-cream disabled:pointer-events-none disabled:opacity-60"
-                    >
-                      {connecting === btn.id ? (
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-charcoal/25 border-t-transparent" />
-                      ) : (
-                        btn.glyph
-                      )}
-                      <span>{connecting === btn.id ? t('flow.connecting') : btn.label}</span>
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-2.5 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-clay">
-                  <Icon name="info" size={13} className="mt-0.5 shrink-0" />
-                  {t('flow.socialDemoNote')}
-                </p>
-
-                <div className="my-5 flex items-center gap-3 text-[12px] text-clay">
-                  <span className="h-px flex-1 bg-sand" />
-                  <span>{t('flow.orContinueEmail')}</span>
-                  <span className="h-px flex-1 bg-sand" />
-                </div>
 
                 {mode === 'signup' ? (
                   <form key="signup" onSubmit={submitSignUp} className="space-y-4" noValidate>
@@ -524,61 +458,9 @@ export default function SignIn() {
                       size="lg"
                       full
                       loading={busy}
-                      disabled={connecting !== null}
                       icon={busy ? undefined : 'arrowRight'}
                     >
                       {busy ? t('flow.creatingAccount') : t('auth.submitSignUp')}
-                    </Button>
-                  </form>
-                ) : magicLink ? (
-                  <form key="magic" onSubmit={submitMagicLink} className="space-y-4" noValidate>
-                    {emailField}
-
-                    <p className="flex items-start gap-2 rounded-xl border border-sand bg-cream/60 px-3.5 py-3 text-[12.5px] leading-relaxed text-umber">
-                      <Icon name="mail" size={14} className="mt-0.5 shrink-0 text-flame" />
-                      {t('flow.magicLinkNote')}
-                    </p>
-                    <p className="flex items-start gap-2 text-[12.5px] leading-relaxed text-clay">
-                      <Icon name="info" size={14} className="mt-0.5 shrink-0" />
-                      {t('flow.magicNote')}
-                    </p>
-
-                    {error ? (
-                      <p className="flex items-center gap-2 rounded-xl border border-rose/40 bg-rose/8 px-3.5 py-2.5 text-[13px] text-rose">
-                        <Icon name="alert" size={15} className="shrink-0" />
-                        {error}
-                      </p>
-                    ) : null}
-
-                    <div className="flex items-center justify-between gap-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMagicLink(false)
-                          setError('')
-                        }}
-                        className="text-[12.5px] font-medium text-flame transition hover:text-flame-dark"
-                      >
-                        {t('flow.passwordInsteadCta')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEmail('owner@bella.demo')}
-                        className="shrink-0 text-[12.5px] font-medium text-flame transition hover:text-flame-dark"
-                      >
-                        {t('flow.useDemoEmail')}
-                      </button>
-                    </div>
-
-                    <Button
-                      type="submit"
-                      size="lg"
-                      full
-                      loading={busy}
-                      disabled={connecting !== null}
-                      icon={busy ? undefined : 'send'}
-                    >
-                      {busy ? t('flow.openingWorkspace') : t('auth.submitSignIn')}
                     </Button>
                   </form>
                 ) : (
@@ -607,16 +489,6 @@ export default function SignIn() {
                       >
                         {t('auth.forgot')}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMagicLink(true)
-                          setError('')
-                        }}
-                        className="text-[12.5px] text-clay underline-offset-2 transition hover:text-umber hover:underline"
-                      >
-                        {t('flow.magicLinkCta')}
-                      </button>
                     </div>
 
                     {error ? (
@@ -626,28 +498,11 @@ export default function SignIn() {
                       </p>
                     ) : null}
 
-                    <div className="flex items-center justify-end gap-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          // seed accounts are legacy password-less accounts —
-                          // the helper drops straight into the magic-link flow
-                          setEmail('owner@bella.demo')
-                          setMagicLink(true)
-                          setError('')
-                        }}
-                        className="text-[12.5px] font-medium text-flame transition hover:text-flame-dark"
-                      >
-                        {t('flow.useDemoEmail')}
-                      </button>
-                    </div>
-
                     <Button
                       type="submit"
                       size="lg"
                       full
                       loading={busy}
-                      disabled={connecting !== null}
                       icon={busy ? undefined : 'arrowRight'}
                     >
                       {busy ? t('flow.openingWorkspace') : t('auth.submitSignIn')}
@@ -655,124 +510,25 @@ export default function SignIn() {
                   </form>
                 )}
               </>
-            ) : step === 'forgot' ? (
-              <form key="forgot" onSubmit={submitForgot} className="mt-1 space-y-4" noValidate>
-                {emailField}
-
-                <p className="flex items-start gap-2 text-[12.5px] leading-relaxed text-clay">
-                  <Icon name="mail" size={14} className="mt-0.5 shrink-0" />
-                  {t('flow.forgotDemoNote')}
-                </p>
-
-                {error ? (
-                  <p className="flex items-center gap-2 rounded-xl border border-rose/40 bg-rose/8 px-3.5 py-2.5 text-[13px] text-rose">
-                    <Icon name="alert" size={15} className="shrink-0" />
-                    {error}
-                  </p>
-                ) : null}
-
-                <Button type="submit" size="lg" full loading={busy} icon={busy ? undefined : 'send'}>
-                  {busy ? t('flow.sendingLink') : t('flow.sendResetLink')}
-                </Button>
-              </form>
-            ) : step === 'sent' ? (
-              <div className="flex flex-col items-center py-2 text-center">
-                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-moss/12 text-moss">
-                  <Icon name="mail" size={24} strokeWidth={2} />
-                </span>
-                <p className="mt-4 flex items-start gap-2 text-[13px] leading-relaxed text-clay">
-                  <Icon name="info" size={14} className="mt-0.5 shrink-0" />
-                  {t('flow.sentDemoNote')}
-                </p>
-                <Button
-                  variant="accent"
-                  size="lg"
-                  full
-                  className="mt-5"
-                  icon="external"
-                  onClick={() => {
-                    setStep('reset')
-                    setError('')
-                    setNeedsAccount(false)
-                  }}
-                >
-                  {t('flow.openResetLink')}
-                </Button>
-              </div>
             ) : (
-              <form key="reset" onSubmit={submitReset} className="mt-1 space-y-4" noValidate>
-                <label className="block">
-                  <span className="mb-1.5 block text-[13px] font-medium text-espresso">{t('auth.password')}</span>
-                  <PasswordInput
-                    autoComplete="new-password"
-                    value={password}
-                    onChange={setPassword}
-                    placeholder={t('flow.passwordPh')}
-                    ariaInvalid={Boolean(error) && password.length < PASSWORD_MIN}
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-1.5 block text-[13px] font-medium text-espresso">
-                    {t('flow.confirmPassword')}
-                  </span>
-                  <PasswordInput
-                    autoComplete="new-password"
-                    value={confirm}
-                    onChange={setConfirm}
-                    placeholder={t('flow.passwordPh')}
-                    ariaInvalid={Boolean(error) && confirm !== password}
-                  />
-                </label>
-
-                {error ? (
-                  <p className="flex items-center gap-2 rounded-xl border border-rose/40 bg-rose/8 px-3.5 py-2.5 text-[13px] text-rose">
-                    <Icon name="alert" size={15} className="shrink-0" />
-                    {error}
-                  </p>
-                ) : null}
-
-                {needsAccount ? (
-                  <Button variant="outline" full icon="sparkles" onClick={createFromEmail}>
-                    {t('flow.createAccountCta')}
-                  </Button>
-                ) : null}
-
-                <Button
-                  type="submit"
-                  size="lg"
-                  full
-                  loading={busy}
-                  icon={busy ? undefined : 'check'}
-                >
-                  {busy ? t('flow.updatingPassword') : t('flow.updatePassword')}
-                </Button>
-              </form>
+              <Button variant="outline" size="lg" full onClick={backToAccount}>
+                {t('flow.backToSignIn')}
+              </Button>
             )}
           </Card>
 
-          <p className="mt-5 text-center text-[13px] text-umber">
-            {step === 'account' ? (
-              <>
-                {mode === 'signup' ? t('auth.haveAccount') : t('auth.noAccount')}{' '}
-                <button
-                  type="button"
-                  onClick={() => switchMode(mode === 'signup' ? 'signin' : 'signup')}
-                  className="font-medium text-flame transition hover:text-flame-dark"
-                >
-                  {mode === 'signup' ? t('flow.signInTab') : t('flow.signUpTab')}
-                </button>
-              </>
-            ) : (
+          {step === 'account' ? (
+            <p className="mt-5 text-center text-[13px] text-umber">
+              {mode === 'signup' ? t('auth.haveAccount') : t('auth.noAccount')}{' '}
               <button
                 type="button"
-                onClick={backToAccount}
+                onClick={() => switchMode(mode === 'signup' ? 'signin' : 'signup')}
                 className="font-medium text-flame transition hover:text-flame-dark"
               >
-                {t('flow.backToSignIn')}
+                {mode === 'signup' ? t('flow.signInTab') : t('flow.signUpTab')}
               </button>
-            )}
-          </p>
+            </p>
+          ) : null}
 
           <p className="mt-5 text-center text-[13px] text-umber">
             <Link to="/templates" className="font-medium text-flame transition hover:text-flame-dark">

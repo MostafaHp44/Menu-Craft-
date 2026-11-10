@@ -121,7 +121,7 @@ const en = {
         'You have unpublished changes — the public page below still shows the saved version.',
       publishNow: 'Publish now',
       draftNotice: 'This menu is saved as a draft. Publishing makes it the shared version.',
-      publishDemo: 'Publish demo',
+      publishDemo: 'Publish site',
       renderedNote: 'Rendered from your saved Digital Menu configuration',
     },
 
@@ -330,7 +330,7 @@ const ar: Deep<typeof en> = {
         'لديك تغييرات غير منشورة — الصفحة العامة أدناه ما زالت تعرض النسخة المحفوظة.',
       publishNow: 'انشر الآن',
       draftNotice: 'هذه القائمة محفوظة كمسودة. النشر يجعلها النسخة المشتركة.',
-      publishDemo: 'انشر العرض',
+      publishDemo: 'انشر الموقع',
       renderedNote: 'يُعرض من إعدادات Digital Menu المحفوظة',
     },
 
@@ -539,7 +539,7 @@ const ku: Deep<typeof en> = {
         'گۆڕانکارییەکانت بڵاو نەکراوەتەوە — پەڕەی گشتی خوارەکە هێشتا وشەی پاشەکەوتکراو پیشان دەدات.',
       publishNow: 'ئێستا بڵاو بکەرەوە',
       draftNotice: 'ئەم مینیۆیە وەک پێشنویس پاشەکەوت کراوە. بڵاوکردنەوە دەکات بێتە نۆخشەی هاوبەش.',
-      publishDemo: 'دیمۆ بڵاو بکەرەوە',
+      publishDemo: 'بڵاوکردنەوەی ماڵپەڕ',
       renderedNote: 'لە ڕێکخستنی پاشەکەوتکراوی Digital Menuەوە پیشان دەدرێت',
     },
 

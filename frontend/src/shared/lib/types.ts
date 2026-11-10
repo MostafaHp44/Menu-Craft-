@@ -3,7 +3,7 @@
  * All data in this application is simulated demo data.
  * ------------------------------------------------------------------ */
 
-export type FontId = 'inter' | 'poppins' | 'dm-sans' | 'playfair' | 'lora' | 'montserrat'
+export type FontId = 'inter' | 'poppins' | 'dm-sans' | 'playfair' | 'lora' | 'montserrat' | 'cairo'
 
 export type SectionId = 'featured' | 'menu' | 'about' | 'gallery' | 'hours' | 'contact'
 
@@ -20,6 +20,11 @@ export interface ColorSet {
   text: string
   card: string
   button: string
+  /**
+   * لون حدود الكروت والفواصل — اختياري: التمبليتات القديمة بلاه
+   * فتُشتق آلياً من mix(text, background, 15%) كما كان سابقاً.
+   */
+  border?: string
 }
 
 export interface TypographyConfig {
@@ -38,7 +43,7 @@ export interface TypographyConfig {
 
 export type HeaderStyle = 'split' | 'centered' | 'minimal'
 export type HeroStyle = 'fullscreen' | 'split' | 'editorial'
-export type MenuLayout = 'grid' | 'list'
+export type MenuLayout = 'grid' | 'list' | 'board' | 'deck' | 'compact'
 export type CardStyle = 'bordered' | 'elevated' | 'flat'
 export type ImageAspect = 'square' | 'portrait' | 'landscape' | 'wide'
 export type ThemeMode = 'light' | 'dark' | 'warm' | 'custom'
@@ -54,6 +59,13 @@ export interface LayoutConfig {
   spacing: 0 | 1 | 2
   aspect: ImageAspect
   theme: ThemeMode
+  /** Structural variant for the public site. `classic` keeps the shared renderer;
+   *  `krispy` enables the donut-shop treatment (green/red branding, banner chips, price-first list). */
+  variant?: 'classic' | 'krispy'
+  /** `tabs` (default) shows one category at a time. `scroll-sticky` stacks all
+   *  categories vertically under sticky tabs with scrollspy: scrolling
+   *  highlights the tab of the section in view, clicking a tab scrolls to it. */
+  menuDisplay?: 'tabs' | 'scroll-sticky'
 }
 
 export interface DesignConfiguration {
@@ -71,9 +83,15 @@ export interface MenuItem {
   /** optional promotional / crossed-out price */
   compareAt: number | null
   image: string
+  imageFit?: ImageFit
   featured: boolean
   popular: boolean
   available: boolean
+  /** dietary / marketing flags used by stock template data */
+  isVeg?: boolean
+  isGf?: boolean
+  isSpicy?: boolean
+  isSpecial?: boolean
 }
 
 export interface MenuCategory {
@@ -107,6 +125,32 @@ export type LogoStyle = 'monogram' | 'wordmark' | 'badge'
 
 import { type Multilang } from '../i18n'
 
+export interface ImageFit {
+  position?: string
+  width?: string
+  height?: string
+}
+
+export const IMAGE_POSITIONS: Array<{ value: string; label: string }> = [
+  { value: 'default', label: 'Default' },
+  { value: 'center top', label: 'Top' },
+  { value: 'right top', label: 'Top Right' },
+  { value: 'left top', label: 'Top Left' },
+  { value: 'center center', label: 'Center Center' },
+  { value: 'center bottom', label: 'Bottom' },
+  { value: 'right bottom', label: 'Bottom Right' },
+  { value: 'left bottom', label: 'Bottom Left' },
+]
+
+export function imageFitStyle(fit?: ImageFit | null): Record<string, string> | undefined {
+  if (!fit) return undefined
+  const style: Record<string, string> = {}
+  if (fit.position && fit.position !== 'default') style.objectPosition = fit.position
+  if (fit.width) style.width = fit.width
+  if (fit.height) style.height = fit.height
+  return Object.keys(style).length ? style : undefined
+}
+
 export interface Restaurant {
   id: string
   name: string | Multilang
@@ -117,9 +161,16 @@ export interface Restaurant {
   logoText: string | Multilang
   logoStyle: LogoStyle
   heroImage: string
+  heroImageFit?: ImageFit
+  /** optional mobile (9:16) variant of heroImage — desktop uses heroImage (16:9) */
+  heroImageMobile?: string
   /** ambient hero clip — ''/absent = none · `https://…mp4` = remote URL · `idb:<uuid>` = uploaded blob in IndexedDB */
   heroVideo?: string
+  /** responsive hero videos — desktop (16:9) wins on wide screens, mobile (9:16) on narrow screens */
+  heroVideoDesktop?: string
+  heroVideoMobile?: string
   gallery: string[]
+  galleryFits?: (ImageFit | null)[]
   phone: string
   email: string
   address: string
@@ -159,6 +210,21 @@ export type TemplateCategory =
   | 'Healthy'
   | 'Dessert'
 
+export interface TemplateOverride {
+  baseTemplateId: string
+  heroTitle?: string | null
+  heroSubtitle?: string | null
+  heroImage?: string | null
+  heroImageMobile?: string | null
+  heroVideoDesktop?: string | null
+  heroVideoMobile?: string | null
+  previewImage?: string | null
+  gallery?: string[] | null
+  design?: Partial<DesignConfiguration> | null
+  updatedAt?: string
+  updatedBy?: string | null
+}
+
 export interface TemplateDefinition {
   id: string
   name: string
@@ -174,6 +240,10 @@ export interface TemplateDefinition {
   chips: string[]
   previewImage: string
   heroImage: string
+  heroImageMobile?: string
+  heroVideo?: string
+  heroVideoDesktop?: string
+  heroVideoMobile?: string
   gallery: string[]
   /** sample restaurant rendered by the template preview page */
   sample: {
@@ -269,6 +339,8 @@ export interface Order {
   total: number
   status: OrderStatus
   createdAt: string
+  /** actual backend status for API transitions */
+  rawStatus?: string
   /** true for demo rows — they roll forward to stay on "today" */
   seed?: boolean
 }
@@ -339,7 +411,7 @@ export interface UserAccount {
  * Subscriptions (platform side)
  * ------------------------------------------------------------------ */
 
-export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'expired'
+export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'expired' | 'cancelled'
 
 export interface SubscriptionRecord {
   restaurantId: string
@@ -349,6 +421,16 @@ export interface SubscriptionRecord {
   startedAt: string
   renewsAt: string
   autoRenew: boolean
+}
+
+/** يتحقق مما إذا كان الاشتراك نشطاً (يمكن النشر والوصول للميزات الكاملة) */
+export function isSubscriptionActive(status: string | undefined): boolean {
+  return status === 'active' || status === 'trialing'
+}
+
+/** يتحقق مما إذا كان الاشتراك في حالة موقوفة (ملغي، منتهي، متأخر السداد) */
+export function isSubscriptionSuspended(status: string | undefined): boolean {
+  return status === 'cancelled' || status === 'expired' || status === 'past_due'
 }
 
 /* ------------------------------------------------------------------ *

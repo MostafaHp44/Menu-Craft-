@@ -3,7 +3,7 @@ import { Button, Card, Field, Input, Modal } from '../../shared/ui/ui.tsx'
 import { Icon } from '../../shared/ui/icons.tsx'
 import { useI18n } from '../../shared/i18n'
 import { useStore } from '../../shared/store/useStore.ts'
-import { ApiError, errorMessage, sitesApi, type SiteCard, type SiteSummary } from '../../shared/api/client.ts'
+import { ApiError, errorMessage, sitesApi, type SiteCard, type SitePlanSummary } from '../../shared/api/client.ts'
 import { slugify } from '../../shared/lib/utils.ts'
 import { useAsync } from './useAsync.ts'
 import {
@@ -21,22 +21,20 @@ import { formatDateTime } from './format.ts'
 
 interface SitesData {
   sites: SiteCard[]
-  summary: SiteSummary
+  summary: SitePlanSummary
   canCreate: boolean
 }
 
 export default function SitesPage() {
   const { t, lang } = useI18n()
   const data = useAsync<SitesData>(async () => {
-    const [list, summary, can] = await Promise.all([sitesApi.list(), sitesApi.summary(), sitesApi.canCreate()])
-    return { sites: list.sites, summary, canCreate: can.canCreate }
+    const [listRes, sumRes, canRes] = await Promise.all([sitesApi.list(), sitesApi.summary(), sitesApi.canCreate()])
+    return { sites: listRes.data, summary: sumRes.data, canCreate: canRes.canCreate }
   }, [])
   const [createOpen, setCreateOpen] = useState(false)
 
-  const siteName = (site: SiteCard): string => {
-    if (typeof site.name === 'string') return site.name
-    return site.name[lang] ?? site.name.en ?? site.name.ar ?? site.name.ku ?? site.slug
-  }
+  const siteName = (site: SiteCard): string =>
+    (site.name_en || site.name_ar || site.name_ku || site.name || site.slug) as string
 
   return (
     <div>
@@ -63,11 +61,11 @@ export default function SitesPage() {
         <Card className="mb-4 flex flex-wrap items-center justify-between gap-4 p-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-clay">{t('live.subscription.plan')}</p>
-            <p className="mt-0.5 text-[16px] font-semibold capitalize text-charcoal">{data.data.summary.subscription.planCode}</p>
+            <p className="mt-0.5 text-[16px] font-semibold capitalize text-charcoal">{data.data.summary.plan?.name ?? '—'}</p>
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-clay">{t('live.subscription.status')}</p>
-            <p className="mt-0.5 text-[13px] font-medium text-charcoal">{data.data.summary.subscription.status}</p>
+            <p className="mt-0.5 text-[13px] font-medium text-charcoal">{data.data.summary.subscription?.status ?? '—'}</p>
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-clay">{t('live.sites.title')}</p>
@@ -116,8 +114,8 @@ export default function SitesPage() {
                 </Td>
                 <Td>{site.categoryCount}</Td>
                 <Td>{site.itemCount}</Td>
-                <Td>{site.orderCount}</Td>
-                <Td className="whitespace-nowrap text-[12px] text-umber">{formatDateTime(site.updatedAt, lang)}</Td>
+                <Td>{site.itemCount}</Td>
+                <Td className="whitespace-nowrap text-[12px] text-umber">{formatDateTime(site.updated_at ?? '', lang)}</Td>
               </tr>
             ))}
           </tbody>

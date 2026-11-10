@@ -1,0 +1,361 @@
+﻿import { useCallback, useEffect, useState } from 'react'
+import { Icon } from '../../shared/ui/icons.tsx'
+import { Button, IconButton, Modal, Segmented } from '../../shared/ui/ui.tsx'
+import { RestaurantSite } from '../../templates/site/RestaurantSite.tsx'
+import { setByPath } from '../../templates/editor/inlineEdit.tsx'
+import { ColorSidebar } from './FullscreenEditorColorSidebar.tsx'
+import { MenuSidebar } from './FullscreenEditorMenuSidebar.tsx'
+import { publicUrl } from '../../shared/lib/hooks.ts'
+import { getTemplate } from '../../templates/data/templates.ts'
+import { ScaledFrame } from '../../shared/ui/ScaledFrame.tsx'
+import { cx, tx } from '../../shared/lib/utils.ts'
+import { useStore } from '../../shared/store/useStore.ts'
+import { useI18n } from '../../shared/i18n'
+
+type Device = 'desktop' | 'phone'
+
+interface Props {
+  isOpen: boolean
+  onClose: () => void
+  templateId: string
+}
+
+export function FullscreenEditorModal({ isOpen, onClose, templateId }: Props) {
+  const { t } = useI18n()
+  const draft = useStore((s) => s.draft)
+  const dirty = useStore((s) => s.dirty)
+  const past = useStore((s) => s.past)
+  const future = useStore((s) => s.future)
+  const beginEdit = useStore((s) => s.beginEdit)
+  const undo = useStore((s) => s.undo)
+  const redo = useStore((s) => s.redo)
+  const saveDraft = useStore((s) => s.saveDraft)
+  const publishDemo = useStore((s) => s.publishDemo)
+  const updateDraft = useStore((s) => s.updateDraft)
+
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [device, setDevice] = useState<Device>('desktop')
+  const [sidebar, setSidebar] = useState<'colors' | 'menu' | 'none'>('colors')
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+
+  useEffect(() => {
+    if (isOpen && !draft) {
+      beginEdit(templateId)
+    }
+  }, [isOpen, templateId, draft, beginEdit])
+
+  const handleCommit = useCallback(
+    (path: string, value: string) => {
+      updateDraft((d) => {
+        if (path.startsWith('copy.')) {
+          d.copy = { ...(d.copy ?? {}), [path]: value }
+          return
+        }
+        setByPath(d, path, value)
+      })
+    },
+    [updateDraft]
+  )
+
+  const handleStyle = useCallback(
+    (path: string, patch: any) => {
+      updateDraft((d) => {
+        const next = { ...(d.inline ?? {}) }
+        if (patch === null) delete next[path]
+        else next[path] = { ...(next[path] ?? {}), ...patch }
+        d.inline = next
+      })
+    },
+    [updateDraft]
+  )
+
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen)
+    if (isFullscreen) {
+      document.body.style.overflow = ''
+      document.body.style.paddingRight = ''
+    } else {
+      document.body.style.overflow = 'hidden'
+      document.body.style.paddingRight = '17px'
+    }
+  }
+
+  // Debounced auto-save
+  useEffect(() => {
+    let timeoutId: number
+    if (dirty && saveStatus === 'idle') {
+      setSaveStatus('saving')
+      timeoutId = setTimeout(() => {
+        saveDraft()
+        setSaveStatus('saved')
+        // Reset after 2 seconds
+        const resetTimeout = setTimeout(() => {
+          setSaveStatus('idle')
+        }, 2000)
+        return () => clearTimeout(resetTimeout)
+      }, 800)
+    }
+    return () => clearTimeout(timeoutId)
+  }, [dirty, saveStatus, saveDraft])
+
+  if (!draft) return null
+
+  const template = getTemplate(draft.templateId)
+  const width = device === 'desktop' ? 1440 : 390
+
+  return (
+    <div className="relative w-full h-full">
+      {/* Fullscreen overlay trigger */}
+      {isOpen && (
+        <Button
+          type="button"
+          onClick={() => setIsFullscreen(true)}
+          className="hidden sm:inline-flex items-center gap-2 rounded-xl bg-flame text-white px-4 py-2 text-sm font-medium hover:bg-flame-dark shadow-[0_4px_12px_-4px_rgba(232,87,31,0.9)]"
+        >
+          <Icon name="open-in-new" size={14} /> {t('myTemplates.editFullscreen')}
+        </Button>
+      )}
+
+      {/* Fullscreen Modal */}
+      {isFullscreen && isOpen ? (
+        <Modal
+          open={true}
+          onClose={onClose}
+          title=""
+        >
+          <div className="flex h-full w-full flex-col bg-ink">
+            {/* Top Bar - full width, no dashboard */}
+            <div className="flex shrink-0 items-center justify-between border-b border-white/10 bg-ink/50 px-4 py-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <IconButton
+                  icon="arrowLeft"
+                  label={t('editor.back')}
+                  size={16}
+                  className="bg-white/10 hover:bg-white/20"
+                  onClick={onClose}
+                />
+                <span className="line-clamp-1 text-[14.5px] font-semibold text-ivory">{tx(draft.name)}</span>
+                <span className="hidden rounded-full bg-white/10 px-2.5 py-1 font-mono text-[11.5px] text-ivory/70 sm:inline">
+                  {publicUrl(draft.slug)}
+                </span>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="hidden text-[11.5px] text-ivory/60 lg:inline">
+                  {width}px Â· {t(dirty ? 'editor.unsavedShort' : 'editor.saved')}
+                </span>
+                <Segmented<Device>
+                  size="sm"
+                  value={device}
+                  onChange={setDevice}
+                  ariaLabel={t('editor.previewDevice')}
+                  options={[
+                    { value: 'desktop', label: t('editor.desktop'), icon: 'monitor' },
+                    { value: 'phone', label: t('editor.phone'), icon: 'smartphone' },
+                  ]}
+                />
+                <div className="mx-1 h-6 w-px bg-white/10" />
+                <div className="flex gap-1">
+                  <SidebarButton
+                    active={sidebar === 'colors'}
+                    onClick={() => setSidebar(sidebar === 'colors' ? 'none' : 'colors')}
+                    icon="palette"
+                    label={t('editor.colors')}
+                  />
+                  <SidebarButton
+                    active={sidebar === 'menu'}
+                    onClick={() => setSidebar(sidebar === 'menu' ? 'none' : 'menu')}
+                    icon="utensils"
+                    label={t('editor.menu')}
+                  />
+                </div>
+                <IconButton
+                  icon="x"
+                  label={t('common.close')}
+                  size={16}
+                  className="bg-white/10 hover:bg-white/20"
+                  onClick={() => toggleFullscreen()}
+                />
+              </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="flex-1 w-full flex overflow-hidden">
+              {/* Preview Area */}
+              <section className="flex-1 w-full flex-col overflow-hidden" aria-label={t('editor.livePreview')}>
+                {/* Preview Toolbar */}
+                <div className="flex shrink-0 items-center justify-between border-b border-white/10 bg-ink/50 px-4 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-1.5 w-1.5 shrink-0 rounded-full bg-moss anim-pulse-dot" />
+                    <span className="font-mono text-[11.5px] text-ivory/70">{publicUrl(draft.slug)}</span>
+                    <span className="shrink-0 text-[10.5px] uppercase tracking-wider text-ivory/50">{t('editor.simulated')}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <IconButton
+                      icon="external"
+                      label={t('editor.openPublished')}
+                      size={16}
+                      className="bg-white/10 hover:bg-white/20"
+                      onClick={() => window.open(publicUrl(draft.slug), '_blank')}
+                    />
+                  </div>
+                </div>
+
+                {/* Preview Body */}
+                <div className="flex-1 w-full overflow-y-auto bg-ink/20 p-4 thin-scroll sm:p-6">
+                  {device === 'desktop' ? (
+                    <div className="mx-auto max-w-[1600px]">
+                      <ScaledFrame width={width}>
+                        <RestaurantSite
+                          restaurant={draft}
+                          interactive={false}
+                          mode="preview"
+                          idPrefix="fs-"
+                          editable
+                          onActiveChange={() => {}}
+                          onCommit={handleCommit}
+                          onStyle={handleStyle}
+                        />
+                      </ScaledFrame>
+                    </div>
+                  ) : (
+                    <div className="mx-auto w-[390px]">
+                      <div className="overflow-hidden rounded-[42px] border-[10px] border-[#2b2622] bg-[#2b2622] shadow-[0_60px_120px_-60px_rgba(0,0,0,1)]">
+                        <div className="relative overflow-hidden rounded-[32px] bg-white">
+                          <ScaledFrame width={width}>
+                            <RestaurantSite
+                              restaurant={draft}
+                              interactive={false}
+                              mode="preview"
+                              idPrefix="fsm-"
+                              editable
+                              onActiveChange={() => {}}
+                              onCommit={handleCommit}
+                              onStyle={handleStyle}
+                            />
+                          </ScaledFrame>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bottom Bar - with auto-save indicator instead of buttons */}
+                <div className="flex shrink-0 items-center justify-between border-t border-white/10 bg-ink/50 px-4 py-2.5">
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="ghost" icon="undo" disabled={past.length === 0} onClick={undo}>
+                      {t('editor.undo')}
+                    </Button>
+                    <Button size="sm" variant="ghost" icon="redo" disabled={future.length === 0} onClick={redo}>
+                      {t('editor.redo')}
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    {saveStatus === 'saving' ? (
+                      <span className="text-[11px] text-ivory/70">{t('editor.saving')}...</span>
+                    ) : saveStatus === 'saved' && dirty ? (
+                      <span className="text-[11px] text-ivory/70">{t('editor.saved')} âœ“</span>
+                    ) : (
+                      <span className="hidden" />
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              {/* Sidebar - hidden in fullscreen mobile, can be toggled on desktop */}
+              {device === 'desktop' && sidebar === 'colors' && (
+                <aside className="w-[320px] shrink-0 border-l border-white/10 bg-ink/50 flex flex-col overflow-hidden">
+                  <ColorSidebar
+                    draft={draft}
+                    updateDraft={updateDraft}
+                    template={template}
+                  />
+                </aside>
+              )}
+              {device === 'desktop' && sidebar === 'menu' && (
+                <aside className="w-[360px] shrink-0 border-l border-white/10 bg-ink/50 flex flex-col overflow-hidden">
+                  <MenuSidebar draft={draft} updateDraft={updateDraft} />
+                </aside>
+              )}
+            </div>
+          </div>
+        </Modal>
+      ) : (
+        // Regular inline editor when not fullscreen (existing behavior adapted)
+        isOpen ? (
+          <Modal
+            open={isOpen}
+            onClose={onClose}
+            size="xl"
+            className="max-w-lg mx-auto"
+            title=""
+          >
+            <div className="flex h-full flex-col bg-ink">
+              {/* ... existing regular editor content ... */}
+              <div className="flex h-full flex-col">
+                <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
+                  <IconButton
+                    icon="arrowLeft"
+                    label={t('editor.back')}
+                    size={16}
+                    className="bg-white/10 hover:bg-white/20"
+                    onClick={onClose}
+                  />
+                  <span className="line-clamp-1 text-[14.5px] font-semibold text-ivory">{tx(draft.name)}</span>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4">
+                  <p>Regular editor content</p>
+                </div>
+                <div className="flex shrink-0 items-center justify-between px-4 py-3">
+                  {saveStatus === 'saving' ? (
+                    <span className="text-[11px] text-ivory/70">{t('editor.saving')}...</span>
+                  ) : saveStatus === 'saved' && dirty ? (
+                    <span className="text-[11px] text-ivory/70">{t('editor.saved')} âœ“</span>
+                  ) : (
+                    <div>
+                      <Button size="sm" variant="outline" icon="save" onClick={saveDraft}>
+                        {t('editor.saveDraft')}
+                      </Button>
+                      <Button size="sm" variant="accent" icon="send" onClick={publishDemo}>
+                        {t('editor.publishShort')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Modal>
+        ) : null
+      )}
+    </div>
+  )
+}
+
+/* Helper components */
+function SidebarButton({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean
+  onClick: () => void
+  icon: string
+  label: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx(
+        'flex h-9 items-center gap-2 rounded-full px-3 text-[12.5px] font-medium transition',
+        active
+          ? 'bg-flame text-white shadow-[0_8px_20px_-12px_rgba(232,87,31,0.9)]'
+          : 'bg-white/10 text-ivory/80 hover:bg-white/20 hover:text-ivory'
+      )}
+      aria-pressed={active}
+    >
+      <Icon name={icon} size={14} />
+      <span className="hidden sm:inline">{label}</span>
+    </button>
+  )
+}

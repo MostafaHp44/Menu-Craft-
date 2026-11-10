@@ -10,6 +10,7 @@ import { useCustomize, publicUrl } from '../../shared/lib/hooks.ts'
 import { FONTS } from '../../templates/data/fonts.ts'
 import { buildTemplatePreviewRestaurant, getTemplate, hasTemplate } from '../../templates/data/templates.ts'
 import { useTemplateList } from '../../templates/data/useTemplateList.ts'
+import { usePlatformStore } from '../../shared/store/usePlatform.ts'
 import { cx, money } from '../../shared/lib/utils.ts'
 import { useActiveRestaurant } from '../../shared/store/useStore.ts'
 import { useI18n } from '../../shared/i18n'
@@ -24,9 +25,10 @@ export default function TemplatePreview() {
   const active = useActiveRestaurant()
   const customize = useCustomize()
   const templates = useTemplateList()
+  const templateOverrides = usePlatformStore((s) => s.templateOverrides)
   const [device, setDevice] = useState<Device>('desktop')
 
-  const preview = useMemo(() => buildTemplatePreviewRestaurant(id), [id])
+  const preview = useMemo(() => buildTemplatePreviewRestaurant(id), [id, templateOverrides])
 
   if (!exists) {
     return (

@@ -4,7 +4,7 @@
  * HttpOnly JWT cookie is sent to the backend on every request.
  * ------------------------------------------------------------------ */
 
-const API_BASE = import.meta.env.VITE_API_URL ?? '';
+const API_BASE = import.meta.env.VITE_API_URL_ABSOLUTE || '';
 
 function apiUrl(path: string): string {
   return `${API_BASE}${path}`;
@@ -58,36 +58,62 @@ async function json<T>(
 }
 
 export const authAPI = {
-  login: (email: string, password: string) =>
-    json<{ ok: boolean; user: { id: string; name: string; email: string; role: string } }>(
-      apiUrl('/api/auth/login'),
-      { method: 'POST', body: { email, password } }
-    ),
   logout: () => json<{ ok: boolean }>(apiUrl('/api/auth/logout'), { method: 'POST' }),
   me: () => json<{ id: string; email: string; role: string }>(apiUrl('/api/auth/me'), { method: 'GET' }),
 };
 
 export const sitesAPI = {
-  list: () => json<{ sites: Array<{
+  list: () => json<{ ok: boolean; data: Array<{
     id: string;
-    name: { en?: string | null; ar?: string | null; ku?: string | null };
+    name_en?: string | null;
+    name_ar?: string | null;
+    name_ku?: string | null;
     slug: string;
     status: string;
-    templateId: string | null;
-    updatedAt: string | null;
+    templateId?: string | null;
+    plan?: string | null;
+    updated_at?: string | null;
     itemCount: number;
-    orderCount: number;
     categoryCount: number;
+    isOwner?: boolean | number;
+    subscriptionStatus?: string | null;
+    subscriptionPlan?: string | null;
+    subscriptionRenewsAt?: string | null;
   }> }>(apiUrl('/api/sites'), { method: 'GET' }),
-  summary: () => json<{ maxSites: number; used: number; remaining: number | null; unlimited: boolean; subscription: { planCode: string; status: string; currentPeriodEnd: string | null } }>(
+  summary: () => json<{ ok: boolean; data: { maxSites: number; used: number; unlimited: boolean; remaining: number | null; canCreate?: boolean; plan?: { id?: string; name?: string; price?: number } | null; subscription: { status: string; renewsAt: string | null; daysLeft: number | null; isTrial: boolean } | null } }>(
     apiUrl('/api/sites/summary'),
     { method: 'GET' }
   ),
-  canCreate: () => json<{ canCreate: boolean }>(apiUrl('/api/sites/can-create'), { method: 'GET' }),
+  canCreate: () => json<{ ok: boolean; canCreate: boolean }>(apiUrl('/api/sites/can-create'), { method: 'GET' }),
+  // POST /api/restaurants هو مسار الإنشاء الحقيقي (يفرض حد الباقة على السيرفر)
   create: (payload: { name: string; slug: string; templateId?: string | null }) =>
-    json<{ ok: boolean; site: { id: string; name: string; slug: string; status: string; templateId: string | null } }>(
-      apiUrl('/api/sites'),
+    json<{ ok: boolean; data: { id: string; slug: string; name_en?: string } }>(
+      apiUrl('/api/restaurants'),
       { method: 'POST', body: payload }
+    ),
+};
+
+/**
+ * التمبليتات المختارة من صاحب المطعم (تبويب "قوالبي") — مخزّنة في قاعدة البيانات
+ * تحت معرّف الموقع، فتظهر من أي جهاز يسجّل الدخول بنفس الحساب.
+ */
+export const templatesAPI = {
+  list: (restaurantId: string) =>
+    json<{ ok: boolean; data: Array<{ templateId: string; selectedAt: string }> }>(
+      apiUrl(`/api/restaurants/${encodeURIComponent(restaurantId)}/templates`),
+      { method: 'GET' }
+    ),
+  select: (restaurantId: string, templateId: string) =>
+    json<{ ok: boolean }>(
+      apiUrl(`/api/restaurants/${encodeURIComponent(restaurantId)}/templates`),
+      { method: 'POST', body: { templateId } }
+    ),
+  remove: (restaurantId: string, templateId: string) =>
+    json<{ ok: boolean }>(
+      apiUrl(
+        `/api/restaurants/${encodeURIComponent(restaurantId)}/templates/${encodeURIComponent(templateId)}`
+      ),
+      { method: 'DELETE' }
     ),
 };
 

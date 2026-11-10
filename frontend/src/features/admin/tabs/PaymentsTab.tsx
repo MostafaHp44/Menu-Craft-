@@ -3,11 +3,20 @@ import { Input, Badge } from '../../../shared/ui/ui.tsx'
 import { DarkEmpty, Panel, PanelHeading } from '../parts.tsx'
 import { useAdminData } from '../useAdminData.ts'
 import { Icon } from '../../../shared/ui/icons.tsx'
+import { useStore } from '../../../shared/store/useStore.ts'
 
-type Payment = { id: string; restaurant_id: string; amount: number; status: string; payment_method?: string; created_at: string }
+interface Payment {
+  id: string
+  restaurant_id?: string | null
+  amount?: number | string | null
+  status?: string | null
+  payment_method?: string | null
+  created_at: string
+}
 
 export default function PaymentsTab() {
   const { data, loading, error } = useAdminData<Payment>('/api/platform/admin/payments')
+  const showToast = useStore((s) => s.showToast)
   const [q, setQ] = useState('')
   const rows = useMemo(() => data.filter(x => (x.id + ' ' + (x.restaurant_id || '') + ' ' + (x.status || '')).toLowerCase().includes(q.toLowerCase())), [data, q])
 
@@ -29,7 +38,7 @@ export default function PaymentsTab() {
               <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${p.active ? 'bg-flame text-white' : 'bg-white/10 text-ivory/60'}`}><Icon name={p.icon} size={18} /></div>
               <div><h3 className="text-sm font-bold text-ivory">{p.name}</h3><p className="text-[11px] text-ivory/40">{p.desc}</p></div>
             </div>
-            <button disabled onClick={() => alert(p.name + ' — provider configuration endpoint not yet implemented; shown read-only')} className={`w-full rounded-lg py-2 text-xs font-bold transition ${p.active ? 'bg-flame text-white' : 'bg-white/6 text-ivory/60 cursor-not-allowed'}`}>{p.active ? 'Active (read-only)' : 'Enable (DB endpoint needed)'}</button>
+            <button disabled onClick={() => showToast({ tone: 'info', title: p.name, message: 'Provider configuration endpoint not yet implemented; shown read-only.' })} className={`w-full rounded-lg py-2 text-xs font-bold transition ${p.active ? 'bg-flame text-white' : 'bg-white/6 text-ivory/60 cursor-not-allowed'}`}>{p.active ? 'Active (read-only)' : 'Enable (DB endpoint needed)'}</button>
           </div>
         ))}
       </div>

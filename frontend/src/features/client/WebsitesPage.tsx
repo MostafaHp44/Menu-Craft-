@@ -2,7 +2,6 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../../shared/ui/icons.tsx'
 import { Badge, Button, Card } from '../../shared/ui/ui.tsx'
-import { useI18n, resolveLang } from '../../shared/i18n'
 import { useStore } from '../../shared/store/useStore.ts'
 import { useSites } from './useSites.ts'
 import { sitesAPI, ApiError } from '../../shared/api/service'
@@ -13,7 +12,6 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 export default function WebsitesPage() {
-  const { lang } = useI18n()
   const navigate = useNavigate()
   const setActive = useStore((s) => s.setActive)
 
@@ -37,10 +35,10 @@ export default function WebsitesPage() {
     return { total, published, draft, items, cats }
   }, [sites, summary])
 
-  const planLabel = summary?.subscription?.planCode || '—'
+  const planLabel = summary?.plan?.name || '—'
   const planStatus = summary?.subscription?.status || '—'
 
-  const canCreate = summary ? summary.maxSites < 0 || summary.used < summary.maxSites : false
+  const canCreate = summary ? summary.canCreate !== false : false
 
   const handleCreate = async () => {
     if (!canCreate) return
@@ -53,8 +51,17 @@ export default function WebsitesPage() {
     if (!slug || !slug.trim()) return
 
     try {
-      await sitesAPI.create({ name: name.trim(), slug: slug.trim(), templateId: null })
+      const created = await sitesAPI.create({ name: name.trim(), slug: slug.trim() })
       await refresh()
+      // التسلسل المطلوب: التحقق من الباقة ← إنشاء الموقع ← اختيار القالب ← التخصيص ← النشر
+      const newId = (created as any)?.data?.id
+      if (newId) {
+        setActive(newId)
+        // تحميل نسخة الموقع من السيرفر (slug/اسم/قائمة) قبل الانتقال،
+        // حتى يربط المحرر/القالب بالموقع الجديد وليس بالموقع الافتراضي.
+        try { await useStore.getState().loadDraftFromBackend() } catch { /* non-fatal */ }
+      }
+      navigate('/dashboard/templates')
     } catch (e: any) {
       if (e instanceof ApiError && e.status === 409) {
         window.alert('A website with this slug already exists. Please choose another slug.')
@@ -157,7 +164,7 @@ export default function WebsitesPage() {
       {!loading && !error && filtered.length > 0 && (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((r) => {
-            const nameStr = typeof r.name === 'string' ? r.name : resolveLang(r.name, lang) || ''
+            const nameStr = r.name_en || r.name_ar || r.name_ku || ''
             return (
               <Card key={r.id} className="flex flex-col overflow-hidden p-0 transition hover:shadow-lg">
                 <div className="relative h-36 overflow-hidden bg-charcoal">
@@ -182,7 +189,7 @@ export default function WebsitesPage() {
                       <Icon name="book" size={10} /> {r.categoryCount}
                     </span>
                     <span className="flex items-center gap-1">
-                      <Icon name="clock" size={10} /> {r.updatedAt ? new Date(r.updatedAt).toLocaleDateString() : '—'}
+                      <Icon name="clock" size={10} /> {r.updated_at ? new Date(r.updated_at).toLocaleDateString() : '—'}
                     </span>
                   </div>
                   <div className="mt-4 flex gap-2">

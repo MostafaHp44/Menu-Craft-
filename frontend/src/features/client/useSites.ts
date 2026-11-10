@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { sitesAPI, ApiError } from '../../shared/api/service'
-import type { SiteCard, SiteSummary } from '../../shared/lib/api-types'
+import type { SiteCard, SitePlanSummary } from '../../shared/lib/api-types'
 
 export function useSites() {
   const [sites, setSites] = useState<SiteCard[]>([])
-  const [summary, setSummary] = useState<SiteSummary | null>(null)
+  const [summary, setSummary] = useState<SitePlanSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -16,8 +16,8 @@ export function useSites() {
         sitesAPI.list(),
         sitesAPI.summary(),
       ])
-      setSites((listRes.sites as SiteCard[]) || [])
-      setSummary(sumRes as SiteSummary)
+      setSites((listRes.data as SiteCard[]) || [])
+      setSummary(sumRes.data as SitePlanSummary)
     } catch (e: any) {
       if (e instanceof ApiError && e.status === 401) {
         setError('Session expired — please sign in again.')

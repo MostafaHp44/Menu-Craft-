@@ -22,9 +22,9 @@
   --rs-muted: #6d665c;
   --rs-accent-soft: #f6e5dd;
   --rs-accent-ink: #c24f1c;
-  --rs-heading: "Playfair Display", Georgia, serif;
-  --rs-body: "Inter", system-ui, sans-serif;
-  --rs-menu: "Inter", system-ui, sans-serif;
+  --rs-heading: "Playfair Display", "Cairo", Georgia, serif;
+  --rs-body: "Inter", "Cairo", system-ui, sans-serif;
+  --rs-menu: "Inter", "Cairo", system-ui, sans-serif;
   --rs-h-scale: 1;
   --rs-b-scale: 1;
   --rs-h-weight: 600;
@@ -1439,4 +1439,345 @@
 .rs-ed-media,
 .rs-ed {
   scroll-margin-top: 5rem;
+}
+
+/* ==================================================================== *
+ * Krispy / donut-shop variant
+ * Green-and-red menu-board treatment: banner section titles, price-
+ * first list rows, chip badges and a fresh-daily hero accent.
+ * ==================================================================== */
+
+.rs[data-variant="krispy"] .rs-header {
+  background: var(--rs-primary);
+  border-bottom: 0;
+}
+
+.rs[data-variant="krispy"] .rs-logo__name,
+.rs[data-variant="krispy"] .rs-logo__sub,
+.rs[data-variant="krispy"] .rs-nav__link,
+.rs[data-variant="krispy"] .rs-header__phone {
+  color: #fff;
+}
+
+.rs[data-variant="krispy"] .rs-logo__mark {
+  background: #fff;
+  color: var(--rs-primary);
+}
+
+.rs[data-variant="krispy"] .rs-header--minimal .rs-logo__sub {
+  display: block;
+  color: color-mix(in srgb, #fff 82%, transparent);
+}
+
+.rs[data-variant="krispy"] .rs-hero__title {
+  color: var(--rs-primary);
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+
+.rs[data-variant="krispy"] .rs-hero__lead {
+  color: var(--rs-muted);
+}
+
+.rs[data-variant="krispy"] .rs-chip {
+  background: var(--rs-primary);
+  color: #fff;
+  clip-path: polygon(0 0, 100% 0, 95% 100%, 5% 100%);
+  border-radius: 0;
+  padding: 0.7em 1.4em;
+}
+
+.rs[data-variant="krispy"] .rs-head__title {
+  background: var(--rs-primary);
+  color: #fff;
+  display: inline-block;
+  padding: 0.45em 1.4em 0.55em;
+  clip-path: polygon(0 0, 100% 0, 92% 100%, 8% 100%);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 800;
+}
+
+.rs[data-variant="krispy"] .rs-head__title::first-letter {
+  color: #fff;
+}
+
+.rs[data-variant="krispy"] .rs-eyebrow {
+  color: var(--rs-accent);
+}
+
+.rs[data-variant="krispy"] .rs-list .rs-item {
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--rs-primary) 20%, transparent);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none !important;
+}
+
+.rs[data-variant="krispy"] .rs-list .rs-item__media {
+  width: 0;
+  display: none;
+}
+
+.rs[data-variant="krispy"] .rs-list .rs-item__name {
+  color: var(--rs-primary);
+  font-weight: 700;
+}
+
+.rs[data-variant="krispy"] .rs-list .rs-item__price {
+  color: var(--rs-accent);
+  font-weight: 800;
+  font-size: 1.1em;
+}
+
+.rs[data-variant="krispy"] .rs-badge {
+  background: var(--rs-accent);
+  clip-path: polygon(0 0, 100% 0, 100% 72%, 50% 100%, 0 72%);
+  border-radius: 0;
+  padding: 0.45em 0.9em 0.65em;
+}
+
+.rs[data-variant="krispy"] .rs-badge--soft {
+  background: color-mix(in srgb, var(--rs-accent) 14%, #fff);
+  color: var(--rs-accent);
+}
+
+.rs[data-variant="krispy"] .rs-btn--accent {
+  background: var(--rs-accent);
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  clip-path: polygon(6% 0, 94% 0, 100% 100%, 0 100%);
+  border-radius: 0;
+}
+
+.rs[data-variant="krispy"] .rs-featured {
+  background: #fff;
+  border-block: 0;
+}
+
+.rs[data-variant="krispy"] .rs-menu__tab[aria-selected="true"] {
+  background: var(--rs-primary);
+  border-color: var(--rs-primary);
+  color: #fff;
+}
+
+/* ==================================================================== *
+ * Sticky tabs + scrollspy (menuDisplay === 'scroll-sticky')
+ * ==================================================================== */
+
+.rs-menu__sticky {
+  position: sticky;
+  top: 64px;
+  z-index: 20;
+  background: color-mix(in srgb, var(--rs-bg) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-block: 1px solid var(--rs-border);
+  margin-inline: calc(-1 * clamp(18px, 4.2cqw, 60px));
+  padding-inline: clamp(18px, 4.2cqw, 60px);
+  padding-block: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.rs-menu__sticky::-webkit-scrollbar { display: none; }
+
+.rs-menu__tab--sticky {
+  flex: 0 0 auto;
+  border: 1px solid var(--rs-border);
+  background: var(--rs-card);
+  color: var(--rs-text);
+  border-radius: 999px;
+  padding: 0.55em 1.1em;
+  font-weight: 700;
+  font-size: 0.85em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rs-menu__tab--sticky.is-active {
+  background: var(--rs-primary);
+  border-color: var(--rs-primary);
+  color: var(--rs-bg);
+}
+
+.rs-menu__stack {
+  display: grid;
+  gap: 2.5rem;
+  margin-top: 1.5rem;
+}
+
+.rs-menu-cat {
+  scroll-margin-top: 140px;
+}
+
+.rs-menu-cat__head {
+  margin-bottom: 1.2rem;
+}
+
+.rs-menu-cat__title {
+  font-family: var(--rs-heading);
+  font-size: 1.4em;
+  font-weight: 700;
+  color: var(--rs-text);
+}
+
+.rs-menu-cat__note {
+  color: var(--rs-muted);
+  font-size: 0.9em;
+  margin-top: 0.25rem;
+}
+
+/* Menu display: board (priceboard, no images) */
+.rs-board {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.rs-board-item {
+  border-bottom: 1px dashed var(--rs-border);
+  padding: 0.55rem 0;
+}
+
+.rs-board-item__row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.rs-board-item__name {
+  font-family: var(--rs-menu);
+  font-weight: 700;
+  font-size: 1em;
+  color: var(--rs-text);
+}
+
+.rs-board-item__dots {
+  flex: 1;
+  border-bottom: 2px dotted var(--rs-border);
+  transform: translateY(-4px);
+}
+
+.rs-board-item__price {
+  font-weight: 800;
+  color: var(--rs-accent);
+  font-size: 1.05em;
+  white-space: nowrap;
+}
+
+.rs-board-item__desc {
+  font-size: 0.85em;
+  color: var(--rs-muted);
+  margin-top: 0.2rem;
+  max-width: 52ch;
+}
+
+.rs-board-item__add {
+  margin-top: 0.35rem;
+  font-size: 0.75em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--rs-primary);
+  color: var(--rs-bg);
+  border-radius: 999px;
+  padding: 0.35em 0.9em;
+  border: 0;
+  cursor: pointer;
+}
+
+/* Menu display: deck (horizontal scroll cards) */
+.rs-deck {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding-block: 0.5rem 1rem;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+}
+
+.rs-deck .rs-item {
+  flex: 0 0 260px;
+  scroll-snap-align: start;
+}
+
+/* Menu display: compact (tiny thumb + price) */
+.rs-compact {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.rs-compact-item {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  background: var(--rs-card);
+  border: 1px solid var(--rs-border);
+  border-radius: var(--rs-radius);
+  padding: 0.55rem 0.7rem;
+}
+
+.rs-compact-item__thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: calc(var(--rs-radius) * 0.7);
+  overflow: hidden;
+  flex: 0 0 auto;
+  background: var(--rs-bg);
+}
+
+.rs-compact-item__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rs-compact-item__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.rs-compact-item__name {
+  font-family: var(--rs-menu);
+  font-weight: 700;
+  font-size: 0.95em;
+  line-height: 1.25;
+}
+
+.rs-compact-item__desc {
+  font-size: 0.8em;
+  color: var(--rs-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.rs-compact-item__price {
+  font-weight: 800;
+  color: var(--rs-accent);
+  white-space: nowrap;
+}
+
+.rs-compact-item__add {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--rs-primary);
+  color: var(--rs-bg);
+  font-weight: 800;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.rs-compact-item__del {
+  border: 0;
+  background: transparent;
+  color: #dc2626;
+  font-weight: 800;
+  cursor: pointer;
 }

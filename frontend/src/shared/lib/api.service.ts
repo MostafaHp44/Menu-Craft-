@@ -1,5 +1,8 @@
 // frontend/src/shared/lib/api.service.ts
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3000';
+// افتراضي: مسارات نسبية عبر Vite proxy (نفس أصل الصفحة) حتى تتطابق كوكي الجلسة
+// مع طلبات الـ API دائمًا. للوصول المباشر إلى خادم على منفذ آخر اجمعه تحت نفس
+// الأصل (أو اضبط VITE_API_URL_ABSOLUTE عند الحاجة التصميم الحقيقي).
+const API_URL = import.meta.env.VITE_API_URL_ABSOLUTE || '';
 
 function getToken(): string | null {
   return null; // Token lifecycle handled exclusively via httpOnly cookie
@@ -243,7 +246,7 @@ export const platformAPI = {
     restaurantId: string
     planId: string
     price: number
-    status: 'active' | 'trialing' | 'past_due' | 'expired'
+    status: 'active' | 'trialing' | 'past_due' | 'expired' | 'cancelled'
     renewsAt: string
     autoRenew?: boolean
     paymentIntentId?: string
@@ -257,15 +260,24 @@ export const platformAPI = {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),
+  createAdmin: (body: { name: string; email: string; password: string; role: 'super_admin' | 'admin' }) =>
+    request<{ ok: boolean; data?: any; accessToken?: string; refreshToken?: string; message?: string }>('/api/platform/admins', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  deleteUser: (userId: string) =>
+    request<{ ok: boolean; data?: any }>(`/api/platform/admin/users/${encodeURIComponent(userId)}`, {
+      method: 'DELETE',
+    }),
   getStats: () =>
     request<{ ok: boolean; data: any }>('/api/platform/stats'),
 };
 
 /* ---------- Templates (server-backed custom copies) ---------- */
 export const templateAPI = {
-  /** الزائر: القوالب الفعّالة فقط */
+  /** الزائر: القوالب الفعّالة فقط + التعديلات */
   getPublic: () =>
-    request<{ ok: boolean; data: any[] }>('/api/platform/templates'),
+    request<{ ok: boolean; data: any[]; overrides?: any[] }>('/api/platform/templates'),
   /** الإدارة: كل القوالب (بما فيها المعطّلة) */
   getAll: () =>
     request<{ ok: boolean; data: any[] }>('/api/platform/templates/all'),
@@ -274,10 +286,47 @@ export const templateAPI = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  update: (id: string, body: { name?: string; category?: string | null; base_template_id?: string; is_active?: boolean }) =>
+    request<{ ok: boolean; data: any }>(`/api/platform/templates/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
   remove: (id: string) =>
     request<{ ok: boolean; deactivated?: boolean }>(`/api/platform/templates/${id}`, {
       method: 'DELETE',
     }),
+  getOverrides: () =>
+    request<{ ok: boolean; data: any[] }>('/api/platform/templates/overrides-admin'),
+  getOverride: (baseId: string) =>
+    request<{ ok: boolean; data: any }>(`/api/platform/templates/overrides/${encodeURIComponent(baseId)}`),
+  saveOverride: (baseId: string, body: any) =>
+    request<{ ok: boolean; data: any }>(`/api/platform/templates/overrides/${encodeURIComponent(baseId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  deleteOverride: (baseId: string) =>
+    request<{ ok: boolean; deleted: boolean }>(`/api/platform/templates/overrides/${encodeURIComponent(baseId)}`, {
+      method: 'DELETE',
+    }),
+  listMedia: () =>
+    request<{ ok: boolean; data: Array<{ url: string; filename: string; kind: 'image' | 'video'; size: number; mtime: number; source: string }> }>('/api/platform/templates/media'),
+  upload: (file: File): Promise<{ ok: boolean; data: { url: string; filename: string; mime: string; size: number; kind: 'image' | 'video' } }> => {
+    const form = new FormData();
+    form.append('file', file);
+    return fetch(`${API_URL}/api/platform/templates/upload`, {
+      method: 'POST',
+      body: form,
+      credentials: 'include',
+    }).then(async (res) => {
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const err: Error & { status?: number } = new Error(json.error || `Upload failed: ${res.status}`);
+        err.status = res.status;
+        throw err;
+      }
+      return json;
+    });
+  },
 };
 
 /* ---------- Home Content ---------- */
@@ -293,15 +342,11 @@ export const homeContentAPI = {
 
 /* ---------- Sites (حدّ المواقع + بطاقات المواقع) ---------- */
 export const sitesAPI = {
-  /** ملخص الحدود: maxSites/used/remaining/subscription */
-  summary: () => request<import('../types/public').SiteSummary>('/api/sites/summary'),
-  /** مواقع الحساب الحالي (بطاقات) */
+  summary: () => request<{ ok: boolean; data: import('../types/public').SiteSummary }>('/api/sites/summary'),
   list: () => request<{ ok: boolean; data: import('../types/public').SiteCard[] }>('/api/sites'),
-  /** هل يمكن إنشاء موقع جديد الآن؟ */
   canCreate: () => request<{ ok: boolean; canCreate: boolean; reason?: string; remaining?: number | null }>('/api/sites/can-create'),
-  /** إنشاء موقع — يرمي 403 PLAN_LIMIT_REACHED عند تجاوز الحد */
   create: (body: { name: string; slug: string; templateId?: string }) =>
-    request<{ ok: boolean; data: any }>('/api/sites', {
+    request<{ ok: boolean; data: any }>('/api/restaurants', {
       method: 'POST',
       body: JSON.stringify(body),
     }),
@@ -343,12 +388,6 @@ export const guestOrderAPI = {
 
 /* ---------- الطلبات أونلاين (العميل النهائي) ---------- */
 export const publicOrderAPI = {
-  /** إنشاء طلب من الموقع العام — يعيد رقم الطلب + توكن التتبع */
-  create: (slug: string, body: import('../types/public').OnlineOrderPayload) =>
-    request<import('../types/public').OnlineOrderResponse>(`/api/public/menu/${encodeURIComponent(slug)}/orders`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
   /** تتبع آمن بالتوكن */
   track: (id: string, token: string) =>
     request<{ ok: boolean; data: import('../types/public').TrackOrderResponse }>(
@@ -362,15 +401,6 @@ export const publicOrderAPI = {
         method: 'POST',
         body: JSON.stringify({ ...body, token }),
       }
-    ),
-};
-
-/* ---------- طرق الدفع المتاحة في الموقع ---------- */
-export const paymentsAPI = {
-  /** طرق الدفع المهيأة فعليًا لهذا الموقع (عامة) */
-  publicMethods: (slug: string) =>
-    request<{ ok: boolean; data: import('../types/public').PublicPaymentMethod[] }>(
-      `/api/public/menu/${encodeURIComponent(slug)}/payment-methods`
     ),
 };
 
@@ -422,5 +452,10 @@ export const planAPI = {
   delete: (id: string) =>
     request<{ ok: boolean }>(`/api/platform/plans/${id}`, { method: 'DELETE' }),
 };
+
+/** Direct authenticated fetch for ad-hoc endpoints — same auto-refresh as `request()` */
+export function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  return request<T>(path, options);
+}
 
 export { setToken, setRefreshToken, removeToken, getToken, getRefreshToken };

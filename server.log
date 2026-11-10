@@ -1,0 +1,4 @@
+{"level":30,"time":1793984494287,"pid":65632,"hostname":"DESKTOP-7LAK1O8","msg":"Server listening at http://0.0.0.0:3000"}
+Digital Menu Backend running at http://0.0.0.0:3000
+{"level":30,"time":1793984496518,"pid":65632,"hostname":"DESKTOP-7LAK1O8","reqId":"req-1","req":{"method":"GET","url":"/health","hostname":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":10729},"msg":"incoming request"}
+{"level":30,"time":1793984496523,"pid":65632,"hostname":"DESKTOP-7LAK1O8","reqId":"req-1","res":{"statusCode":200},"responseTime":4.5793000012636185,"msg":"request completed"}

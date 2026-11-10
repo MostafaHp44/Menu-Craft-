@@ -7,15 +7,10 @@ import { FONTS, fontName } from '../../../templates/data/fonts.ts'
 import { PALETTE_PRESETS, THEME_OPTIONS, THEME_SURFACES } from '../../../templates/data/palettes.ts'
 import { getTemplate } from '../../../templates/data/templates.ts'
 import type { ColorSet, FontId, ImageAspect, LogoStyle, Restaurant, SectionId } from '../../../shared/lib/types.ts'
-import {
-  HeroVideoError,
-  SAMPLE_HERO_VIDEO,
-  deleteVideo,
-  isRemoteVideoUrl,
-  resolveVideoSrc,
-  saveVideo,
-} from '../../../shared/lib/heroVideo.ts'
-import { cx, slugify, tx, writeText } from '../../../shared/lib/utils.ts'
+import { HeroVideoError, SAMPLE_HERO_VIDEO, deleteVideo, isRemoteVideoUrl, resolveVideoSrc, saveVideo } from '../../../shared/lib/heroVideo.ts'
+import { ImageFitControls } from './ImageFitControls.tsx'
+import { ImageEditPanel } from './ImageEditPanel.tsx'
+import { cx, mix, slugify, tx, writeText } from '../../../shared/lib/utils.ts'
 import { publicUrl } from '../../../shared/lib/hooks.ts'
 import { useStore } from '../../../shared/store/useStore.ts'
 import { useI18n, type TKey } from '../../../shared/i18n'
@@ -195,6 +190,13 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
             }}
           />
         ) : null}
+        <ImageEditPanel
+          title={t('design.imageEdit.heroEdit')}
+          value={draft.heroImage}
+          fit={(draft as any).heroImageFit}
+          onChange={(src) => set('heroImage', src)}
+          onFitChange={(fit) => set('heroImageFit' as any, (fit as any) || undefined)}
+        />
       </PanelBlock>
 
       <PanelBlock title={t('design.heroVideoGroup')} description={t('design.heroVideoNote')}>
@@ -207,15 +209,47 @@ export function BrandingPanel({ compact = false }: { compact?: boolean }) {
       >
         <ImagePicker
           value={draft.gallery}
-          onToggle={(src) =>
+          onToggle={(src) => {
             set(
               'gallery',
               draft.gallery.includes(src)
                 ? draft.gallery.filter((s) => s !== src)
                 : [...draft.gallery, src]
             )
-          }
+          }}
         />
+        {draft.gallery.length ? (
+          <div className="space-y-3 pt-3">
+            {draft.gallery.map((src, index) => (
+              <div key={`${src}-${index}`} className="rounded-xl border border-sand bg-cream/60 p-3">
+                <div className="mb-2 flex items-center gap-3">
+                  <Img src={src} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[12px] font-medium text-charcoal">{t('design.imageEdit.galleryPhoto', { index: index + 1 })}</p>
+                    <p className="line-clamp-1 font-mono text-[11px] text-umber" dir="ltr">{src.slice(0, 48)}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    icon="trash"
+                    onClick={() => set('gallery', draft.gallery.filter((_, i) => i !== index))}
+                  >
+                    {t('design.imageEdit.remove')}
+                  </Button>
+                </div>
+                <ImageFitControls
+                  prefix={t('design.imageEdit.galleryPhoto', { index: index + 1 })}
+                  value={(draft as any).galleryFits?.[index]}
+                  onChange={(fit) => {
+                    const next = [...((draft as any).galleryFits || [])]
+                    next[index] = fit
+                    set('galleryFits' as any, (next as any) || undefined)
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        ) : null}
       </PanelBlock>
 
       <PanelBlock title={t('design.contactDetails')} description={t('design.contactDesc')}>
@@ -432,6 +466,7 @@ const COLOR_LABELS: Array<{ key: keyof ColorSet; labelKey: TKey; noteKey: TKey }
   { key: 'card', labelKey: 'design.colorCard', noteKey: 'design.colorCardNote' },
   { key: 'text', labelKey: 'design.colorText', noteKey: 'design.colorTextNote' },
   { key: 'secondary', labelKey: 'design.colorSecondary', noteKey: 'design.colorSecondaryNote' },
+  { key: 'border', labelKey: 'design.colorBorder', noteKey: 'design.colorBorderNote' },
 ]
 
 export function ColorPanel() {
@@ -459,7 +494,9 @@ export function ColorPanel() {
                 aria-pressed={active}
                 onClick={() =>
                   updateDraft((d) => {
-                    d.design.colors = { ...preset.colors }
+                    // البوردر المستخدم يدويًا يبقى كما هو — الباليتة تغيّر الباقي
+                    const keptBorder = d.design.colors.border
+                    d.design.colors = { ...preset.colors, ...(keptBorder ? { border: keptBorder } : null) }
                     d.design.layout.theme = 'custom'
                   })
                 }
@@ -495,7 +532,13 @@ export function ColorPanel() {
             <ColorField
               key={row.key}
               label={t(row.labelKey)}
-              value={draft.design.colors[row.key]}
+              value={
+                draft.design.colors[row.key] ??
+                // البوردر اختياري في التمبليتات القديمة — نعرض القيمة المشتقة كما تظهر فعلياً
+                (row.key === 'border'
+                  ? mix(draft.design.colors.text, draft.design.colors.background, 0.15)
+                  : '')
+              }
               onChange={(hex) =>
                 updateDraft((d) => {
                   d.design.colors[row.key] = hex

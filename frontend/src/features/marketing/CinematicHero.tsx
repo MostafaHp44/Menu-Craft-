@@ -5,6 +5,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { HOME_SEED, useHomeContentByLang } from '../../shared/store/useHomeContent.ts'
 import { useI18n } from '../../shared/i18n'
 import { Particles } from '../../shared/ui/Particles.tsx'
+import { getHeroVariant } from '../../templates/data/heroVariants.ts'
 
 const FOOD_IMAGES = [
   'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&q=80',
@@ -23,6 +24,10 @@ const FALLBACK_DESKTOP = 'https://storage.googleapis.com/gtv-videos-bucket/sampl
 const FALLBACK_MOBILE = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'
 
 gsap.registerPlugin(ScrollTrigger)
+
+// Configuração mobile-aware: تمنع ScrollTrigger من إعادة التفعيل بطريقة
+// تسبب تعطل animations على الموبايل
+
 
 /* --------------------------- roaming tagline ------------------------------ */
 
@@ -83,6 +88,10 @@ export default function CinematicHero() {
   const { lang } = useI18n()
   const contentByLang = useHomeContentByLang()
   const hero = contentByLang[lang]?.hero || contentByLang.en?.hero || HOME_SEED[lang]?.hero
+  const variant = getHeroVariant((hero as any)?.variant)
+
+  const titleScale = (hero.textSizes?.title || 100) / 100
+  const subScale = (hero.textSizes?.sub || 100) / 100
 
   /* pick video by viewport */
   const [isMobile, setIsMobile] = useState(false)
@@ -94,14 +103,24 @@ export default function CinematicHero() {
     return () => mq.removeEventListener('change', onChange)
   }, [])
 
-  const videoSrc = isMobile
-    ? (hero?.videoMobile || hero?.video || FALLBACK_MOBILE)
-    : (hero?.videoDesktop || hero?.video || FALLBACK_DESKTOP)
+  const hasAdminVideo = !!(hero?.videoMobile || hero?.videoDesktop || hero?.video)
+  const hasAdminImage = !!(hero?.imageMobile || hero?.imageDesktop || hero?.image)
+  // لو الأدمن اختار صورة فقط (من غير فيديو) — اعرض الصورة بدل ما نبدّل لفيديو تجريبي
+  const useFallbackVideo = !hasAdminVideo && !hasAdminImage
+  const videoSrc = hasAdminVideo
+    ? (isMobile ? (hero?.videoMobile || hero?.video || FALLBACK_MOBILE) : (hero?.videoDesktop || hero?.video || FALLBACK_DESKTOP))
+    : (useFallbackVideo ? (isMobile ? FALLBACK_MOBILE : FALLBACK_DESKTOP) : null)
+  const heroImage = isMobile ? (hero?.imageMobile || hero?.imageDesktop || hero?.image || '') : (hero?.imageDesktop || hero?.image || '')
 
   /* text reveal — progressive with scroll (scrub) */
   useEffect(() => {
     if (!sectionRef.current) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      gsap.set([line1Ref.current, line2Ref.current, subRef.current, tagRef.current], {
+        y: 0, opacity: 1, clearProps: 'transform',
+      })
+      return
+    }
 
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({
@@ -178,9 +197,7 @@ export default function CinematicHero() {
         })
       })
     }
-    if (!window.matchMedia('(pointer: coarse)').matches) {
-      window.addEventListener('mousemove', onMove, { passive: true })
-    }
+    window.addEventListener('mousemove', onMove, { passive: true })
 
     /* subtle scroll drift so the phrase layer feels alive while scrolling */
     const onScroll = () => {
@@ -197,24 +214,33 @@ export default function CinematicHero() {
   }, [reduced])
 
   return (
-    <section ref={sectionRef} className="relative h-[100vh] w-full overflow-hidden bg-[#071426] flex items-center justify-center">
-      <video
-        ref={videoRef}
-        autoPlay
-        muted
-        loop
-        playsInline
-        poster={hero?.image || ''}
-        className="absolute inset-0 h-full w-full object-cover opacity-80"
-        src={videoSrc}
-        onError={(e) => {
-          const v = e.currentTarget
-          const fb = isMobile ? FALLBACK_MOBILE : FALLBACK_DESKTOP
-          if (!v.src.endsWith(fb)) v.src = fb
+    <section ref={sectionRef} className="relative h-[100vh] w-full overflow-hidden flex items-center justify-center" style={{ backgroundColor: variant.bg }}>
+      {videoSrc ? (
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          loop
+          playsInline
+          poster={heroImage || ''}
+          className="absolute inset-0 h-full w-full object-cover opacity-80"
+          src={videoSrc}
+          onError={(e) => {
+            const v = e.currentTarget
+            const fb = isMobile ? FALLBACK_MOBILE : FALLBACK_DESKTOP
+            if (!v.src.endsWith(fb)) v.src = fb
+          }}
+        />
+      ) : heroImage ? (
+        <img src={heroImage} alt="" className="absolute inset-0 h-full w-full object-cover opacity-80" />
+      ) : null}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `radial-gradient(ellipse at top, ${variant.glow}59, transparent 55%), linear-gradient(to bottom, ${variant.bg}b3 0%, ${variant.bg}59 45%, ${variant.bg}db 100%)`,
         }}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#071426]/70 via-[#071426]/50 to-[#071426]/85" />
-      <div className="absolute inset-0 bg-black/35" />
+      <div className="absolute inset-0 bg-black/20" />
       <Particles className="z-[1]" />
 
       {/* Food showcase — desktop only */}
@@ -250,7 +276,7 @@ export default function CinematicHero() {
       </div>
 
       {/* Tagline — phrases float and roam around the screen (kinetic type) */}
-      {!reduced && (
+      {!reduced && variant.taglineRoam && (
         <div
           ref={floatLayerRef}
           aria-hidden="true"
@@ -263,7 +289,12 @@ export default function CinematicHero() {
             >
               <span
                 data-phrase
-                className={`block whitespace-nowrap rounded-full border border-[#55B8FF]/25 bg-[#071426]/45 px-3 py-1.5 sm:px-4 sm:py-2 tracking-[0.18em] uppercase backdrop-blur-md shadow-[0_8px_40px_-12px_rgba(36,123,223,0.5)] ${TAG_STYLES[i % TAG_STYLES.length]}`}
+                className={`block whitespace-nowrap rounded-full border border-white/20 bg-black/45 px-3 py-1.5 sm:px-4 sm:py-2 tracking-[0.18em] uppercase backdrop-blur-md ${TAG_STYLES[i % TAG_STYLES.length]}`}
+                style={{
+                  borderColor: `${variant.accent}40`,
+                  boxShadow: `0 8px 40px -12px ${variant.accent}80`,
+                  ...(i % TAG_STYLES.length === 0 ? { color: variant.accent } : {}),
+                }}
               >
                 {phrase}
               </span>
@@ -273,27 +304,55 @@ export default function CinematicHero() {
       )}
 
       {/* Text — appears progressively with scroll (scrub) */}
-      <div className="relative z-10 text-center px-6 max-w-5xl">
-        <h1 className="text-[clamp(60px,10vw,140px)] font-extrabold leading-[0.95] tracking-tighter">
-          <span ref={line1Ref} className="block text-[#55B8FF]">Digital</span>
-          <span ref={line2Ref} className="block text-white">Menu</span>
+      <div className={`relative z-10 px-6 max-w-5xl ${variant.align === 'left' ? 'text-start self-center ms-6 md:ms-16' : 'text-center'}`}>
+        <span className="mb-4 inline-block rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-white/70 backdrop-blur-md" style={hero.textColors?.eyebrow ? { color: hero.textColors.eyebrow } : undefined}>
+          {variant.name} · {variant.note}
+        </span>
+        <h1
+          className="font-extrabold leading-[0.95] tracking-tighter"
+          style={{
+            fontSize: `clamp(${Math.round(60 * variant.bigType * titleScale)}px,${Math.round(10 * variant.bigType * titleScale)}vw,${Math.round(140 * variant.bigType * titleScale)}px)`,
+            fontFamily: variant.font === 'playfair' ? '"Playfair Display", "Cairo", serif' : variant.font === 'inter' ? 'Inter, "Cairo", sans-serif' : 'Montserrat, "Cairo", sans-serif',
+          }}
+        >
+          {(hero?.title || 'Your menu, alive.')
+            .split('\n')
+            .map((line: string, i: number) => (
+              <span key={i} ref={i === 0 ? line1Ref : line2Ref} className="block" style={{ color: hero.textColors?.title || (i === 0 ? variant.accent : '#fff') }}>
+                {line}
+              </span>
+            ))}
         </h1>
-        <p ref={subRef} className="mt-6 text-xl md:text-2xl text-[#EAF4FF]/80 font-light">
-          The future of restaurant experiences starts with a scan.
+        <p ref={subRef} className={`mt-6 text-[#EAF4FF]/80 font-light ${variant.align === 'center' ? 'mx-auto max-w-2xl' : 'max-w-2xl'}`} style={{ fontSize: `clamp(${Math.round(16 * subScale)}px, ${Math.round(2.2 * subScale)}vw, ${Math.round(24 * subScale)}px)`, ...(hero.textColors?.sub ? { color: hero.textColors.sub } : {}) }}>
+          {hero?.sub || 'The future of restaurant experiences starts with a scan.'}
         </p>
+        {variant.chips ? (
+          <div className="mt-6 flex flex-wrap gap-2 justify-center">
+            {(['QR', 'Order', 'Pay'] as const).map((c) => (
+              <span key={c} className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] backdrop-blur-md" style={{ color: hero.chipColors?.[c.toLowerCase() as 'qr' | 'order' | 'pay'] || variant.accent }}>{c}</span>
+            ))}
+          </div>
+        ) : null}
+        {variant.phoneMock ? (
+          <div className="mx-auto mt-6 w-[240px] rounded-3xl border border-white/25 bg-white/10 p-3 backdrop-blur-xl">
+            <div className="flex items-center justify-between text-[13px]"><span>🍕 Margherita</span><b>$12</b></div>
+            <div className="mt-2 rounded-full bg-white py-2 text-center text-[12px] font-bold text-black">Add to cart</div>
+          </div>
+        ) : null}
         <p
           ref={tagRef}
           className={
-            reduced
-              ? 'mt-4 text-sm md:text-base font-medium tracking-[0.2em] text-[#55B8FF]/70 uppercase'
+            reduced || variant.taglineRoam
+              ? 'mt-4 text-sm md:text-base font-medium tracking-[0.2em] uppercase'
               : 'sr-only'
           }
+          style={{ color: `${variant.accent}b3` }}
         >
           {TAGLINE}
         </p>
       </div>
 
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[#55B8FF]/60 text-xs tracking-[0.3em] uppercase animate-bounce">
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-xs tracking-[0.3em] uppercase animate-bounce" style={{ color: `${variant.accent}99` }}>
         Scroll to Enter
       </div>
     </section>

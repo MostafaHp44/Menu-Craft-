@@ -22,10 +22,15 @@ export default function EarningsPage() {
   const daily = series?.daily ?? []
   const monthly = series?.monthly ?? []
   const last7 = daily.slice(-7)
-  const monthPoint = monthly.length > 0 ? monthly[monthly.length - 1] : null
+  const now = new Date()
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const monthPoints = monthly.filter((point) => point.date.startsWith(monthKey))
+  const monthPoint = monthPoints.length > 0 ? monthPoints[monthPoints.length - 1] : null
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const todayPoint = daily.find((point) => point.date === todayKey) ?? null
 
   const todayOrders = orders.filter((order) => isToday(order.createdAt))
-  const todayRevenue = todayOrders.reduce((sum, order) => sum + order.total, 0)
+  const todayRevenue = todayPoint?.revenue ?? 0
   const last7Revenue = last7.reduce((sum, point) => sum + point.revenue, 0)
   const last7Orders = last7.reduce((sum, point) => sum + point.orders, 0)
   const avgOrder = monthPoint && monthPoint.orders > 0 ? monthPoint.revenue / monthPoint.orders : 0

@@ -1,269 +1,184 @@
-const { getPool, sql } = require('../config/db');
-const { z } = require('zod');
+const { getMySQLPool } = require('../config/mysql');
 
-const subscriptionSchema = z.object({
-  restaurantId: z.string().min(1),
-  plan: z.enum(['trial', 'starter', 'professional', 'business']),
-  price: z.number().nonnegative(),
-  status: z.enum(['active', 'trialing', 'past_due', 'expired']),
-  renewsAt: z.string().datetime()
-});
+async function getPlatformStatus() {
+  const pool = await getMySQLPool(); const c = await pool.getConnection();
+  try { const [r] = await c.execute('SELECT 1'); return { status: 'mysql', timestamp: new Date() }; } finally { c.release(); }
+}
+
+async function getSubscriptionByRestaurant(restaurantId) {
+  const pool = await getMySQLPool(); const c = await pool.getConnection();
+  try {
+    const [rows] = await c.execute('SELECT * FROM Subscriptions WHERE restaurant_id = ? ORDER BY started_at DESC LIMIT 1', [restaurantId]);
+    return rows[0] || null;
+  } finally { c.release(); }
+}
+
+// ---- NEW: functions needed by platform controller ----
 
 async function getAllRestaurantsForAdmin() {
-  const pool = await getPool();
-  const result = await pool.request().query(`
-    SELECT r.id, r.name_en AS name, r.slug, r.status, r.[plan], r.created_at, r.updated_at,
-           u.name AS owner_name, u.email AS owner_email
-    FROM Restaurants r
-    LEFT JOIN Users u ON u.restaurant_id = r.id AND u.role = 'client'
-    ORDER BY r.created_at DESC
-  `);
-  return result.recordset;
+  const pool = await getMySQLPool(); const c = await pool.getConnection();
+  try {
+    // استعلامات مترابطة بدل JOIN — كل مطعم صفّ واحد بالضبط.
+    // (JOIN مع UserRestaurants/Subscriptions كان يكرّر الصفوف عند تعدد
+    //  مالكي الموقع أو اشتراكاته: مطعم واحد يظهر أكثر من مرة في لوحة السوبر أدمن)
+    const [rows] = await c.execute(`
+      SELECT 
+        r.id, r.name_en AS name, r.slug, r.status, r.plan, r.templateId AS templateId,
+        r.created_at AS createdAt, r.updated_at AS updatedAt,
+        (SELECT u.name FROM UserRestaurants ur JOIN Users u ON u.id = ur.user_id
+          WHERE ur.restaurant_id = r.id AND ur.is_owner = 1 ORDER BY ur.id LIMIT 1) AS owner_name,
+        (SELECT u.email FROM UserRestaurants ur JOIN Users u ON u.id = ur.user_id
+          WHERE ur.restaurant_id = r.id AND ur.is_owner = 1 ORDER BY ur.id LIMIT 1) AS owner_email,
+        (SELECT s.status FROM Subscriptions s
+          WHERE s.restaurant_id = r.id ORDER BY s.started_at DESC, s.id DESC LIMIT 1) AS subscription_status,
+        (SELECT p.price FROM Subscriptions s LEFT JOIN Plans p ON p.id = s.plan_id
+          WHERE s.restaurant_id = r.id ORDER BY s.started_at DESC, s.id DESC LIMIT 1) AS price
+      FROM Restaurants r
+      ORDER BY r.created_at DESC
+    `);
+    return rows;
+  } finally { c.release(); }
 }
 
 async function getSubscriptions() {
-  const pool = await getPool();
-  const result = await pool.request().query(`
-    SELECT s.id, s.restaurant_id AS restaurantId, s.plan_name AS [plan], s.price, s.status,
-           s.started_at AS startedAt, s.renews_at AS renewsAt, s.auto_renew AS autoRenew,
-           r.name_en AS restaurantName
-    FROM Subscriptions s
-    LEFT JOIN Restaurants r ON r.id = s.restaurant_id
-    ORDER BY s.started_at DESC
-  `);
-  return result.recordset;
-}
-
-const createSubscriptionSchema = z.object({
-  restaurantId: z.string().min(1),
-  planId: z.string().min(1),
-  price: z.number().nonnegative(),
-  status: z.enum(['active', 'trialing', 'past_due', 'expired']),
-  renewsAt: z.string().datetime(),
-  paymentIntentId: z.string().optional(),
-  autoRenew: z.boolean().optional()
-});
-
-async function getSubscriptionByRestaurant(restaurantId) {
-  const pool = await getPool();
-  const result = await pool.request()
-    .input('restaurantId', sql.VarChar, restaurantId)
-    .query(`
-      SELECT s.id, s.restaurant_id AS restaurantId, s.plan_id AS planId, s.plan_name AS [plan],
-             s.price, s.status, s.started_at AS startedAt, s.renews_at AS renewsAt,
-             s.auto_renew AS autoRenew, s.created_at AS createdAt,
-             p.name AS planDisplayName, p.interval_type AS intervalType, p.max_menu_items AS maxMenuItems,
-             p.max_restaurants AS maxRestaurants, p.features AS planFeatures
+  const pool = await getMySQLPool(); const c = await pool.getConnection();
+  try {
+    const [rows] = await c.execute(`
+      SELECT 
+        s.*, r.name_en AS restaurant_name, r.slug AS restaurant_slug,
+        u.name AS owner_name, u.email AS owner_email,
+        p.name AS plan_name, p.price AS plan_price, p.interval_type
       FROM Subscriptions s
+      LEFT JOIN Restaurants r ON r.id = s.restaurant_id
+      LEFT JOIN Users u ON u.id = s.user_id
       LEFT JOIN Plans p ON p.id = s.plan_id
-      WHERE s.restaurant_id = @restaurantId
       ORDER BY s.started_at DESC
     `);
-
-  if (result.recordset.length === 0) {
-    return null;
-  }
-
-  const sub = result.recordset[0];
-  return {
-    ...sub,
-    planFeatures: sub.planFeatures ? JSON.parse(sub.planFeatures) : {}
-  };
+    return rows;
+  } finally { c.release(); }
 }
 
-async function createSubscription(input) {
-  const parsed = createSubscriptionSchema.parse(input);
-  const pool = await getPool();
-  const now = new Date().toISOString();
-
-  // التحقق من وجود المطعم
-  const restaurantCheck = await pool.request()
-    .input('restaurantId', sql.VarChar, parsed.restaurantId)
-    .query('SELECT id, [plan] FROM Restaurants WHERE id = @restaurantId');
-
-  if (restaurantCheck.recordset.length === 0) {
-    const err = new Error('المطعم غير موجود');
-    err.status = 404;
-    throw err;
-  }
-
-  // جلب اسم الباقة من جدول Plans باستخدام planId
-  const planResult = await pool.request()
-    .input('planId', sql.VarChar, parsed.planId)
-    .query('SELECT name, price FROM Plans WHERE id = @planId AND is_active = 1');
-
-  if (planResult.recordset.length === 0) {
-    const err = new Error('الباقة غير موجودة أو غير فعالة');
-    err.status = 404;
-    throw err;
-  }
-
-  const planName = planResult.recordset[0].name;
-  const maxRestaurants = (planResult.recordset[0].max_restaurants ?? 1) || 1;
-
-  const existing = await pool.request()
-    .input('restaurantId', sql.VarChar, parsed.restaurantId)
-    .query('SELECT id FROM Subscriptions WHERE restaurant_id = @restaurantId');
-
-  let subscriptionId;
-  if (existing.recordset.length > 0) {
-    // تحديث الاشتراك الموجود
-    await pool.request()
-      .input('restaurantId', sql.VarChar, parsed.restaurantId)
-      .input('planId', sql.VarChar, parsed.planId)
-      .input('planName', sql.NVarChar, planName)
-      .input('price', sql.Decimal(10, 2), parsed.price)
-      .input('status', sql.NVarChar, parsed.status)
-      .input('renewsAt', sql.DateTime, parsed.renewsAt)
-      .input('autoRenew', sql.Bit, parsed.autoRenew ?? false)
-      .input('updatedAt', sql.DateTime, now)
-      .query(`
-        UPDATE Subscriptions
-        SET plan_id = @planId, plan_name = @planName, price = @price, status = @status,
-            renews_at = @renewsAt, auto_renew = @autoRenew, updated_at = @updatedAt
-        WHERE restaurant_id = @restaurantId
-      `);
-    subscriptionId = existing.recordset[0].id;
-  } else {
-    // إنشاء اشتراك جديد
-    const insertResult = await pool.request()
-      .input('restaurantId', sql.VarChar, parsed.restaurantId)
-      .input('planId', sql.VarChar, parsed.planId)
-      .input('planName', sql.NVarChar, planName)
-      .input('price', sql.Decimal(10, 2), parsed.price)
-      .input('status', sql.NVarChar, parsed.status)
-      .input('startedAt', sql.DateTime, now)
-      .input('renewsAt', sql.DateTime, parsed.renewsAt)
-      .input('autoRenew', sql.Bit, parsed.autoRenew ?? false)
-      .input('createdAt', sql.DateTime, now)
-      .input('updatedAt', sql.DateTime, now)
-      .query(`
-        INSERT INTO Subscriptions (restaurant_id, plan_id, plan_name, price, status, started_at, renews_at, auto_renew, created_at, updated_at)
-        OUTPUT INSERTED.id
-        VALUES (@restaurantId, @planId, @planName, @price, @status, @startedAt, @renewsAt, @autoRenew, @createdAt, @updatedAt)
-      `);
-    subscriptionId = insertResult.recordset[0].id;
-  }
-
-  // تحديث خطة المطعم في جدول Restaurants
-  await pool.request()
-    .input('restaurantId', sql.VarChar, parsed.restaurantId)
-    .input('plan', sql.NVarChar, String(planName).toLowerCase())
-    .input('updatedAt', sql.DateTime, now)
-    .query(`
-      UPDATE Restaurants
-      SET [plan] = @plan, updated_at = @updatedAt
-      WHERE id = @restaurantId
-    `);
-
-  // تسجيل الدفع لو تم تمرير paymentIntentId
-  if (parsed.paymentIntentId) {
-    await pool.request()
-      .input('restaurantId', sql.VarChar, parsed.restaurantId)
-      .input('subscriptionId', sql.VarChar, subscriptionId)
-      .input('stripePaymentId', sql.NVarChar, parsed.paymentIntentId)
-      .input('amount', sql.Decimal(10, 2), parsed.price)
-      .input('status', sql.NVarChar, parsed.status === 'active' ? 'succeeded' : 'pending')
-      .input('paymentMethod', sql.NVarChar, 'stripe')
-      .query(`
-        INSERT INTO Payments (restaurant_id, subscription_id, stripe_payment_id, amount, currency, status, payment_method, created_at)
-        VALUES (@restaurantId, @subscriptionId, @stripePaymentId, @amount, 'USD', @status, @paymentMethod, GETDATE())
-      `);
-  }
-
-  return { ok: true, subscriptionId, plan: planName };
+async function createSubscription({ restaurantId, planId, price, status, renewsAt, paymentIntentId, autoRenew }) {
+  const pool = await getMySQLPool(); const c = await pool.getConnection();
+  try {
+    await c.beginTransaction();
+    const subId = `sub-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    await c.execute(`
+      INSERT INTO Subscriptions (id, user_id, restaurant_id, plan_id, status, price, started_at, renews_at, payment_intent_id, auto_renew)
+      VALUES (?, (SELECT u.id FROM Users u JOIN UserRestaurants ur ON ur.user_id = u.id WHERE ur.restaurant_id = ? AND ur.is_owner = 1 LIMIT 1), ?, ?, ?, ?, NOW(), ?, ?, ?)
+    `, [subId, restaurantId, restaurantId, planId, status || 'active', price || 0, renewsAt || null, paymentIntentId || null, autoRenew ? 1 : 0]);
+    const [rows] = await c.execute('SELECT * FROM Subscriptions WHERE id = ?', [subId]);
+    await c.commit();
+    return rows[0];
+  } catch (e) {
+    await c.rollback();
+    throw e;
+  } finally { c.release(); }
 }
 
-/**
- * تحديث جزئي للاشتراك — يكفي إرسال الحقول المراد تغييرها فقط.
- * (التجديد / إيقاف التجديد التلقائي / انتهاء الصلاحية / تغيير الباقة)
- */
-async function updateSubscription(restaurantId, patch = {}) {
-  const pool = await getPool();
-
-  const existing = await pool.request()
-    .input('restaurantId', sql.VarChar, restaurantId)
-    .query('SELECT id, plan_name, price, status, renews_at, auto_renew FROM Subscriptions WHERE restaurant_id = @restaurantId');
-
-  const now = new Date();
-  const current = existing.recordset[0] || null;
-
-  if (!current) {
-    // لا يوجد اشتراك للتحديث — نشئ واحداً من الرقعة المُرسلة
-    const plan = patch.plan || 'trial';
-    const status = patch.status || 'active';
-    const renewsAt = patch.renewsAt || now.toISOString();
-    await pool.request()
-      .input('restaurantId', sql.VarChar, restaurantId)
-      .input('plan', sql.NVarChar, plan)
-      .input('price', sql.Decimal(10, 2), patch.price ?? 0)
-      .input('status', sql.NVarChar, status)
-      .input('startedAt', sql.DateTime, now)
-      .input('renewsAt', sql.DateTime, renewsAt)
-      .input('autoRenew', sql.Bit, patch.autoRenew ?? (status === 'active' ? 1 : 0))
-      .input('now', sql.DateTime, now)
-      .query(`
-        INSERT INTO Subscriptions (restaurant_id, plan_name, price, status, started_at, renews_at, auto_renew, created_at, updated_at)
-        VALUES (@restaurantId, @plan, @price, @status, @startedAt, @renewsAt, @autoRenew, @now, @now)
-      `);
-  } else {
-    // ابني قائمة التحديث ديناميكياً حتى لا نمسح حقولاً لم تُرسل
-    const sets = [];
-    const req = pool.request().input('restaurantId', sql.VarChar, restaurantId);
-    const add = (column, type, value) => {
-      sets.push(`${column} = @${column}`);
-      req.input(column, type, value);
-    };
-
-    if (patch.plan !== undefined) add('plan_name', sql.NVarChar, patch.plan);
-    if (patch.price !== undefined) add('price', sql.Decimal(10, 2), patch.price);
-    if (patch.status !== undefined) add('status', sql.NVarChar, patch.status);
-    if (patch.renewsAt !== undefined) add('renews_at', sql.DateTime, patch.renewsAt);
-    if (patch.autoRenew !== undefined) add('auto_renew', sql.Bit, patch.autoRenew ? 1 : 0);
-
-    sets.push('updated_at = @updatedAt');
-    req.input('updatedAt', sql.DateTime, now);
-
-    if (sets.length > 1) {
-      await req.query(`UPDATE Subscriptions SET ${sets.join(', ')} WHERE restaurant_id = @restaurantId`);
+async function updateSubscription(restaurantId, patch) {
+  const pool = await getMySQLPool(); const c = await pool.getConnection();
+  try {
+    const fields = [];
+    const values = [];
+    const allowed = ['plan_id', 'status', 'price', 'renews_at', 'payment_intent_id', 'auto_renew'];
+    for (const key of allowed) {
+      if (patch[key] !== undefined) {
+        fields.push(`${key} = ?`);
+        values.push(patch[key]);
+      }
     }
-  }
-
-  // مزامنة خطة المطعم في جدول Restaurants (فقط عند تغيّر الباقة)
-  if (patch.plan !== undefined) {
-    await pool.request()
-      .input('restaurantId', sql.VarChar, restaurantId)
-      .input('plan', sql.NVarChar, patch.plan)
-      .input('updatedAt', sql.DateTime, now)
-      .query(`
-        UPDATE Restaurants
-        SET [plan] = @plan, updated_at = @updatedAt
-        WHERE id = @restaurantId
-      `);
-  }
-
-  return { ok: true };
+    if (fields.length === 0) return;
+    values.push(restaurantId);
+    await c.execute(`UPDATE Subscriptions SET ${fields.join(', ')} WHERE restaurant_id = ? AND id = (SELECT id FROM Subscriptions WHERE restaurant_id = ? ORDER BY started_at DESC LIMIT 1)`, [...values, restaurantId]);
+  } finally { c.release(); }
 }
 
 async function getPlatformStats() {
-  const pool = await getPool();
-
-  const restaurants = await pool.request().query('SELECT COUNT(*) AS count FROM Restaurants');
-  const activeSubs = await pool.request().query("SELECT COUNT(*) AS count FROM Subscriptions WHERE status = 'active'");
-  const totalRevenue = await pool.request().query("SELECT ISNULL(SUM(price), 0) AS total FROM Subscriptions");
-
-  return {
-    restaurants: restaurants.recordset[0].count,
-    subscriptions: activeSubs.recordset[0].count,
-    mrr: totalRevenue.recordset[0].total
-  };
+  const pool = await getMySQLPool(); const c = await pool.getConnection();
+  try {
+    const [[{ total_restaurants }]] = await c.execute('SELECT COUNT(*) AS total_restaurants FROM Restaurants');
+    const [[{ total_users }]] = await c.execute('SELECT COUNT(*) AS total_users FROM Users');
+    const [[{ active_subscriptions }]] = await c.execute("SELECT COUNT(*) AS active_subscriptions FROM Subscriptions WHERE status IN ('active', 'trialing')");
+    const [[{ total_orders }]] = await c.execute('SELECT COUNT(*) AS total_orders FROM Orders');
+    const [[{ total_revenue }]] = await c.execute('SELECT COALESCE(SUM(amount), 0) AS total_revenue FROM Payments WHERE status = "paid"');
+    const [[{ pending_payments }]] = await c.execute('SELECT COUNT(*) AS pending_payments FROM Payments WHERE status = "pending"');
+    const [[{ mrr }]] = await c.execute(`
+      SELECT COALESCE(SUM(p.price), 0) AS mrr
+      FROM Subscriptions s
+      JOIN Plans p ON p.id = s.plan_id
+      WHERE s.status IN ('active', 'trialing') AND p.interval_type = 'month'
+    `);
+    return {
+      total_restaurants,
+      total_users,
+      active_subscriptions,
+      total_orders,
+      total_revenue: Number(total_revenue),
+      pending_payments,
+      mrr: Number(mrr)
+    };
+  } finally { c.release(); }
 }
 
-module.exports = {
+// ---- NEW: functions for SalesTab and RevenuePage ----
+
+async function getAdminSales(period = 'month') {
+  const pool = await getMySQLPool(); const c = await pool.getConnection();
+  try {
+    // Aggregate orders/payments by date and restaurant
+    const dateFilter = period === 'week' 
+      ? 'AND o.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)'
+      : period === 'year'
+        ? 'AND o.created_at >= DATE_SUB(NOW(), INTERVAL 1 YEAR)'
+        : 'AND o.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)';
+
+    const [rows] = await c.execute(`
+      SELECT 
+        DATE(o.created_at) AS date,
+        r.id AS restaurant_id,
+        r.name_en AS restaurant_name,
+        COUNT(o.id) AS orders,
+        COALESCE(SUM(p.amount), 0) AS revenue
+      FROM Orders o
+      JOIN Restaurants r ON r.id = o.restaurant_id
+      LEFT JOIN Payments p ON p.order_id = o.id AND p.status = 'paid'
+      WHERE 1=1 ${dateFilter}
+      GROUP BY DATE(o.created_at), r.id, r.name_en
+      ORDER BY date DESC
+    `);
+    return rows;
+  } finally { c.release(); }
+}
+
+async function getAdminFinancial(period = 'month') {
+  const pool = await getMySQLPool(); const c = await pool.getConnection();
+  try {
+    const days = period === 'week' ? 7 : period === 'year' ? 365 : 30;
+    const [rows] = await c.execute(`
+      SELECT 
+        DATE_FORMAT(p.created_at, '%Y-%m') AS period,
+        COALESCE(SUM(CASE WHEN p.status = 'paid' THEN p.amount ELSE 0 END), 0) AS revenue,
+        COALESCE(SUM(CASE WHEN p.status = 'pending' THEN p.amount ELSE 0 END), 0) AS pending,
+        COALESCE(SUM(CASE WHEN p.status = 'failed' THEN p.amount ELSE 0 END), 0) AS failed,
+        COALESCE(SUM(CASE WHEN p.status = 'refunded' THEN p.amount ELSE 0 END), 0) AS refunded
+      FROM Payments p
+      WHERE p.created_at >= DATE_SUB(NOW(), INTERVAL ${days} DAY)
+      GROUP BY period
+      ORDER BY period DESC
+    `);
+    return rows;
+  } finally { c.release(); }
+}
+
+module.exports = { 
+  getPlatformStatus, 
+  getSubscriptionByRestaurant,
   getAllRestaurantsForAdmin,
   getSubscriptions,
-  getSubscriptionByRestaurant,
   createSubscription,
   updateSubscription,
-  getPlatformStats
+  getPlatformStats,
+  getAdminSales,
+  getAdminFinancial
 };

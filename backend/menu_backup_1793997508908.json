@@ -1,0 +1,66 @@
+{
+  "takenAt": "2026-11-06T20:38:28.903Z",
+  "note": "نسخة احتياطية قبل seed_json_from_menuitems.js",
+  "restaurants": [
+    {
+      "id": "rest-1793763207061-secob",
+      "slug": "e2e-test-restaurant",
+      "draft_menu": "[]",
+      "published_menu": "[]"
+    },
+    {
+      "id": "rest-1793846465919-hnucf",
+      "slug": "probe-cafe",
+      "draft_menu": "[]",
+      "published_menu": "[]"
+    },
+    {
+      "id": "rest-1793846854613-x5vk0",
+      "slug": "browser-cafe",
+      "draft_menu": "[]",
+      "published_menu": "[]"
+    },
+    {
+      "id": "rest-1793886341827-hkf4w",
+      "slug": "free-plan-bistro",
+      "draft_menu": "[]",
+      "published_menu": "[]"
+    },
+    {
+      "id": "rest-1793904460546-p3ioy",
+      "slug": "tecnoworld",
+      "draft_menu": "[]",
+      "published_menu": "[]"
+    },
+    {
+      "id": "rest-1793936053029-gcr86",
+      "slug": "e2e-templates-site",
+      "draft_menu": "[]",
+      "published_menu": "[]"
+    },
+    {
+      "id": "rest-bella-mw1xq4wc-8pa9o",
+      "slug": "bella",
+      "draft_menu": "[{\"id\":\"seed-cat-17\",\"name\":\"Antipasti\",\"note\":\"To share, or not\",\"items\":[{\"id\":\"seed-item-48\",\"name\":\"Bruschetta al Pomodoro\",\"description\":\"Sourdough, garlic, basil, olive oil\",\"price\":9,\"compareAt\":null,\"image\":\"/images/food/food-33.jpg\",\"featured\":false,\"popular\":true,\"available\":true},{\"id\":\"seed-item-49\",\"name\":\"Insalata della Casa\",\"description\":\"Leaves, shaved parmigiano, lemon\",\"price\":11,\"compareAt\":null,\"image\":\"/images/food/food-15.jpg\",\"featured\":false,\"popular\":false,\"available\":true},{\"id\":\"seed-item-50\",\"name\":\"Polpette della Nonna\",\"description\":\"Beef & pork meatballs, sugo, parmesan\",\"price\":13,\"compareAt\":null,\"image\":\"/images/food/food-50.jpg\",\"featured\":false,\"popular\":false,\"available\":true}]},{\"id\":\"seed-cat-18\",\"name\":\"Pasta\",\"note\":\"Rolled fresh every morning\",\"items\":[{\"id\":\"seed-item-51\",\"name\":\"Tagliatelle ai Funghi\",\"description\":\"Wild mushroom, thyme, cream\",\"price\":19,\"compareAt\":null,\"image\":\"/images/food/food-37.jpg\",\"featured\":true,\"popular\":true,\"available\":true},{\"id\":\"seed-item-52\",\"name\":\"Spaghetti ai Frutti di Mare\",\"description\":\"Clams, mussels, chilli, white wine\",\"price\":23,\"compareAt\":null,\"image\":\"/images/food/food-38.jpg\",\"featured\":true,\"popular\":false,\"available\":true},{\"id\":\"seed-item-53\",\"name\":\"Penne allâ€™Arrabbiata\",\"description\":\"Tomato, garlic, calabrian chilli\",\"price\":16,\"compareAt\":null,\"image\":\"/images/food/food-10.jpg\",\"featured\":false,\"popular\":false,\"available\":true},{\"id\":\"seed-item-54\",\"name\":\"Pasta alla Zucchina\",\"description\":\"Courgette ribbons, mint, pecorino\",\"price\":18,\"compareAt\":null,\"image\":\"/images/food/food-43.jpg\",\"featured\":false,\"popular\":false,\"available\":true}]},{\"id\":\"seed-cat-19\",\"name\":\"Pizza\",\"note\":\"48-hour dough, wood fired\",\"items\":[{\"id\":\"seed-item-55\",\"name\":\"Margherita D.O.P.\",\"description\":\"San marzano, fior di latte, basil\",\"price\":16,\"compareAt\":null,\"image\":\"/images/food/food-11.jpg\",\"featured\":false,\"popular\":true,\"available\":true},{\"id\":\"seed-item-56\",\"name\":\"Quattro Formaggi\",\"description\":\"Gorgonzola, taleggio, provolone, mozzarella\",\"price\":19,\"compareAt\":null,\"image\":\"/images/food/food-08.jpg\",\"featured\":false,\"popular\":false,\"available\":true},{\"id\":\"seed-item-57\",\"name\":\"Diavola\",\"description\":\"Spicy salami, chilli honey\",\"price\":18,\"compareAt\":null,\"image\":\"/images/food/food-12.jpg\",\"featured\":false,\"popular\":false,\"available\":true}]},{\"id\":\"seed-cat-20\",\"name\":\"Secondi\",\"note\":\"From the grill\",\"items\":[{\"id\":\"seed-item-58\",\"name\":\"Tagliata di Manzo\",\"description\":\"Sliced ribeye, rocket, balsamic\",\"price\":32,\"compareAt\":null,\"image\":\"/images/food/food-13.jpg\",\"featured\":true,\"popular\":false,\"available\":true},{\"id\":\"seed-item-59\",\"name\":\"Bistecca alla Fiorentina\",\"description\":\"For two, 600g, rosemary potatoes\",\"price\":68,\"compareAt\":null,\"image\":\"/images/food/food-17.jpg\",\"featured\":false,\"popular\":false,\"available\":true},{\"id\":\"seed-item-60\",\"name\":\"Costolette dâ€™Agnello\",\"description\":\"Slow braised, tomato, olives\",\"price\":29,\"compareAt\":null,\"image\":\"/images/food/food-36.jpg\",\"featured\":false,\"popular\":false,\"available\":true}]},{\"id\":\"seed-cat-21\",\"name\":\"Dolci\",\"note\":\"Made by Marta\",\"items\":[{\"id\":\"seed-item-61\",\"name\":\"TiramisÃ¹ Classico\",\"description\":\"Mascarpone, espresso, cocoa\",\"price\":9,\"compareAt\":null,\"image\":\"/images/food/food-30.jpg\",\"featured\":true,\"popular\":false,\"available\":true},{\"id\":\"seed-item-62\",\"name\":\"Torta al Cioccolato\",\"description\":\"Warm dark chocolate centre\",\"price\":10,\"compareAt\":null,\"image\":\"/images/food/food-28.jpg\",\"featured\":false,\"popular\":false,\"available\":true},{\"id\":\"seed-item-63\",\"name\":\"Biscotti della Casa\",\"description\":\"Almond, cantuccini, vin santo\",\"price\":7,\"compareAt\":null,\"image\":\"/images/food/food-41.jpg\",\"featured\":false,\"popular\":false,\"available\":true}]}]",
+      "published_menu": "[{\"id\":\"seed-cat-17\",\"name\":\"Antipasti\",\"note\":\"To share, or not\",\"items\":[{\"id\":\"seed-item-48\",\"name\":\"Bruschetta al Pomodoro\",\"description\":\"Sourdough, garlic, basil, olive oil\",\"price\":9,\"compareAt\":null,\"image\":\"/images/food/food-33.jpg\",\"featured\":false,\"popular\":true,\"available\":true},{\"id\":\"seed-item-49\",\"name\":\"Insalata della Casa\",\"description\":\"Leaves, shaved parmigiano, lemon\",\"price\":11,\"compareAt\":null,\"image\":\"/images/food/food-15.jpg\",\"featured\":false,\"popular\":false,\"available\":true},{\"id\":\"seed-item-50\",\"name\":\"Polpette della Nonna\",\"description\":\"Beef & pork meatballs, sugo, parmesan\",\"price\":13,\"compareAt\":null,\"image\":\"/images/food/food-50.jpg\",\"featured\":false,\"popular\":false,\"available\":true}]},{\"id\":\"seed-cat-18\",\"name\":\"Pasta\",\"note\":\"Rolled fresh every morning\",\"items\":[{\"id\":\"seed-item-51\",\"name\":\"Tagliatelle ai Funghi\",\"description\":\"Wild mushroom, thyme, cream\",\"price\":19,\"compareAt\":null,\"image\":\"/images/food/food-37.jpg\",\"featured\":true,\"popular\":true,\"available\":true},{\"id\":\"seed-item-52\",\"name\":\"Spaghetti ai Frutti di Mare\",\"description\":\"Clams, mussels, chilli, white wine\",\"price\":23,\"compareAt\":null,\"image\":\"/images/food/food-38.jpg\",\"featured\":true,\"popular\":false,\"available\":true},{\"id\":\"seed-item-53\",\"name\":\"Penne allâ€™Arrabbiata\",\"description\":\"Tomato, garlic, calabrian chilli\",\"price\":16,\"compareAt\":null,\"image\":\"/images/food/food-10.jpg\",\"featured\":false,\"popular\":false,\"available\":true},{\"id\":\"seed-item-54\",\"name\":\"Pasta alla Zucchina\",\"description\":\"Courgette ribbons, mint, pecorino\",\"price\":18,\"compareAt\":null,\"image\":\"/images/food/food-43.jpg\",\"featured\":false,\"popular\":false,\"available\":true}]},{\"id\":\"seed-cat-19\",\"name\":\"Pizza\",\"note\":\"48-hour dough, wood fired\",\"items\":[{\"id\":\"seed-item-55\",\"name\":\"Margherita D.O.P.\",\"description\":\"San marzano, fior di latte, basil\",\"price\":16,\"compareAt\":null,\"image\":\"/images/food/food-11.jpg\",\"featured\":false,\"popular\":true,\"available\":true},{\"id\":\"seed-item-56\",\"name\":\"Quattro Formaggi\",\"description\":\"Gorgonzola, taleggio, provolone, mozzarella\",\"price\":19,\"compareAt\":null,\"image\":\"/images/food/food-08.jpg\",\"featured\":false,\"popular\":false,\"available\":true},{\"id\":\"seed-item-57\",\"name\":\"Diavola\",\"description\":\"Spicy salami, chilli honey\",\"price\":18,\"compareAt\":null,\"image\":\"/images/food/food-12.jpg\",\"featured\":false,\"popular\":false,\"available\":true}]},{\"id\":\"seed-cat-20\",\"name\":\"Secondi\",\"note\":\"From the grill\",\"items\":[{\"id\":\"seed-item-58\",\"name\":\"Tagliata di Manzo\",\"description\":\"Sliced ribeye, rocket, balsamic\",\"price\":32,\"compareAt\":null,\"image\":\"/images/food/food-13.jpg\",\"featured\":true,\"popular\":false,\"available\":true},{\"id\":\"seed-item-59\",\"name\":\"Bistecca alla Fiorentina\",\"description\":\"For two, 600g, rosemary potatoes\",\"price\":68,\"compareAt\":null,\"image\":\"/images/food/food-17.jpg\",\"featured\":false,\"popular\":false,\"available\":true},{\"id\":\"seed-item-60\",\"name\":\"Costolette dâ€™Agnello\",\"description\":\"Slow braised, tomato, olives\",\"price\":29,\"compareAt\":null,\"image\":\"/images/food/food-36.jpg\",\"featured\":false,\"popular\":false,\"available\":true}]},{\"id\":\"seed-cat-21\",\"name\":\"Dolci\",\"note\":\"Made by Marta\",\"items\":[{\"id\":\"seed-item-61\",\"name\":\"TiramisÃ¹ Classico\",\"description\":\"Mascarpone, espresso, cocoa\",\"price\":9,\"compareAt\":null,\"image\":\"/images/food/food-30.jpg\",\"featured\":true,\"popular\":false,\"available\":true},{\"id\":\"seed-item-62\",\"name\":\"Torta al Cioccolato\",\"description\":\"Warm dark chocolate centre\",\"price\":10,\"compareAt\":null,\"image\":\"/images/food/food-28.jpg\",\"featured\":false,\"popular\":false,\"available\":true},{\"id\":\"seed-item-63\",\"name\":\"Biscotti della Casa\",\"description\":\"Almond, cantuccini, vin santo\",\"price\":7,\"compareAt\":null,\"image\":\"/images/food/food-41.jpg\",\"featured\":false,\"popular\":false,\"available\":true}]}]"
+    },
+    {
+      "id": "rst-mw3vrdvt-d7aax",
+      "slug": "new-site-qa",
+      "draft_menu": "[]",
+      "published_menu": "[]"
+    },
+    {
+      "id": "rst-mw3vtf8n-qsr00",
+      "slug": "qa-vtf8c",
+      "draft_menu": "[]",
+      "published_menu": "[]"
+    },
+    {
+      "id": "test-restaurant",
+      "slug": "test-restaurant",
+      "draft_menu": "[]",
+      "published_menu": "[]"
+    }
+  ]
+}

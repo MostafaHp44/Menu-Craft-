@@ -1,9 +1,16 @@
 const fastify = require('fastify')({ logger: require('pino')() });
+
+// ** Environment Validation **
+// تحميل .env ثم رفض الإقلاع بأي JWT secret افتراضي/ضعيف/محرّر (dev و prod معًا)
+// — لا توجد قيم fallback في الكود إطلاقًا (إصلاح P0 C-1).
+require('dotenv').config();
+const { assertJwtSecrets } = require('./config/secrets');
+assertJwtSecrets();
+
 const corsPlugin = require('./middleware/cors');
 const authMiddleware = require('./middleware/auth.middleware');
 const authRoutes = require('./routes/auth.routes');
 
-// ** Environment Validation **
 // In production, missing required environment variables must stop startup.
 // In development, preserve the current local workflow.
 const requiredEnvVars = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
@@ -15,60 +22,9 @@ for (const varName of requiredEnvVars) {
     missingEnv = true;
   }
 }
-
-// In production, JWT secrets are required; in development fallbacks are acceptable.
-// Production validations:
-if (process.env.NODE_ENV === 'production') {
-  // Check JWT_ACCESS_SECRET exists and is valid
-  if (!process.env.JWT_ACCESS_SECRET) {
-    fastify.log.fatal('JWT_ACCESS_SECRET is required in production - cannot start');
-    process.exit(1);
-  }
-  // Check JWT_ACCESS_SECRET minimum length (32 characters)
-  if (process.env.JWT_ACCESS_SECRET.length < 32) {
-    fastify.log.fatal('JWT_ACCESS_SECRET must be at least 32 characters long');
-    process.exit(1);
-  }
-  // Reject obvious placeholder/default values
-  const placeholderPatterns = ['change_this', 'your_secret', 'replace_me', 'example', 'password', 'secret_key'];
-  const lowerAccessSecret = process.env.JWT_ACCESS_SECRET.toLowerCase();
-  for (const pattern of placeholderPatterns) {
-    if (lowerAccessSecret.includes(pattern)) {
-      fastify.log.fatal('JWT_ACCESS_SECRET contains a prohibited placeholder pattern: ' + pattern);
-      process.exit(1);
-    }
-  }
-  // Check JWT_REFRESH_SECRET exists and is valid
-  if (!process.env.JWT_REFRESH_SECRET) {
-    fastify.log.fatal('JWT_REFRESH_SECRET is required in production - cannot start');
-    process.exit(1);
-  }
-  // Check JWT_REFRESH_SECRET minimum length (32 characters)
-  if (process.env.JWT_REFRESH_SECRET.length < 32) {
-    fastify.log.fatal('JWT_REFRESH_SECRET must be at least 32 characters long');
-    process.exit(1);
-  }
-  // Reject obvious placeholder/default values
-  const lowerRefreshSecret = process.env.JWT_REFRESH_SECRET.toLowerCase();
-  for (const pattern of placeholderPatterns) {
-    if (lowerRefreshSecret.includes(pattern)) {
-      fastify.log.fatal('JWT_REFRESH_SECRET contains a prohibited placeholder pattern: ' + pattern);
-      process.exit(1);
-    }
-  }
-  // Access and refresh secrets must not be identical
-  if (process.env.JWT_ACCESS_SECRET === process.env.JWT_REFRESH_SECRET) {
-    fastify.log.fatal('JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must not be identical');
-    process.exit(1);
-  }
-} else {
-  // Development: warn if using fallbacks
-  if (!process.env.JWT_ACCESS_SECRET) {
-    fastify.log.warn('JWT_ACCESS_SECRET not set; using fallback (development only)');
-  }
-  if (!process.env.JWT_REFRESH_SECRET) {
-    fastify.log.warn('JWT_REFRESH_SECRET not set; using fallback (development only)');
-  }
+if (missingEnv) {
+  console.error('FATAL: missing required database environment variables - refusing to start');
+  process.exit(1);
 }
 const translateRoutes = require('./routes/translate.routes');
 const orderRoutes = require('./routes/order.routes');
@@ -90,6 +46,36 @@ const errorHandler = require('./middleware/errorHandler');
 
 fastify.setErrorHandler(errorHandler);
 
+/**
+ * شبكة أمان أخيرة (P1): أي استجابة 5xx لا تُظهر للعميل رسالة داخلية.
+ * بعض المتحكّمات تبني `{ error: e.message }` يدويًا وتتجاوز معالج الأخطاء،
+ * فنستبدل النص هنا برسالة عامة — والتفاصيل الكاملة تبقى في سجل الخادم فقط.
+ */
+fastify.addHook('onSend', async (_request, reply, payload) => {
+  if (reply.statusCode < 500) return payload;
+  if (typeof payload !== 'string' || payload.length === 0) return payload;
+  let body;
+  try {
+    body = JSON.parse(payload);
+  } catch (_) {
+    return payload; // ليست استجابة JSON (مثل صفحة خطأ HTML) — لا نلمسها
+  }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return payload;
+
+  let changed = false;
+  for (const key of ['error', 'message', 'details', 'stack', 'trace']) {
+    if (key in body && body[key] !== 'Internal Server Error') {
+      body[key] = 'Internal Server Error';
+      changed = true;
+    }
+  }
+  if ('code' in body) {
+    delete body.code;
+    changed = true;
+  }
+  return changed ? JSON.stringify(body) : payload;
+});
+
 // السماح بجسم JSON فارغ (يعاد ككائن فارغ بدل خطأ 400)
 // + الاحتفاظ بالنص الخام في request.rawBody للتحقق من توقيع Stripe Webhook
 fastify.removeContentTypeParser('application/json');
@@ -108,7 +94,23 @@ fastify.addContentTypeParser('application/json', { parseAs: 'string' }, (req, bo
 // جعل الـ auth middleware متاح ك preHandler للمسارات المحمية
 fastify.decorate('authMiddleware', authMiddleware);
 
+const path = require('path');
+const fs = require('fs');
+const uploadsRoot = path.join(__dirname, '../public/uploads');
+fs.mkdirSync(uploadsRoot, { recursive: true });
+fs.mkdirSync(path.join(uploadsRoot, 'templates'), { recursive: true });
+
 fastify.register(corsPlugin);
+
+fastify.register(require('@fastify/multipart'), {
+  limits: { fileSize: 40 * 1024 * 1024 },
+});
+fastify.register(require('@fastify/static'), {
+  root: uploadsRoot,
+  prefix: '/uploads/',
+  decorateReply: false,
+  fallthrough: false,
+});
 
 // مسارات عامة
 fastify.register(authRoutes, { prefix: '/api' });
@@ -126,6 +128,9 @@ fastify.register(paymentRoutes, { prefix: '/api' });
 // مسارات القوالب (العرض عام، الإضافة/الحذف محمية بالتوكن)
 fastify.register(templateRoutes, { prefix: '/api' });
 
+// مسارات الرفع (صور وفيديو العميل) — محمية بالتوكن
+fastify.register(require('./routes/uploads.routes'), { prefix: '/api' });
+
 // مسارات المنصة (محمية بداخلها)
 fastify.register(platformRoutes, { prefix: '/api' });
 
@@ -138,23 +143,14 @@ fastify.register(paidSubscriptionRequestRoutes, { prefix: '/api' });
 // مسارات الفروع والموظفين
 fastify.register(branchRoutes, { prefix: '/api' });
 fastify.register(employeeRoutes, { prefix: '/api' });
+fastify.register(require('./routes/owner.routes'), { prefix: '/api' });
 fastify.register(templateDraftRoutes, { prefix: '/api' });
 fastify.register(adminRevenueRoutes, { prefix: '/api' });
-fastify.register(require('./routes/platformAdminData.routes'), { prefix: '/api' });
 fastify.register(require('./routes/dashboardTheme.routes'), { prefix: '/api' });
 fastify.register(require('./routes/homeVideo.routes'), { prefix: '/api' });
 
 fastify.get('/health', async () => ({ status: 'ok', service: 'menucraft-backend' }));
 
-// ===== STARTUP =====
-const PORT = process.env.PORT || 3000;
-fastify.listen({ port: PORT, host: '0.0.0.0' }, (err) => {
-  if (err) {
-    fastify.log.fatal(err);
-    process.exit(1);
-  }
-  fastify.log.info(`Server running on http://localhost:${PORT}`);
-  console.log('BACKEND STARTED ON PORT', PORT);
-});
-
+// ===== STARTUP (moved to server.js) =====
+// app module exports fastify instance for server.js to listen
 module.exports = fastify;

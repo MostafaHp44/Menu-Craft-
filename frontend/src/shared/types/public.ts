@@ -18,24 +18,31 @@ export interface SubscriptionSummary {
 export interface SiteSummary {
   maxSites: number; // -1 = بلا حد
   used: number;
-  remaining: number | null; // null = بلا حد
+  remaining: number | null;
   unlimited: boolean;
-  subscription: SubscriptionSummary;
+  canCreate?: boolean;
+  plan?: { id?: string; name?: string; price?: number } | null;
+  subscription?: {
+    status: 'trialing' | 'active' | 'past_due' | 'cancelled' | 'expired';
+    renewsAt: string | null;
+    daysLeft: number | null;
+    isTrial: boolean;
+  } | null;
 }
 
-/* ------------------------------------------------------------------ */
-/* بطاقة موقع  →  GET /api/sites                                       */
-/* ------------------------------------------------------------------ */
 export interface SiteCard {
   id: string;
-  name: string;
+  name?: string | null;
+  name_en?: string | null;
+  name_ar?: string | null;
+  name_ku?: string | null;
   slug: string;
   status: string;
   templateId: string | null;
-  updatedAt: string | null;
+  updated_at?: string | null;
   itemCount: number;
-  orderCount: number;
   categoryCount: number;
+  isOwner?: boolean | number;
 }
 
 /* ------------------------------------------------------------------ */

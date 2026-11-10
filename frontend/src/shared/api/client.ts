@@ -7,7 +7,7 @@
  * being invented in this file.
  * ------------------------------------------------------------------ */
 
-const API_BASE = import.meta.env.VITE_API_URL ?? ''
+const API_BASE = import.meta.env.VITE_API_URL_ABSOLUTE || ''
 
 export class ApiError extends Error {
   status: number
@@ -86,6 +86,8 @@ export interface ApiUser {
   name?: string
   status?: string
   needsPasswordChange?: boolean
+  restaurant_id?: string
+  restaurant_name?: string | null
 }
 
 export interface LoginResponse {
@@ -124,19 +126,29 @@ export interface OrderItem {
 
 export interface Order {
   id: string
-  restaurant_id: string
-  branch_id: string | null
-  order_number: number | null
-  status: string
-  customer_name?: string | null
-  phone?: string | null
-  delivery_address?: string | null
-  table_no: string | null
+  number: number | null
+  restaurantId: string
+  branchId: string | null
+  channel: string | null
+  table: string | null
+  customer: string | null
+  customerName?: string | null
+  customerPhone?: string | null
+  customerEmail?: string | null
+  deliveryAddress?: string | null
   note: string | null
   total: number | null
-  created_at: string | null
-  channel: string | null
-  items: OrderItem[]
+  subtotal: number | null
+  deliveryFee: number | null
+  discount: number | null
+  currency: string | null
+  paymentMethod: string | null
+  paymentStatus: string | null
+  status: string
+  createdAt: string
+  updatedAt: string
+  fulfillment: string | null
+  lines: Array<{ itemId: string; name: string; price: number; qty: number }>
 }
 
 export interface OwnerDashboard {
@@ -204,44 +216,58 @@ export interface AuditResponse {
 
 export interface SiteCard {
   id: string
-  name: { en?: string | null; ar?: string | null; ku?: string | null } | string
+  name?: string | null
+  name_en?: string | null
+  name_ar?: string | null
+  name_ku?: string | null
   slug: string
   status: string
-  templateId: string | null
-  updatedAt: string | null
+  templateId?: string | null
+  updated_at?: string | null
   itemCount: number
-  orderCount: number
   categoryCount: number
+  isOwner?: boolean | number
+  subscriptionStatus?: string | null
+  subscriptionPlan?: string | null
+  subscriptionRenewsAt?: string | null
 }
 
-export interface SiteSummary {
-  maxSites: number
+export interface SitePlanSummary {
+  maxSites: number // -1 means unlimited
   used: number
   remaining: number | null
   unlimited: boolean
-  subscription: {
-    planCode: string
-    status: string
-    currentPeriodEnd: string | null
-  }
+  canCreate?: boolean
+  plan?: { id?: string; name?: string; price?: number } | null
+  subscription?: {
+    status: 'trialing' | 'active' | 'past_due' | 'cancelled' | 'expired';
+    renewsAt: string | null;
+    daysLeft: number | null;
+    isTrial: boolean;
+  } | null;
 }
 
 /* --------------------------------- auth ---------------------------------- */
 
 export const authApi = {
   login: (email: string, password: string) =>
-    request<LoginResponse>('/api/auth/login', body({ email, password })),
+    request<LoginResponse>('/api/auth/signin', body({ email, password })),
   employeeLogin: (email: string, password: string) =>
     request<LoginResponse>('/api/auth/employee-login', body({ email, password })),
   logout: () => request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
-  me: () => request<ApiUser>('/api/auth/me'),
+  me: () =>
+    request<{ ok: boolean; data: { user: ApiUser; sites: any[]; subscription: any } }>('/api/auth/me').then(
+      (r) => r?.data?.user
+    ),
 }
 
 /* -------------------------------- branches ------------------------------- */
 
 export const branchesApi = {
-  list: () => request<Branch[]>('/api/branches'),
-  get: (id: string) => request<Branch>(`/api/branches/${encodeURIComponent(id)}`),
+  list: () =>
+    request<{ ok: boolean; data: Branch[] }>('/api/branches').then(
+      (r) => r?.data ?? []
+    ),
   create: (payload: { name: string; address?: string; phone?: string }) =>
     request<Branch>('/api/branches', body(payload)),
   update: (
@@ -259,20 +285,28 @@ export const branchesApi = {
 /* -------------------------------- employees ------------------------------ */
 
 export const employeesApi = {
-  list: () => request<Employee[]>('/api/employees'),
+  list: () =>
+    request<{ ok: boolean; data: Employee[] }>('/api/employees').then(
+      (r) => r?.data ?? []
+    ),
   create: (payload: {
     name: string
     email: string
     role: string
-    temporaryPassword: string
-    branch_access_type?: string
-  }) => request<{ ok: boolean; employeeId: string }>('/api/employees', body(payload)),
+    password: string
+    branchAccessType?: string
+    branchIds?: string[]
+  }) =>
+    request<{ ok: boolean; data: { id: string; userId: string; name: string; email: string; role: string } }>(
+      '/api/employees',
+      body(payload)
+    ).then((r) => r?.data!),
   update: (id: string, payload: { name?: string; email?: string }) =>
     request<{ ok: boolean }>(`/api/employees/${encodeURIComponent(id)}`, patch(payload)),
   setRole: (id: string, role: string) =>
     request<{ ok: boolean; role: string }>(`/api/employees/${encodeURIComponent(id)}/role`, patch({ role })),
-  setBranches: (id: string, branch_access_type: string, branch_ids: string[]) =>
-    request<{ ok: boolean }>(`/api/employees/${encodeURIComponent(id)}/branches`, patch({ branch_access_type, branch_ids })),
+  setBranches: (id: string, branchAccessType: string, branchIds: string[]) =>
+    request<{ ok: boolean }>(`/api/employees/${encodeURIComponent(id)}/branches`, patch({ branchAccessType, branchIds })),
   changePassword: (userId: string, payload: { currentPassword?: string; newPassword: string }) =>
     request<{ ok: boolean; needsPasswordChange: boolean; status: string }>(
       `/api/employees/${encodeURIComponent(userId)}/password`,
@@ -287,58 +321,87 @@ export const employeesApi = {
 /* --------------------------------- orders -------------------------------- */
 
 export interface PublicOrderPayload {
-  restaurant_id: string
-  branch_id: string
-  items: Array<{ item_id: string; qty: number }>
-  customer_name?: string
-  phone?: string
-  delivery_address?: string
-  table_no?: string
+  restaurantId: string
+  channel: string
+  customerName?: string
+  table?: string
   note?: string
-  channel?: string
+  lines: Array<{ itemId: string; qty: number }>
 }
 
 export const ordersApi = {
   create: (payload: PublicOrderPayload) =>
-    request<{ ok: boolean; order: Order }>('/api/orders', body(payload)),
-  list: (params: { status: string; branch_id?: string }) =>
-    request<Order[]>(`/api/orders${query({ status: params.status, branch_id: params.branch_id })}`),
-  get: (id: string) => request<Order>(`/api/orders/${encodeURIComponent(id)}`),
-  confirm: (id: string) =>
-    request<{ ok: boolean; order: { id: string; status: string } }>(
-      `/api/orders/${encodeURIComponent(id)}/confirm`,
-      { method: 'PATCH' }
+    request<{ ok: boolean; data: Order }>('/api/orders', body(payload)),
+  list: (params: { status: string; branch_id?: string; restaurantId?: string }) =>
+    request<{ ok: boolean; data: Order[] }>(`/api/orders${query({ status: params.status, branch_id: params.branch_id, restaurantId: params.restaurantId })}`).then(
+      (r) => r?.data ?? []
     ),
-  reject: (id: string, reason: string) =>
-    request<{ ok: boolean; order: { id: string; status: string; reason: string } }>(
-      `/api/orders/${encodeURIComponent(id)}/reject`,
-      patch({ reason })
+  get: (id: string) =>
+    request<{ ok: boolean; data: Order }>(`/api/orders/${encodeURIComponent(id)}`).then(
+      (r) => r?.data!
+    ),
+  confirm: (id: string) =>
+    request<{ ok: boolean; data: any }>(
+      `/api/orders/${encodeURIComponent(id)}/status`,
+      patch({ status: 'confirmed' })
+    ),
+  setStatus: (id: string, status: string) =>
+    request<{ ok: boolean; data: any }>(
+      `/api/orders/${encodeURIComponent(id)}/status`,
+      patch({ status })
+    ),
+  reject: (id: string) =>
+    request<{ ok: boolean; data: any }>(
+      `/api/orders/${encodeURIComponent(id)}/status`,
+      patch({ status: 'cancelled' })
     ),
 }
 
 /* --------------------------------- kitchen ------------------------------- */
 
 export const kitchenApi = {
-  list: (params: { status: string; branch_id?: string }) =>
-    request<Order[]>(`/api/kitchen/orders${query({ status: params.status, branch_id: params.branch_id })}`),
+  list: (params: { status: string; branch_id?: string; restaurantId?: string }) =>
+    request<{ ok: boolean; data: Order[] }>(`/api/orders${query({ status: params.status, branch_id: params.branch_id, restaurantId: params.restaurantId })}`).then(
+      (r) => r?.data ?? []
+    ),
   start: (id: string) =>
-    request<{ ok: boolean }>(`/api/kitchen/orders/${encodeURIComponent(id)}/start`, { method: 'PATCH' }),
+    request<{ ok: boolean; data: any }>(
+      `/api/orders/${encodeURIComponent(id)}/status`,
+      patch({ status: 'preparing' })
+    ),
   ready: (id: string) =>
-    request<{ ok: boolean }>(`/api/kitchen/orders/${encodeURIComponent(id)}/ready`, { method: 'PATCH' }),
-  reject: (id: string, reason: string) =>
-    request<{ ok: boolean }>(`/api/kitchen/orders/${encodeURIComponent(id)}/reject`, patch({ reason })),
+    request<{ ok: boolean; data: any }>(
+      `/api/orders/${encodeURIComponent(id)}/status`,
+      patch({ status: 'ready' })
+    ),
+  reject: (id: string) =>
+    request<{ ok: boolean; data: any }>(
+      `/api/orders/${encodeURIComponent(id)}/status`,
+      patch({ status: 'cancelled' })
+    ),
 }
 
 /* --------------------------------- waiter -------------------------------- */
 
 export const waiterApi = {
-  list: (params: { status: string; branch_id?: string }) =>
-    request<Order[]>(`/api/waiter/orders${query({ status: params.status, branch_id: params.branch_id })}`),
-  get: (id: string) => request<Order>(`/api/waiter/orders/${encodeURIComponent(id)}`),
+  list: (params: { status: string; branch_id?: string; restaurantId?: string }) =>
+    request<{ ok: boolean; data: Order[] }>(`/api/orders${query({ status: params.status, branch_id: params.branch_id, restaurantId: params.restaurantId })}`).then(
+      (r) => r?.data ?? []
+    ),
+  get: (id: string) =>
+    request<{ ok: boolean; data: Order }>(`/api/orders/${encodeURIComponent(id)}`).then(
+      (r) => r?.data!
+    ),
   complete: (id: string) =>
-    request<{ ok: boolean }>(`/api/waiter/orders/${encodeURIComponent(id)}/complete`, { method: 'PATCH' }),
-  returnToKitchen: (id: string, reason: string) =>
-    request<{ ok: boolean }>(`/api/waiter/orders/${encodeURIComponent(id)}/return`, patch({ reason })),
+    request<{ ok: boolean; data: any }>(
+      `/api/orders/${encodeURIComponent(id)}/status`,
+      patch({ status: 'completed' })
+    ),
+  returnToKitchen: (id: string, _reason: string) =>
+    request<{ ok: boolean; data: any }>(
+      `/api/orders/${encodeURIComponent(id)}/status`,
+      patch({ status: 'preparing' })
+    ),
 }
 
 /* ---------------------------------- owner -------------------------------- */
@@ -365,12 +428,12 @@ export const ownerApi = {
 /* ---------------------------------- sites -------------------------------- */
 
 export const sitesApi = {
-  list: () => request<{ sites: SiteCard[] }>('/api/sites'),
-  summary: () => request<SiteSummary>('/api/sites/summary'),
-  canCreate: () => request<{ canCreate: boolean }>('/api/sites/can-create'),
+  list: () => request<{ ok: boolean; data: SiteCard[] }>('/api/sites'),
+  summary: () => request<{ ok: boolean; data: SitePlanSummary }>('/api/sites/summary'),
+  canCreate: () => request<{ ok: boolean; canCreate: boolean }>('/api/sites/can-create'),
   create: (payload: { name: string; slug: string; templateId?: string | null }) =>
-    request<{ ok: boolean; site: { id: string; name: string; slug: string; status: string; templateId: string | null } }>(
-      '/api/sites',
+    request<{ ok: boolean; data: { id: string; slug: string; name_en?: string } }>(
+      '/api/restaurants',
       body(payload)
     ),
 }
@@ -387,8 +450,8 @@ export function isOn(value: boolean | number | null | undefined): boolean {
   return value === true || value === 1
 }
 
-export function orderNumber(order: Pick<Order, 'order_number' | 'id'>): string {
-  return order.order_number === null || order.order_number === undefined
+export function orderNumber(order: Pick<Order, 'number' | 'id'>): string {
+  return order.number === null || order.number === undefined
     ? `#${order.id.slice(-6)}`
-    : `#${order.order_number}`
+    : `#${order.number}`
 }

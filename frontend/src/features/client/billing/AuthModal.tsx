@@ -3,6 +3,7 @@ import { Icon } from '../../../shared/ui/icons.tsx'
 import { Button, Field, Input, Modal } from '../../../shared/ui/ui.tsx'
 import { useI18n } from '../../../shared/i18n'
 import { useAuthStore } from '../../../shared/store/useAuth.ts'
+import { useBackendAuth } from '../../../shared/store/useBackendAuth.ts'
 import { useStore } from '../../../shared/store/useStore.ts'
 import { TEMPLATES } from '../../../templates/data/templates.ts'
 
@@ -25,6 +26,7 @@ export function AuthModal({ open, onClose, restaurantName, onSuccess }: AuthModa
   const draftTemplateId = useStore((s) => s.draft?.templateId)
 
   const [name, setName] = useState('')
+  const [restName, setRestName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [lang, setLang] = useState('ar')
@@ -34,31 +36,64 @@ export function AuthModal({ open, onClose, restaurantName, onSuccess }: AuthModa
   useEffect(() => {
     if (open) {
       setName('')
+      setRestName(restaurantName)
       setEmail('')
       setError('')
       setBusy(false)
     }
-  }, [open])
+  }, [open, restaurantName])
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (!/^\S+@\S+\.\S+$/.test(email)) {
       setError(t('flow.validEmail'))
       return
     }
+    if (name.trim().length < 2) {
+      setError(t('flow.nameRequired'))
+      return
+    }
+    if (restName.trim().length < 2) {
+      setError(t('flow.restaurantRequired'))
+      return
+    }
+    if (password.length < 6) {
+      setError(t('flow.passwordMin'))
+      return
+    }
+    const finalRestaurantName = restName.trim()
     setError('')
     setBusy(true)
-    window.setTimeout(() => {
-      signUp({
-        name,
-        email,
-        restaurantName,
-        templateId: draftTemplateId ?? TEMPLATES[0].id,
+    const templateId = draftTemplateId ?? TEMPLATES[0].id
+
+    // 1) تسجيل حقيقي على الباك إند عشان الـ HttpOnly cookie يبقى جاهز
+    //    (من غيره الـ Publish هيفشل 401 والداشبورد هيرفض دخولنا)
+    try {
+      await useBackendAuth.getState().signup({
+        email: email.trim(),
+        password,
+        name: name.trim(),
+        restaurantName: finalRestaurantName,
+        templateId,
+        language: (lang as 'ar' | 'en' | 'ku') ?? 'ar',
       })
+    } catch (err) {
       setBusy(false)
-      onSuccess?.()
-      onClose()
-    }, 450)
+      setError(err instanceof Error ? err.message : t('flow.signUpFailed'))
+      return
+    }
+
+    // 2) مزامنة الـ prototype المحلي (الذي يقود الـ Editor/UI)
+    signUp({
+      name: name.trim(),
+      email: email.trim(),
+      restaurantName: finalRestaurantName,
+      templateId,
+      password,
+    })
+    setBusy(false)
+    onSuccess?.()
+    onClose()
   }
 
   return (
@@ -70,6 +105,14 @@ export function AuthModal({ open, onClose, restaurantName, onSuccess }: AuthModa
             autoComplete="name"
             placeholder={t('auth.fullNamePh')}
             onChange={(e) => setName(e.target.value)}
+          />
+        </Field>
+        <Field label={t('auth.restaurant')}>
+          <Input
+            value={restName}
+            autoComplete="organization"
+            placeholder={t('auth.restaurantPh')}
+            onChange={(e) => setRestName(e.target.value)}
           />
         </Field>
         <Field label={t('auth.email')} error={error || undefined}>

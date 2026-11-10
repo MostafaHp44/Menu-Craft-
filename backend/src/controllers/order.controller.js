@@ -56,7 +56,11 @@ async function createHandler(request, reply) {
  */
 async function listHandler(request, reply) {
   try {
-    const { restaurantId, status, paymentMethod, paymentStatus, from, to } = request.query;
+    const { status, paymentMethod, paymentStatus, from, to } = request.query;
+    // The dashboard client lists its own restaurant's orders and never sends
+    // restaurantId — default to the caller's restaurant. Isolation is still
+    // enforced by ownsRestaurant() below (fails closed for other tenants).
+    const restaurantId = request.query.restaurantId || request.user?.restaurant_id || request.user?.restaurantId;
     if (!restaurantId) {
       return reply.status(400).send({ ok: false, error: 'معرف المطعم مطلوب', code: 'RESTAURANT_REQUIRED' });
     }
@@ -113,7 +117,11 @@ async function statusHandler(request, reply) {
     if (!(await ownsRestaurant(request, order.restaurantId))) {
       return reply.status(403).send({ ok: false, error: 'ليست لديك صلاحية على هذا الطلب', code: 'NOT_SITE_OWNER' });
     }
-    const updated = await updateOrderStatus(id, status, request.user?.role);
+    // الفاعل = محتوى التوكن المُتحقَّق منه — الخدمة تفحص الملكية + الدور داخليًا
+    const updated = await updateOrderStatus(id, status, {
+      userId: request.user?.userId,
+      role: request.user?.role
+    });
     return reply.send({ ok: true, data: updated });
   } catch (err) {
     return sendError(reply, err);

@@ -2,8 +2,6 @@
   AdminRestaurantRow,
   DemoPlanId,
   DemoSubscription,
-  Order,
-  OrderLine,
   PlatformActivity,
   PlatformProvider,
   RecentActivity,
@@ -355,102 +353,6 @@ function mulberry32(seed: number) {
 
 const isoDay = (d: Date) => d.toISOString().slice(0, 10)
 
-const CUSTOMERS = [
-  'Layla H.',
-  'Omar S.',
-  'Chris P.',
-  'Amina R.',
-  'Noah K.',
-  'Yasmin A.',
-  'Daniel M.',
-  'Farida E.',
-  'Jonas B.',
-  'Salma T.',
-]
-
-/* ------------------------------------------------------------------ *
- * Today's orders â€” the kitchen board starts alive
- * ------------------------------------------------------------------ */
-
-export function createSeedOrders(restaurants: Restaurant[]): Order[] {
-  const seeded: Order[] = []
-
-  for (const r of restaurants) {
-    const rnd = mulberry32(hash(r.id + 'orders'))
-    const items = r.menu.flatMap((c) => c.items).filter((i) => i.available)
-    if (items.length === 0) continue
-
-    const count = r.id === 'rst-bella' ? 9 : r.id === 'rst-copper' ? 5 : 4
-    const now = Date.now()
-    const dayStart = new Date()
-    dayStart.setHours(0, 0, 0, 0)
-    const lo = Math.max(dayStart.getTime() + 8 * 3600_000, now - 9 * 3600_000)
-    const hi = now - 3 * 60_000
-
-    for (let n = 1; n <= count; n++) {
-      const lines: OrderLine[] = []
-      const wanted = 1 + Math.floor(rnd() * 3)
-      for (let l = 0; l < wanted && lines.length < 4; l++) {
-        const item = items[Math.floor(rnd() * items.length)]
-        if (lines.some((x) => x.itemId === item.id)) continue
-        lines.push({
-          itemId: item.id,
-          name: item.name,
-          price: item.price,
-          qty: 1 + Math.floor(rnd() * 2),
-        })
-      }
-      if (lines.length === 0) continue
-
-      const counter = rnd() < 0.3
-      const ts = hi > lo ? lo + rnd() * (hi - lo) : hi - n * 60_000
-      seeded.push({
-        id: `ord-${r.id}-${n}`,
-        number: n,
-        restaurantId: r.id,
-        channel: counter ? 'counter' : 'online',
-        table: counter ? 'â€”' : String(1 + Math.floor(rnd() * 18)),
-        customer: CUSTOMERS[Math.floor(rnd() * CUSTOMERS.length)],
-        lines,
-        note: rnd() < 0.25 ? 'No onions, please.' : '',
-        total: lines.reduce((sum, line) => sum + line.price * line.qty, 0),
-        status: 'served',
-        createdAt: new Date(ts).toISOString(),
-        seed: true,
-      })
-    }
-
-    // newest first, then give the board a live mix of statuses
-    const mine = seeded.filter((o) => o.restaurantId === r.id)
-    mine.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
-    mine.forEach((order, i) => {
-      order.number = i + 1
-      order.status = i === 0 ? 'received' : i < 3 ? 'preparing' : 'served'
-    })
-  }
-
-  return seeded
-}
-
-/** Demo rows jump forward so the board is never empty, even tomorrow. */
-export function rollOrdersToToday(orders: Order[]): Order[] {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return orders.map((o) => {
-    if (!o.seed) return o
-    const created = new Date(o.createdAt)
-    const sameDay =
-      created.getFullYear() === today.getFullYear() &&
-      created.getMonth() === today.getMonth() &&
-      created.getDate() === today.getDate()
-    if (sameDay) return o
-    const next = new Date(today)
-    next.setHours(created.getHours(), created.getMinutes(), 0, 0)
-    if (next.getTime() > Date.now() - 5 * 60_000) next.setHours(9, 0, 0, 0)
-    return { ...o, createdAt: next.toISOString() }
-  })
-}
-
 /* ------------------------------------------------------------------ *
  * Reporting series (demo numbers per restaurant)
  * ------------------------------------------------------------------ */
@@ -520,7 +422,7 @@ export function createSeedAccounts(): UserAccount[] {
     {
       id: 'u-super',
       name: 'Mostafa Adel',
-      email: 'super@menucraft.demo',
+      email: 'super@menudigital.demo',
       role: 'super_admin',
       status: 'active',
       createdAt: created,
@@ -528,7 +430,7 @@ export function createSeedAccounts(): UserAccount[] {
     {
       id: 'u-admin',
       name: 'Nora Haddad',
-      email: 'admin@menucraft.demo',
+      email: 'admin@menudigital.demo',
       role: 'admin',
       permissions: ['clients', 'subscriptions', 'sales'],
       status: 'active',

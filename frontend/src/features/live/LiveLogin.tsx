@@ -5,10 +5,11 @@ import { Icon, Wordmark } from '../../shared/ui/icons.tsx'
 import { LanguageSwitcher } from '../../shared/ui/LanguageSwitcher.tsx'
 import { useI18n } from '../../shared/i18n'
 import { homePathFor, useSession, type LoginMode } from '../../shared/store/useSession.ts'
+import { panelForRole } from '../../shared/auth/panels.tsx'
 
 export default function LiveLogin() {
   const { t } = useI18n()
-  const { user, login, error, clearError } = useSession()
+  const { user, login, logout, error, clearError } = useSession()
   const navigate = useNavigate()
   const location = useLocation()
   const [mode, _setMode] = useState<LoginMode>('employee')
@@ -21,7 +22,14 @@ export default function LiveLogin() {
     clearError()
   }, [mode, clearError])
 
-  if (user) {
+  /**
+   * فصل تام: هذه الشاشة للموظفين (كاشير/مطبخ/نادل) فقط.
+   * - الموظف المسجّل دخول → يذهب إلى داشبورد الموظفين مباشرة.
+   * - حساب آخر (مالك/سوبر أدمن) → لا يُنقل، بل تظهر رسالة توضّح الباب الصحيح.
+   */
+  const wrongPanel = user != null && panelForRole(user.role) !== 'staff'
+
+  if (user && !wrongPanel) {
     return <Navigate to={homePathFor(user)} replace />
   }
 
@@ -38,6 +46,12 @@ export default function LiveLogin() {
     setBusy(true)
     try {
       const account = await login('employee', email.trim(), password)
+      if (panelForRole(account.role) !== 'staff') {
+        // ليس موظفاً — ارفض الدخول وألغِ الجلسة، ولا يُنقل إلى أي لوحة
+        await logout()
+        setLocalError(t('live.login.wrongPanel'))
+        return
+      }
       navigate(target ?? homePathFor(account), { replace: true })
     } catch {
       /* the session store exposes the backend message through `error` */
@@ -45,6 +59,8 @@ export default function LiveLogin() {
       setBusy(false)
     }
   }
+
+  const notice = localError || error || (wrongPanel ? t('live.login.wrongPanel') : '')
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-ink px-4 py-10 text-ivory">
@@ -116,10 +132,20 @@ export default function LiveLogin() {
                 />
               </Field>
 
-              {localError || error ? (
+              {notice ? (
                 <div className="flex items-start gap-2 rounded-xl border border-rose/30 bg-rose/8 px-3 py-2.5 text-[12.5px] text-rose">
                   <Icon name="alert" size={14} className="mt-0.5 shrink-0" />
-                  <span>{localError || error}</span>
+                  <span>
+                    {notice}
+                    {wrongPanel && user ? (
+                      <>
+                        {' '}
+                        <Link to={homePathFor(user)} className="font-semibold underline">
+                          {t('live.login.goToPanel')}
+                        </Link>
+                      </>
+                    ) : null}
+                  </span>
                 </div>
               ) : null}
 

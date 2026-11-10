@@ -38,7 +38,17 @@ export function StaggerList({ children, className = '', itemSelector = 'li' }: P
       },
     })
 
+    /* Safety net: if the scroll-timeline toggle never fires on touch, reveal */
+    /* the items so content is never left stuck at opacity 0. */
+    const safety = window.setTimeout(() => {
+      items.forEach((t) => {
+        const o = parseFloat(getComputedStyle(t).opacity)
+        if (o < 0.3) gsap.set(t, { x: 0, opacity: 1 })
+      })
+    }, 2500)
+
     return () => {
+      window.clearTimeout(safety)
       tween.scrollTrigger?.kill()
       tween.kill()
       gsap.set(items, { clearProps: 'all' })

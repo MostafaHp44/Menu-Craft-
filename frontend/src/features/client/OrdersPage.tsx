@@ -1,32 +1,90 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useI18n } from '../../shared/i18n'
 import { Button, Card, EmptyState, Input, Modal, Segmented } from '../../shared/ui/ui.tsx'
 import { Icon } from '../../shared/ui/icons.tsx'
 import { useActiveRestaurant, useStore } from '../../shared/store/useStore.ts'
-import { useOrderedOrders, useOrdersStore } from '../../shared/store/useOrders.ts'
+import { useBackendAuth } from '../../shared/store/useBackendAuth.ts'
 import { cx, money } from '../../shared/lib/utils.ts'
 import type { Order, OrderChannel, OrderStatus } from '../../shared/lib/types.ts'
 import { isToday, statusKey, STATUS_DOT } from './orders/helpers.ts'
 import { OrderCard } from './orders/OrderCard.tsx'
 import { ManualOrderModal } from './orders/ManualOrderModal.tsx'
+import { ordersApi } from '../../shared/api/client.ts'
 
 type Range = 'today' | 'all'
 type ChannelFilter = 'all' | OrderChannel
 
+function mapApiStatus(status: string): OrderStatus {
+  switch (status) {
+    case 'pending':
+      return 'received'
+    case 'confirmed':
+      return 'preparing'
+    case 'preparing':
+      return 'preparing'
+    case 'ready':
+      return 'served'
+    case 'completed':
+      return 'served'
+    case 'cancelled':
+      return 'served'
+    default:
+      return 'received'
+  }
+}
+
 export default function OrdersPage() {
   const { t, lang } = useI18n()
   const restaurant = useActiveRestaurant()
-  const orders = useOrderedOrders(restaurant.id)
-  const advance = useOrdersStore((s) => s.advance)
-  const removeOrder = useOrdersStore((s) => s.removeOrder)
   const showToast = useStore((s) => s.showToast)
+  const backendRid = useBackendAuth((s) => s.user?.restaurant_id || s.user?.restaurantId)
+
+  // معرّف المطعم في طلب الكاشير يأتي من جلسة الخادم دائمًا — لا من البذرة
+  // المحلية (rst-bella) التي يخزّنها localStorage، وإلا رفض الخادم الطلب 403.
+  const orderRestaurant = useMemo(
+    () => (backendRid ? { ...restaurant, id: backendRid } : restaurant),
+    [restaurant, backendRid]
+  )
 
   const [range, setRange] = useState<Range>('today')
   const [channel, setChannel] = useState<ChannelFilter>('all')
   const [query, setQuery] = useState('')
   const [composerOpen, setComposerOpen] = useState(false)
   const [pendingRemove, setPendingRemove] = useState<Order | null>(null)
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const [refreshTick, setRefreshTick] = useState(0)
+
+  useEffect(() => {
+    setLoading(true)
+    ordersApi
+      .list({ status: '' })
+      .then((data) => {
+        const mapped: Order[] = data.map((o: any) => ({
+          id: o.id,
+          number: o.number ?? 0,
+          restaurantId: o.restaurantId ?? restaurant.id,
+          channel: (o.channel ?? 'online') as OrderChannel,
+          table: o.table ?? '—',
+          customer: o.customer ?? 'Walk-in',
+          lines: (o.lines || []).map((line: any) => ({
+            itemId: line.itemId ?? line.id ?? '',
+            name: line.name ?? '',
+            price: Number(line.price ?? 0),
+            qty: Number(line.qty ?? 1),
+          })),
+          note: o.note ?? '',
+          total: Number(o.total ?? 0),
+          status: mapApiStatus(o.status),
+          rawStatus: o.status ?? 'pending',
+          createdAt: o.createdAt ?? new Date().toISOString(),
+        }))
+        setOrders(mapped)
+      })
+      .catch(() => setOrders([]))
+      .finally(() => setLoading(false))
+  }, [restaurant?.id, refreshTick])
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -55,21 +113,43 @@ export default function OrdersPage() {
     { status: 'served', count: counts.served },
   ]
 
-  const handleAdvance = (order: Order) => {
-    advance(order.id)
-    const next: OrderStatus = order.status === 'received' ? 'preparing' : 'served'
-    showToast({
-      title: t('clientMore.statusUpdated'),
-      message: t(statusKey(next, lang)),
-      tone: 'success',
-    })
+  const handleAdvance = async (order: Order) => {
+    const nextStatus =
+      order.rawStatus === 'pending' || order.rawStatus === 'received' || order.rawStatus === 'confirmed'
+        ? 'preparing'
+        : order.rawStatus === 'preparing'
+          ? 'ready'
+          : order.rawStatus === 'ready'
+            ? 'completed'
+            : 'preparing'
+    try {
+      await ordersApi.setStatus(order.id, nextStatus)
+      showToast({
+        title: t('clientMore.statusUpdated'),
+        tone: 'success',
+      })
+      setRefreshTick((t) => t + 1)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      showToast({
+        title: t('common.error'),
+        message,
+        tone: 'error',
+      })
+    }
   }
 
-  const confirmRemove = () => {
+  const confirmRemove = async () => {
     if (!pendingRemove) return
-    removeOrder(pendingRemove.id)
-    showToast({ title: t('toast.deleted'), tone: 'info' })
-    setPendingRemove(null)
+    try {
+      await ordersApi.setStatus(pendingRemove.id, 'cancelled')
+      showToast({ title: t('toast.deleted'), tone: 'info' })
+      setRefreshTick((t) => t + 1)
+      setPendingRemove(null)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      showToast({ title: t('common.error'), message, tone: 'error' })
+    }
   }
 
   return (
@@ -119,6 +199,15 @@ export default function OrdersPage() {
           </div>
         </div>
       </Card>
+
+      {loading ? (
+        <Card className="p-4 sm:p-5">
+          <div className="flex items-center gap-3 p-8 text-center">
+            <Icon name="clock" size={20} className="animate-spin" />
+            <span className="text-[13px] text-clay">جاري تحميل الطلبات…</span>
+          </div>
+        </Card>
+      ) : null}
 
       {/* ------------------------------ summary ------------------------------- */}
       <Card className="p-4 sm:p-5">
@@ -200,9 +289,10 @@ export default function OrdersPage() {
 
       {/* --------------------------- manual composer -------------------------- */}
       <ManualOrderModal
-        restaurant={restaurant}
+        restaurant={orderRestaurant}
         open={composerOpen}
         onClose={() => setComposerOpen(false)}
+        onCreated={() => setRefreshTick((t) => t + 1)}
       />
 
       {/* ---------------------------- remove confirm -------------------------- */}

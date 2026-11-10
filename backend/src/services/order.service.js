@@ -10,6 +10,8 @@
 const crypto = require('crypto');
 const { getMySQLPool } = require('../config/mysql');
 const { z } = require('zod');
+const { normalizeRole } = require('../middleware/roles');
+const { userOwnsSite } = require('./site.service');
 
 /* ----------------------------- الحالات ----------------------------- */
 const ORDER_STATUSES = ['pending', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled'];
@@ -24,6 +26,25 @@ const STATUS_TRANSITIONS = {
   completed: [],
   cancelled: []
 };
+
+/**
+ * صلاحيات الدور على الانتقالات (P0 C-3): كل دور يحرّك الحالة التي تخصّه فقط.
+ * الحالة الحالية تبقى مربوطة بـ STATUS_TRANSITIONS أعلاه (state machine) —
+ * هذا الجدول يضيف طبقة الدور فوقها:
+ *   - cashier: يقبل الطلب (confirmed) ويلغيه (cancelled) — واجهة الكونتر/الكاشير.
+ *   - kitchen: يبدأ التحضير ويجعله جاهزًا — لا يلغي الطلبات.
+ *   - waiter: يُسلّم الطلب المكتمل (completed) فقط.
+ *   - المالك/إدارة المنصة (client/super_admin/admin): كل الانتقالات.
+ */
+const ALL_TRANSITIONS = ['confirmed', 'preparing', 'ready', 'completed', 'cancelled'];
+const ROLE_ALLOWED_STATUSES = Object.freeze({
+  super_admin: ALL_TRANSITIONS,
+  admin: ALL_TRANSITIONS,
+  client: ALL_TRANSITIONS,
+  cashier: ['confirmed', 'cancelled'],
+  kitchen: ['preparing', 'ready'],
+  waiter: ['completed']
+});
 
 const PAYMENT_METHODS = ['cash', 'cash_at_pickup', 'card', 'wallet', 'bank_transfer'];
 const PAYMENT_STATUSES = ['unpaid', 'paid', 'awaiting_confirmation', 'refunded', 'failed'];
@@ -54,7 +75,9 @@ const createOrderSchema = z.object({
   slug: z.string().optional(),
   customer: z.object({
     name: z.string().min(2, 'اسم العميل مطلوب').max(120),
-    phone: z.string().min(5, 'رقم الهاتف مطلوب').max(30),
+    // الهاتف: يُقبل الفارغ لطلبات الكونتر (POS) — الفحص الفعلي في createPublicOrder
+    // (رقم الهاتف مطلوب للطلب الإلكتروني فقط، ومحظور للكونتر) — إصلاح P0 C-4.
+    phone: z.string().max(30).refine((v) => v.length === 0 || v.length >= 5, 'رقم الهاتف مطلوب').optional(),
     email: z.string().email().optional().or(z.literal(''))
   }).optional(),
   customerName: z.string().min(1).max(120).optional(),
@@ -66,6 +89,7 @@ const createOrderSchema = z.object({
   paymentMethod: z.enum(PAYMENT_METHODS).default('cash'),
   promoCode: z.string().max(50).optional(),
   channel: z.enum(['online', 'counter']).default('online'),
+  branchId: z.string().optional(),
   lines: z.array(orderLineInput).min(1, 'يجب اختيار صنف واحد على الأقل'),
   idempotencyKey: z.string().min(8).max(100).optional()
 });
@@ -280,15 +304,16 @@ async function createPublicOrder(input) {
     await connection.execute(
         `INSERT INTO Orders (id, restaurant_id, order_number, channel, table_no, customer_name, customer_phone,
           customer_email, fulfillment, delivery_address, note, subtotal, delivery_fee, discount, total, currency,
-          payment_method, payment_status, status, order_token, idempotency_key)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          payment_method, payment_status, status, order_token, idempotency_key, branch_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           orderId, restaurant.id, orderNumber, parsed.channel, parsed.table || null,
           customerName, customerPhone, parsed.customer?.email || null,
           parsed.fulfillment, parsed.deliveryAddress || null, parsed.note || '',
           subtotal, deliveryFee, discount, total, settings.currency || 'USD',
           parsed.paymentMethod, paymentStatus, 'pending', orderToken,
-          parsed.idempotencyKey || null
+          parsed.idempotencyKey || null,
+          parsed.branchId || null
         ]
       );
 
@@ -380,6 +405,7 @@ function mapOrderRow(o) {
     id: o.id,
     number: o.order_number,
     restaurantId: o.restaurant_id,
+    branchId: o.branch_id || null,
     channel: o.channel,
     table: o.table_no,
     customer: o.customer_name,
@@ -501,21 +527,45 @@ async function trackOrder(orderId, token) {
 }
 
 /* ----------------------------- التحديث ----------------------------- */
-async function updateOrderStatus(orderId, nextStatus, actorRole) {
+/**
+ * تحديث حالة الطلب مع تحقق ثلاثي (P0 C-3):
+ *  1) الطلب يعود لمطعم يملكه الفاعل (tenant check).
+ *  2) الانتقال مسموح في state machine الحالية.
+ *  3) الدور المُرسِل مسموح له بهذا الانتقال (role matrix).
+ *
+ * @param {string} orderId
+ * @param {string} nextStatus
+ * @param {{ userId?: string, role?: string }} actor الفاعل من التوكن المُتحقَّق منه
+ */
+async function updateOrderStatus(orderId, nextStatus, actor = {}) {
   const canonical = canonicalStatus(nextStatus);
   if (!ORDER_STATUSES.includes(canonical)) {
     throw httpError(400, 'حالة الطلب غير صحيحة', 'INVALID_STATUS');
   }
+  const role = normalizeRole(actor.role);
   const pool = await getMySQLPool();
   const connection = await pool.getConnection();
   try {
-    const [currentRows] = await connection.execute('SELECT status FROM Orders WHERE id = ?', [orderId]);
+    const [currentRows] = await connection.execute('SELECT status, restaurant_id FROM Orders WHERE id = ?', [orderId]);
     if (currentRows.length === 0) throw httpError(404, 'الطلب غير موجود', 'ORDER_NOT_FOUND');
 
     const currentStatus = currentRows[0].status;
+
+    // 1) العائد للطلب: ملكية المطعم تُفحص دائمًا في الخادم بغضّ النظر عن الطلب
+    const owns = await userOwnsSite(actor.userId, currentRows[0].restaurant_id, role);
+    if (!owns) {
+      throw httpError(403, 'الطلب لا يعود إلى مطعمك', 'NOT_SITE_OWNER');
+    }
+
     const allowed = STATUS_TRANSITIONS[currentStatus] || [];
     if (!allowed.includes(canonical)) {
       throw httpError(409, `لا يمكن الانتقال من ${currentStatus} إلى ${canonical}`, 'INVALID_TRANSITION');
+    }
+
+    // 3) صلاحية الدور على هذا الانتقال بالذات
+    const allowedForRole = ROLE_ALLOWED_STATUSES[role];
+    if (!allowedForRole || !allowedForRole.includes(canonical)) {
+      throw httpError(403, 'هذه الحالة غير مسموحة لدورك', 'ROLE_FORBIDDEN');
     }
 
     await connection.execute(
@@ -523,6 +573,21 @@ async function updateOrderStatus(orderId, nextStatus, actorRole) {
       [canonical, orderId]
     );
     const [updated] = await connection.execute('SELECT id, status FROM Orders WHERE id = ?', [orderId]);
+
+    // سجل النشاط (P1) — نشاط حقيقي يُقرأ من /api/owner/audit
+    try {
+      const { logActivity } = require('./audit.service');
+      await logActivity({
+        restaurantId: currentRows[0].restaurant_id,
+        userId: actor.userId,
+        actorRole: actor.role,
+        action: 'order.status_changed',
+        details: { order_id: orderId, from: currentStatus, to: canonical },
+        ip: actor.ip,
+        userAgent: actor.userAgent,
+      });
+    } catch (_) { /* السجل مساند — لا يُفشل تحديث الحالة */ }
+
     return updated[0];
   } finally {
     connection.release();
@@ -569,11 +634,69 @@ async function createCounterOrder(input) {
   });
 }
 
+/**
+ * Builds a sales series (daily / monthly / yearly) from real Orders rows for a
+ * restaurant — grouping by date, summing `total` per bucket. Cancelled excluded.
+ */
+async function getSalesSeries(restaurantId) {
+  const pool = await getMySQLPool();
+  const connection = await pool.getConnection();
+  try {
+    const [orders] = await connection.execute(
+      `SELECT id, created_at, total FROM Orders
+       WHERE restaurant_id = ? AND status != 'cancelled' AND total IS NOT NULL
+       ORDER BY created_at ASC`,
+      [restaurantId]
+    );
+
+    const dayMap = new Map();
+    const monthMap = new Map();
+    const yearMap = new Map();
+
+    for (const o of orders) {
+      const d = new Date(o.created_at);
+      const dayKey = d.toISOString().slice(0, 10);
+      if (!dayMap.has(dayKey)) dayMap.set(dayKey, { date: dayKey, orders: 0, revenue: 0 });
+      const db = dayMap.get(dayKey);
+      db.orders += 1;
+      db.revenue += Number(o.total || 0);
+
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!monthMap.has(monthKey)) monthMap.set(monthKey, { date: monthKey, orders: 0, revenue: 0 });
+      const mb = monthMap.get(monthKey);
+      mb.orders += 1;
+      mb.revenue += Number(o.total || 0);
+
+      const yearKey = String(d.getFullYear());
+      if (!yearMap.has(yearKey)) yearMap.set(yearKey, { date: yearKey, orders: 0, revenue: 0 });
+      const yb = yearMap.get(yearKey);
+      yb.orders += 1;
+      yb.revenue += Number(o.total || 0);
+    }
+
+    const daily = [...dayMap.values()].sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-30);
+    const monthly = [...monthMap.values()].sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-12);
+    const yearly = [...yearMap.values()].sort((a, b) => Number(b.date) - Number(a.date)).slice(0, 5);
+
+    return { daily, monthly, yearly };
+  } finally { connection.release(); }
+}
+
+async function getPendingOrdersCount() {
+  const pool = await getMySQLPool();
+  const c = await pool.getConnection();
+  try {
+    const [rows] = await c.execute('SELECT COUNT(*) as count FROM Orders WHERE status = "pending"');
+    return rows[0]?.count || 0;
+  } finally { c.release(); }
+}
+
 module.exports = {
   ORDER_STATUSES,
   PAYMENT_METHODS,
   PAYMENT_STATUSES,
   DEFAULT_ORDERING,
+  getPendingOrdersCount,
   canonicalStatus,
   orderingSettingsFromRow,
   createPublicOrder,
@@ -583,5 +706,6 @@ module.exports = {
   trackOrder,
   updateOrderStatus,
   deleteOrder,
-  markOrderPaid
+  markOrderPaid,
+  getSalesSeries
 };

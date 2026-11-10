@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { useEffect as _useEffectImpl } from 'react'
 import type { Lang } from '../i18n'
 
 /**
@@ -35,9 +36,19 @@ export interface HomeContent {
     cta: string
     secondaryCta: string
     image: string
+    imageDesktop?: string
+    imageMobile?: string
     video?: string
     videoDesktop?: string
     videoMobile?: string
+    /** shape of the first hero section — admin picks one in /admin?tab=home */
+    variant?: string
+    /** optional hero text color overrides — empty = variant default */
+    textColors?: { eyebrow?: string; title?: string; sub?: string }
+    /** optional per-chip accent colors — empty = variant accent */
+    chipColors?: { qr?: string; order?: string; pay?: string }
+    /** optional hero text size overrides (%) of the variant defaults — 100 = default */
+    textSizes?: { title?: number; sub?: number }
     note: string
   }
   templates: HomeSection
@@ -81,6 +92,7 @@ const SEED_EN: HomeContent = {
     secondaryCta: 'Explore the Editor',
     // the hero uses the live restaurant preview as its visual — no photo today
     image: '',
+    variant: 'menu-alive',
     note: 'A real Digital Menu preview — the same renderer that powers the editor and the published site.',
   },
   templates: {
@@ -390,6 +402,8 @@ interface HomeContentState {
   resetSection: (lang: Lang, key: HomeSectionKey) => void
   /** restores the whole page, in ALL languages, to `HOME_SEED` */
   resetHome: () => void
+  /** pull server copy into the store (guest-facing pages rely on this) */
+  refreshFromServer: () => Promise<void>
 }
 
 /** guards against older/partial payloads sitting in localStorage */
@@ -494,6 +508,30 @@ export const useHomeContentStore = create<HomeContentState>()(
 
       resetHome: () =>
         set({ content: structuredClone(HOME_SEED), updatedAt: new Date().toISOString() }),
+
+      refreshFromServer: async () => {
+        try {
+          // Server is authoritative for the public page; localStorage is only a fallback seed.
+          const langs: Lang[] = ['en', 'ar', 'ku']
+          const fetched: Partial<HomeContentByLang> = {}
+          for (const lang of langs) {
+            try {
+              const res = await fetch(`/api/home-content?lang=${lang}`, { credentials: 'include' })
+              if (!res.ok) continue
+              const json = await res.json().catch(() => null)
+              if (json?.ok && json?.data) fetched[lang] = json.data
+            } catch (_) {}
+          }
+          if (!fetched.en && !fetched.ar && !fetched.ku) return
+          set({
+            content: {
+              en: mergeLangWithSeed('en', fetched.en),
+              ar: mergeLangWithSeed('ar', fetched.ar),
+              ku: mergeLangWithSeed('ku', fetched.ku),
+            },
+          })
+        } catch (_) {}
+      },
     }),
     {
       name: 'Digital Menu-home-v1',
@@ -517,5 +555,10 @@ export function useHomeContent(lang: Lang): HomeContent {
 
 /** all three languages — the public page falls back from the active language to English */
 export function useHomeContentByLang(): HomeContentByLang {
-  return useHomeContentStore((state) => state.content)
+  const content = useHomeContentStore((state) => state.content)
+  const refreshFromServer = useHomeContentStore((state) => state.refreshFromServer)
+  // Pull server copy once per page load so DB edits show up for guests too.
+  _useEffectImpl(() => { void refreshFromServer() }, [refreshFromServer])
+  return content
 }
+

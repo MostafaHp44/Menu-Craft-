@@ -6,6 +6,7 @@ import type {
   Restaurant,
   SectionId,
 } from '../../shared/lib/types.ts'
+import { imageFitStyle } from '../../shared/lib/types.ts'
 import { fontStack } from '../data/fonts.ts'
 import { getTemplate } from '../data/templates.ts'
 import { cx, mix, money, readableOn, tx } from '../../shared/lib/utils.ts'
@@ -58,7 +59,8 @@ function designVars(r: Restaurant): CSSProperties {
     '--rs-accent': c.accent,
     '--rs-button': c.button,
     '--rs-on-button': readableOn(c.button),
-    '--rs-border': mix(c.text, c.background, 0.15),
+    // لون البوردر: حقل مستقل إذا حدده صاحب الموقع، وإلا يُشتق من النص والخلفية
+    '--rs-border': c.border || mix(c.text, c.background, 0.15),
     '--rs-muted': mix(c.text, c.background, 0.58),
     '--rs-accent-soft': mix(c.accent, c.background, 0.86),
     '--rs-accent-ink': mix(c.accent, c.text, 0.22),
@@ -96,6 +98,8 @@ export interface RestaurantSiteProps {
   onOpenCart?: () => void
   /** external add-to-cart (published page's cart/checkout/branch) */
   onAddItem?: (item: MenuItem) => void
+  /** in-place menu editing (admin): append/remove categories & items */
+  onMenuEdit?: (recipe: (draft: Restaurant) => void) => void
 }
 
 export function RestaurantSite({
@@ -108,6 +112,7 @@ export function RestaurantSite({
   onCommit,
   onStyle,
   onOpenCart,
+  onMenuEdit,
 }: RestaurantSiteProps) {
   const { layout } = r.design
   const enabled = r.design.sections.filter((s) => s.enabled).map((s) => s.id)
@@ -140,6 +145,7 @@ export function RestaurantSite({
         data-theme={layout.theme}
         data-card={layout.card}
         data-mode={mode}
+        data-variant={(layout as any).variant || 'classic'}
         data-interactive={interactive || editable ? 'true' : 'false'}
         data-editable={editable ? 'true' : undefined}
         id={`${idPrefix}rs-top`}
@@ -149,7 +155,7 @@ export function RestaurantSite({
         <SiteHero r={r} anchor={anchor} />
 
         {enabled.includes('featured') ? <FeaturedSection r={r} prefix={idPrefix} /> : null}
-        {enabled.includes('menu') ? <MenuSection r={r} prefix={idPrefix} /> : null}
+        {enabled.includes('menu') ? <MenuSection r={r} prefix={idPrefix} editable={editable} onMenuEdit={onMenuEdit} /> : null}
         {enabled.includes('about') ? <AboutSection r={r} prefix={idPrefix} /> : null}
         {enabled.includes('gallery') && r.gallery.length > 0 ? (
           <GallerySection r={r} prefix={idPrefix} />
@@ -375,11 +381,38 @@ function HeroVideo({ src, poster, className }: { src: string; poster: string; cl
   )
 }
 
+function ResponsiveHeroMedia({ r, poster, className }: { r: Restaurant; poster: string; className?: string }) {
+  const [isMobile, setIsMobile] = useState<boolean>(() => typeof window !== 'undefined' && window.innerWidth < 768)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+  const src =
+    (isMobile && r.heroVideoMobile) ? r.heroVideoMobile :
+    (r.heroVideoDesktop) ? r.heroVideoDesktop :
+    r.heroVideo
+  if (!src) return null
+  return <HeroVideo src={src} poster={poster} className={className} />
+}
+
 function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string }) {
   const style = r.design.layout.hero
   const firstHours = r.hours[0]
   const inline = useInlineEdit()
   const { t } = useI18n()
+  const [isMobile, setIsMobile] = useState<boolean>(() => typeof window !== 'undefined' && window.innerWidth < 768)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+  const heroImage = (isMobile && (r as any).heroImageMobile) ? (r as any).heroImageMobile : r.heroImage
+  const heroPoster = heroImage
 
   const body = (
     <>
@@ -433,11 +466,12 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
   )
 
   if (style === 'fullscreen') {
+    const fit = (r as any).heroImageFit || {}
     return (
       <section className="rs-hero rs-hero--fullscreen">
         <div
           className="rs-hero__media"
-          style={{ backgroundImage: `url(${r.heroImage})` }}
+          style={{ backgroundImage: `url(${heroImage})`, backgroundPosition: fit.position && fit.position !== 'default' ? fit.position : undefined }}
           role="img"
           aria-label={t('web.site.hero.ambienceAlt', { name: tx(r.name) })}
           onClick={
@@ -446,7 +480,7 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
               : undefined
           }
         >
-          {r.heroVideo ? <HeroVideo src={r.heroVideo} poster={r.heroImage} /> : null}
+          <ResponsiveHeroMedia r={r} poster={heroPoster} />
         </div>
         <div className="rs-hero__overlay" />
         <div className="rs-hero__inner">
@@ -514,12 +548,13 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
           <figure className="rs-hero__figure">
             <EdImage
               path="heroImage"
-              src={r.heroImage}
+              src={heroImage}
               alt={t('web.site.hero.signatureAlt', { name: tx(r.name) })}
               eager
               label="editor.inline.f.photo"
+              style={imageFitStyle((r as any).heroImageFit) as any}
             />
-            {r.heroVideo ? <HeroVideo src={r.heroVideo} poster={r.heroImage} /> : null}
+            <ResponsiveHeroMedia r={r} poster={heroPoster} />
             <figcaption className="rs-hero__float">
               <Icon name="utensils" size={15} />
               <Ed path="name" label="editor.inline.f.name" />
@@ -545,12 +580,13 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
         <figure className="rs-hero__figure">
           <EdImage
             path="heroImage"
-            src={r.heroImage}
+            src={heroImage}
             alt={t('web.site.hero.diningAlt', { name: tx(r.name) })}
             eager
             label="editor.inline.f.photo"
+            style={imageFitStyle((r as any).heroImageFit) as any}
           />
-          {r.heroVideo ? <HeroVideo src={r.heroVideo} poster={r.heroImage} /> : null}
+          <ResponsiveHeroMedia r={r} poster={heroPoster} />
         </figure>
       </div>
     </section>
@@ -692,7 +728,7 @@ function FeaturedSection({ r, prefix }: { r: Restaurant; prefix: string }) {
             {items.map(({ item, category, base, categoryPath }) => (
               <article key={item.id} className="rs-feature-card">
                 <div className="rs-feature-card__media">
-                  <EdImage path={`${base}.image`} src={item.image} alt={item.name} label="editor.inline.f.photo" />
+                  <EdImage path={`${base}.image`} src={item.image} alt={item.name} label="editor.inline.f.photo" style={imageFitStyle(item.imageFit) as any} />
                   <span className="rs-feature-card__tag rs-badge">
                     <Ed
                       path="copy.featured.tag"
@@ -748,12 +784,12 @@ function addToCart(restaurant: Restaurant, item: MenuItem) {
   })
 }
 
-function MenuCard({ item, base, restaurant }: { item: MenuItem; base: string; restaurant: Restaurant }) {
+function MenuCard({ item, base, restaurant, editable = false, onDelete }: { item: MenuItem; base: string; restaurant: Restaurant; editable?: boolean; onDelete?: () => void }) {
   const { t } = useI18n()
   return (
     <article className={cx('rs-item group relative overflow-hidden rounded-2xl bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md', !item.available && 'rs-item--out')}>
       <div className="rs-item__media">
-        <EdImage path={`${base}.image`} src={item.image} alt={item.name} label="editor.inline.f.photo" />
+        <EdImage path={`${base}.image`} src={item.image} alt={item.name} label="editor.inline.f.photo" style={imageFitStyle(item.imageFit) as any} />
         <div className="rs-item__badges">
           <Badges item={item} />
         </div>
@@ -761,7 +797,20 @@ function MenuCard({ item, base, restaurant }: { item: MenuItem; base: string; re
       <div className="rs-item__body">
         <div className="rs-item__row">
           <Ed as="h3" path={`${base}.name`} className="rs-item__name" label="editor.inline.f.dishName" />
-          <Price item={item} base={base} />
+          <span className="flex shrink-0 items-center gap-1.5">
+            <Price item={item} base={base} />
+            {editable && onDelete ? (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this item?')) onDelete() }}
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-[rgba(220,38,38,0.92)] text-[13px] leading-none text-white transition hover:bg-[rgba(220,38,38,1)]"
+                aria-label="Delete item"
+                title="Delete item"
+              >
+                ×
+              </button>
+            ) : null}
+          </span>
         </div>
         <Ed
           as="p"
@@ -787,17 +836,30 @@ function MenuCard({ item, base, restaurant }: { item: MenuItem; base: string; re
   )
 }
 
-function MenuRow({ item, base, restaurant }: { item: MenuItem; base: string; restaurant: Restaurant }) {
+function MenuRow({ item, base, restaurant, editable = false, onDelete }: { item: MenuItem; base: string; restaurant: Restaurant; editable?: boolean; onDelete?: () => void }) {
   const { t } = useI18n()
   return (
     <article className={cx('rs-item group relative overflow-hidden rounded-2xl bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md', !item.available && 'rs-item--out')}>
       <div className="rs-item__media">
-        <EdImage path={`${base}.image`} src={item.image} alt={item.name} label="editor.inline.f.photo" />
+        <EdImage path={`${base}.image`} src={item.image} alt={item.name} label="editor.inline.f.photo" style={imageFitStyle(item.imageFit) as any} />
       </div>
       <div className="rs-item__body">
         <div className="rs-item__row">
           <Ed as="h3" path={`${base}.name`} className="rs-item__name" label="editor.inline.f.dishName" />
-          <Price item={item} base={base} />
+          <span className="flex shrink-0 items-center gap-1.5">
+            <Price item={item} base={base} />
+            {editable && onDelete ? (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this item?')) onDelete() }}
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-[rgba(220,38,38,0.92)] text-[13px] leading-none text-white transition hover:bg-[rgba(220,38,38,1)]"
+                aria-label="Delete item"
+                title="Delete item"
+              >
+                ×
+              </button>
+            ) : null}
+          </span>
         </div>
         <Ed
           as="p"
@@ -827,13 +889,130 @@ function MenuRow({ item, base, restaurant }: { item: MenuItem; base: string; res
   )
 }
 
-function MenuSection({ r, prefix }: { r: Restaurant; prefix: string }) {
+function MenuBoardItem({ item, restaurant }: { item: MenuItem; restaurant: Restaurant }) {
+  return (
+    <article className="rs-board-item">
+      <div className="rs-board-item__row">
+        <h3 className="rs-board-item__name">{item.name}</h3>
+        <span className="rs-board-item__dots" />
+        <span className="rs-board-item__price">{money(item.price)}</span>
+      </div>
+      {item.description ? <p className="rs-board-item__desc">{item.description}</p> : null}
+      <button type="button" className="rs-board-item__add" onClick={() => addToCart(restaurant, item)}>
+        Add
+      </button>
+    </article>
+  )
+}
+
+function MenuCompactItem({ item, base, restaurant, editable = false, onDelete }: { item: MenuItem; base: string; restaurant: Restaurant; editable?: boolean; onDelete?: () => void }) {
+  return (
+    <article className="rs-compact-item">
+      <div className="rs-compact-item__thumb"><EdImage path={`${base}.image`} src={item.image} alt={item.name} label="editor.inline.f.photo" style={imageFitStyle(item.imageFit) as any} /></div>
+      <div className="rs-compact-item__body">
+        <h3 className="rs-compact-item__name">{item.name}</h3>
+        <p className="rs-compact-item__desc">{item.description}</p>
+      </div>
+      <span className="rs-compact-item__price">{money(item.price)}</span>
+      <button type="button" className="rs-compact-item__add" onClick={() => addToCart(restaurant, item)}>+</button>
+      {editable && onDelete ? <button type="button" onClick={onDelete} className="rs-compact-item__del" aria-label="Delete">×</button> : null}
+    </article>
+  )
+}
+
+function MenuItemsGrid({ items, baseFor, restaurant, editable = false }: { items: MenuItem[]; baseFor: (index: number, item: MenuItem) => { base: string; onDelete?: () => void }; restaurant: Restaurant; editable?: boolean; onMenuEdit?: any }) {
+  const layout = restaurant.design.layout.menuLayout
+  if (layout === 'board') return <div className="rs-board">{items.map((it) => <MenuBoardItem key={it.id} item={it} restaurant={restaurant} />)}</div>
+  if (layout === 'compact') return <div className="rs-compact">{items.map((it, idx) => { const { base, onDelete } = baseFor(idx, it); return <MenuCompactItem key={it.id} item={it} base={base} restaurant={restaurant} editable={editable} onDelete={onDelete} /> })}</div>
+  if (layout === 'deck') return <div className="rs-deck">{items.map((it, idx) => { const { base, onDelete } = baseFor(idx, it); return <MenuCard key={it.id} item={it} base={base} restaurant={restaurant} editable={editable} onDelete={onDelete} /> })}</div>
+  const listMode = layout === 'list'
+  return (
+    <div className={listMode ? 'rs-list' : 'rs-menu__grid'}>
+      {items.map((it, idx) => { const { base, onDelete } = baseFor(idx, it); return listMode ? <MenuRow key={it.id} item={it} base={base} restaurant={restaurant} editable={editable} onDelete={onDelete} /> : <MenuCard key={it.id} item={it} base={base} restaurant={restaurant} editable={editable} onDelete={onDelete} /> })}
+    </div>
+  )
+}
+
+function MenuSection({ r, prefix, editable = false, onMenuEdit }: { r: Restaurant; prefix: string; editable?: boolean; onMenuEdit?: (recipe: (draft: Restaurant) => void) => void }) {
   const { t } = useI18n()
-  const categories: MenuCategory[] = r.menu.filter((c) => c.items.length > 0)
+  const categories: MenuCategory[] = editable ? r.menu : r.menu.filter((c) => c.items.length > 0)
   const [selected, setSelected] = useState<string | null>(null)
   const current = categories.find((c) => c.id === selected) ?? categories[0]
   const currentIndex = current ? r.menu.indexOf(current) : -1
-  const listMode = r.design.layout.menuLayout === 'list'
+  const displayMode = (r.design.layout as any).menuDisplay || 'tabs'
+  const sectionRefs = useRef<Map<string, HTMLElement>>(new Map())
+  const [activeId, setActiveId] = useState<string | null>(null)
+
+  // Scrollspy: highlight the tab of the section currently in view
+  useEffect(() => {
+    if (displayMode !== 'scroll-sticky' || editable) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveId(entry.target.getAttribute('data-cat-id'))
+        })
+      },
+      { rootMargin: '-90px 0px -65% 0px', threshold: 0 }
+    )
+    sectionRefs.current.forEach((el) => observer.observe(el))
+    return () => observer.disconnect()
+  }, [categories.length, displayMode, editable])
+
+  useEffect(() => {
+    if (!activeId && categories[0]) setActiveId(categories[0].id)
+  }, [categories.length, activeId])
+
+  const scrollToCat = (id: string) => {
+    const el = sectionRefs.current.get(id)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setActiveId(id)
+    // keep the active tab visible in the sticky bar
+    const tabEl = document.querySelector(`[data-tab-id="${id}"]`) as HTMLElement | null
+    if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+  }
+
+  // ---------- scroll-sticky presentation (stacked categories + sticky tabs + scrollspy) ----------
+  if (displayMode === 'scroll-sticky' && !editable) {
+    return (
+      <section className="rs-section" id={`${prefix}rs-menu`}>
+        <div className="rs-shell">
+          <SectionHead
+            copyKey="menu"
+            eyebrow={t('web.site.menu.eyebrow')}
+            title={t('web.site.menu.title', { defaultValue: 'Menu' } as any) || 'Menu'}
+            sub={t('web.site.menu.noteFallback')}
+            split
+            action={<span className="rs-chip">{t('web.site.menu.dishesCount', { count: r.menu.reduce((s, c) => s + c.items.length, 0) })}</span>}
+          />
+          <div className="rs-menu__sticky" role="tablist" aria-label={t('web.site.menu.categoriesAria')}>
+            {categories.map((cat) => (
+              <button key={cat.id} type="button" data-tab-id={cat.id} aria-selected={activeId === cat.id} role="tab" className={`rs-menu__tab rs-menu__tab--sticky${activeId === cat.id ? ' is-active' : ''}`} onClick={() => scrollToCat(cat.id)}>
+                {cat.name}<span className="rs-menu__count">{cat.items.length}</span>
+              </button>
+            ))}
+          </div>
+          <div className="rs-menu__stack">
+            {categories.map((cat) => {
+              const idx = r.menu.indexOf(cat)
+              return (
+                <div key={cat.id} id={`${prefix}cat-${cat.id}`} data-cat-id={cat.id} ref={(el) => { if (el) sectionRefs.current.set(cat.id, el); else sectionRefs.current.delete(cat.id) }} className="rs-menu-cat">
+                  <header className="rs-menu-cat__head">
+                    <h3 className="rs-menu-cat__title">{cat.name}</h3>
+                    {cat.note ? <p className="rs-menu-cat__note">{cat.note}</p> : null}
+                  </header>
+                  <MenuItemsGrid
+                    items={cat.items}
+                    restaurant={r}
+                    baseFor={(itemIdx) => ({ base: `menu.${idx}.items.${itemIdx}` })}
+                  />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section className="rs-section" id={`${prefix}rs-menu`}>
@@ -889,17 +1068,70 @@ function MenuSection({ r, prefix }: { r: Restaurant; prefix: string }) {
                   <span className="rs-menu__count">{category.items.length}</span>
                 </button>
               ))}
+              {editable && onMenuEdit ? (
+                <button
+                  type="button"
+                  className="rs-menu__tab"
+                  style={{ borderStyle: 'dashed' }}
+                  onClick={() => {
+                    // اسم افتراضي — يُعدّل بالضغط عليه مباشرة في رأس القسم (titlePath)
+                    const id = `cat-${Date.now()}`
+                    onMenuEdit((draft) => {
+                      if (!Array.isArray(draft.menu)) draft.menu = []
+                      draft.menu.push({ id, name: 'New Category', note: '', items: [] })
+                    })
+                    setSelected(id)
+                  }}
+                >
+                  + Add category
+                </button>
+              ) : null}
             </div>
 
-            <div className={listMode ? 'rs-list' : 'rs-menu__grid'}>
-              {current?.items.map((menuItem, itemIndex) => {
-                const base = `menu.${currentIndex}.items.${itemIndex}`
-                return listMode ? (
-                  <MenuRow key={menuItem.id} item={menuItem} base={base} restaurant={r} />
-                ) : (
-                  <MenuCard key={menuItem.id} item={menuItem} base={base} restaurant={r} />
-                )
-              })}
+            <MenuItemsGrid
+              items={current?.items || []}
+              restaurant={r}
+              editable={editable}
+              baseFor={(itemIdx) => {
+                const onDelete = editable && onMenuEdit
+                  ? () => onMenuEdit((draft) => {
+                      const cat = draft.menu[currentIndex]
+                      if (cat && Array.isArray(cat.items)) cat.items.splice(itemIdx, 1)
+                    })
+                  : undefined
+                return { base: `menu.${currentIndex}.items.${itemIdx}`, onDelete }
+              }}
+            />
+            <div style={{ marginTop: '1rem' }}>
+              {editable && onMenuEdit && current ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    // صنف افتراضي بسعر صفر — الاسم والسعر والوصف والصورة تُعدَّل بالضغط المباشر
+                    onMenuEdit((draft) => {
+                      const cat = draft.menu[currentIndex]
+                      if (!cat) return
+                      if (!Array.isArray(cat.items)) cat.items = []
+                      cat.items.push({ id: `item-${Date.now()}`, name: 'New dish', description: '', price: 0, compareAt: null, available: true, featured: false, popular: false, image: '' })
+                    })
+                  }}
+                  style={{
+                    minHeight: '8rem',
+                    border: '2px dashed var(--rs-border)',
+                    borderRadius: 'var(--rs-radius)',
+                    background: 'transparent',
+                    color: 'var(--rs-muted)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  + Add item
+                </button>
+              ) : null}
             </div>
           </>
         )}
@@ -921,6 +1153,7 @@ function AboutSection({ r, prefix }: { r: Restaurant; prefix: string }) {
             src={r.gallery[0] ?? r.heroImage}
             alt={t('web.site.about.interiorAlt', { name: tx(r.name) })}
             label="editor.inline.f.photo"
+            style={imageFitStyle(r.galleryFits?.[0]) as any}
           />
         </figure>
         <div className="rs-about__body">
@@ -1007,6 +1240,7 @@ function GallerySection({ r, prefix }: { r: Restaurant; prefix: string }) {
                 src={src}
                 alt={t('web.site.gallery.imageAlt', { name: tx(r.name), index: index + 1 })}
                 label="editor.inline.f.galleryPhoto"
+                style={imageFitStyle(r.galleryFits?.[index]) as any}
               />
             </div>
           ))}

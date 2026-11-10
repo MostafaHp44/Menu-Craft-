@@ -21,7 +21,6 @@ export function FloatingVideo({ src, poster }: Props) {
     const el = ref.current
     if (!el) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    if (window.matchMedia('(pointer: coarse)').matches) return
 
     /* show after the first screen, hide again at the very bottom */
     const st = ScrollTrigger.create({

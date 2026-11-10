@@ -44,10 +44,10 @@ export default function OrdersPage() {
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  const branches = useAsync<Branch[]>(() => (isOwner ? branchesApi.list() : Promise.resolve([])), [isOwner])
+  const branches = useAsync<Branch[]>(() => branchesApi.list(), [])
   const list = useAsync(
-    () => ordersApi.list({ status, branch_id: isOwner && branchId ? branchId : undefined }),
-    [status, branchId, isOwner]
+    () => ordersApi.list({ status, branch_id: isOwner && branchId ? branchId : undefined, restaurantId: user?.restaurant_id }),
+    [status, branchId, isOwner, user?.restaurant_id]
   )
 
   const branchNames = useMemo(() => {
@@ -62,11 +62,11 @@ export default function OrdersPage() {
     if (!query) return rows
     return rows.filter((order) => {
       const haystack = [
-        order.order_number?.toString() ?? '',
+        String(order.number ?? ''),
         order.id,
-        order.table_no ?? '',
-        order.customer_name ?? '',
-        order.phone ?? '',
+        order.table ?? '',
+        order.customer ?? order.customerName ?? '',
+        order.customerPhone ?? '',
       ]
         .join(' ')
         .toLowerCase()
@@ -157,14 +157,16 @@ export default function OrdersPage() {
                   <StatusBadge status={order.status} />
                 </Td>
                 <Td>
-                  <span className="line-clamp-1">{order.customer_name ?? '—'}</span>
-                  {order.phone ? <span className="block text-[11.5px] text-clay">{order.phone}</span> : null}
+                  <span className="line-clamp-1">{order.customer ?? '—'}</span>
+                  {order.customerPhone ? (
+                    <span className="block text-[11.5px] text-clay">{order.customerPhone}</span>
+                  ) : null}
                 </Td>
-                <Td>{order.table_no ?? '—'}</Td>
-                <Td>{order.branch_id ? branchNames.get(order.branch_id) ?? '—' : '—'}</Td>
-                <Td>{order.items.length}</Td>
+                <Td>{order.table ?? '—'}</Td>
+                <Td>{order.branchId && branchNames.has(order.branchId as string) ? branchNames.get(order.branchId as string)! : '—'}</Td>
+                <Td>{Array.isArray(order.lines) ? order.lines.length : 0}</Td>
                 <Td>{formatNumber(order.total, lang)}</Td>
-                <Td className="whitespace-nowrap text-[12px] text-umber">{formatDateTime(order.created_at, lang)}</Td>
+                <Td className="whitespace-nowrap text-[12px] text-umber">{formatDateTime(order.createdAt, lang)}</Td>
                 <Td>
                   <Button variant="outline" size="sm" onClick={() => setSelectedId(order.id)}>
                     {t('live.common.details')}
@@ -207,7 +209,7 @@ function OrderDetail({
   const user = useSession((state) => state.user)
   const isOwner = user?.role === 'Owner'
   const detail = useAsync<Order>(() => ordersApi.get(orderId), [orderId])
-  const branches = useAsync<Branch[]>(() => (isOwner ? branchesApi.list() : Promise.resolve([])), [isOwner])
+  const branches = useAsync<Branch[]>(() => branchesApi.list(), [])
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [reasonMode, setReasonMode] = useState<'reject' | 'cancel' | null>(null)
   const [busy, setBusy] = useState(false)
@@ -235,11 +237,11 @@ function OrderDetail({
     }
   }
 
-  const rejectOrder = async (reason: string) => {
+  const rejectOrder = async () => {
     setBusy(true)
     setActionError('')
     try {
-      await ordersApi.reject(orderId, reason)
+      await ordersApi.reject(orderId)
       notify(t('live.orders.rejected'), 'success')
       setReasonMode(null)
       refreshAll()
@@ -265,8 +267,8 @@ function OrderDetail({
     }
   }
 
-  const branchName = order?.branch_id
-    ? (branches.data ?? []).find((branch) => branch.id === order.branch_id)?.name ?? '—'
+  const branchName = order?.branchId
+    ? (branches.data ?? []).find((branch) => branch.id === order.branchId)?.name ?? '—'
     : '—'
 
   const canConfirm = order?.status === 'pending'
@@ -278,13 +280,13 @@ function OrderDetail({
       open
       onClose={onClose}
       title={`${t('live.orders.detailsTitle')} ${order ? orderNumber(order) : ''}`}
-      description={order ? `${formatDateTime(order.created_at, lang)} · ${t('live.common.branch')}: ${branchName}` : undefined}
+      description={order ? `${formatDateTime(order.createdAt, lang)} · ${t('live.common.branch')}: ${branchName}` : undefined}
       size="lg"
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap gap-2">
             {order ? <ReceiptButton order={order} /> : null}
-            {order?.phone ? <WhatsAppButton order={order} /> : null}
+            {order?.customerPhone ? <WhatsAppButton order={order} /> : null}
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="ghost" onClick={onClose}>
@@ -325,17 +327,17 @@ function OrderDetail({
             <span className="rounded-full border border-sand px-2.5 py-1 text-[11.5px] text-umber">
               {order.channel ?? '—'}
             </span>
-            {order.table_no ? (
+            {order.table ? (
               <span className="rounded-full border border-sand px-2.5 py-1 text-[11.5px] text-umber">
-                {t('live.common.table')}: {order.table_no}
+                {t('live.common.table')}: {order.table}
               </span>
             ) : null}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Info label={t('live.common.customer')} value={order.customer_name ?? '—'} />
-            <Info label={t('live.common.phone')} value={order.phone ?? '—'} />
-            <Info label={t('live.common.address')} value={order.delivery_address ?? '—'} />
+            <Info label={t('live.common.customer')} value={order.customer ?? '—'} />
+            <Info label={t('live.common.phone')} value={order.customerPhone ?? '—'} />
+            <Info label={t('live.common.address')} value={order.deliveryAddress ?? '—'} />
             <Info label={t('live.common.total')} value={formatNumber(order.total, lang)} />
           </div>
 
@@ -361,13 +363,13 @@ function OrderDetail({
                   </tr>
                 </thead>
                 <tbody>
-                  {order.items.map((item, index) => (
-                    <tr key={`${item.item_id}-${index}`} className="border-t border-sand/60">
-                      <td className="px-3 py-2 text-espresso">{item.item_name}</td>
+                  {order.lines.map((item, index) => (
+                    <tr key={`${item.itemId}-${index}`} className="border-t border-sand/60">
+                      <td className="px-3 py-2 text-espresso">{item.name}</td>
                       <td className="px-3 py-2 text-center text-umber">{item.qty}</td>
                       <td className="px-3 py-2 text-end text-umber">{formatNumber(item.price, lang)}</td>
                       <td className="px-3 py-2 text-end font-medium text-charcoal">
-                        {formatNumber(item.line_total ?? item.price * item.qty, lang)}
+                        {formatNumber(item.price * item.qty, lang)}
                       </td>
                     </tr>
                   ))}
@@ -433,10 +435,10 @@ function Info({ label, value }: { label: string; value: string }) {
 function ReceiptButton({ order }: { order: Order }) {
   const { t, lang } = useI18n()
   const print = () => {
-    const rows = order.items
+    const rows = order.lines
       .map(
         (item) =>
-          `<tr><td>${escapeHtml(item.item_name)}</td><td style="text-align:center">${item.qty}</td><td style="text-align:end">${item.price * item.qty}</td></tr>`
+          `<tr><td>${escapeHtml(item.name)}</td><td style="text-align:center">${item.qty}</td><td style="text-align:end">${item.price * item.qty}</td></tr>`
       )
       .join('')
     const html = `<!doctype html><html dir="${lang === 'en' ? 'ltr' : 'rtl'}"><head><meta charset="utf-8"><title>${escapeHtml(
@@ -449,10 +451,10 @@ function ReceiptButton({ order }: { order: Order }) {
       .total{margin-top:12px;font-size:15px;font-weight:700;display:flex;justify-content:space-between}
       </style></head><body>
       <h1>${escapeHtml(orderNumber(order))}</h1>
-      <p>${escapeHtml(formatDateTime(order.created_at, lang))}</p>
-      <p>${escapeHtml(order.customer_name ?? '')}</p>
-      <p>${escapeHtml(order.phone ?? '')}</p>
-      <p>${escapeHtml(order.delivery_address ?? '')}</p>
+      <p>${escapeHtml(formatDateTime(order.createdAt, lang))}</p>
+      <p>${escapeHtml(order.customerName ?? '')}</p>
+      <p>${escapeHtml(order.customerPhone ?? '')}</p>
+      <p>${escapeHtml(order.deliveryAddress ?? '')}</p>
       <table><thead><tr><th>${escapeHtml(t('live.common.name'))}</th><th style="text-align:center">×</th><th style="text-align:end">${escapeHtml(
       t('live.common.amount')
     )}</th></tr></thead><tbody>${rows}</tbody></table>
@@ -477,12 +479,12 @@ function ReceiptButton({ order }: { order: Order }) {
 
 function WhatsAppButton({ order }: { order: Order }) {
   const { t, lang } = useI18n()
-  const phone = (order.phone ?? '').replace(/[^\d]/g, '')
+  const phone = (order.customerPhone ?? '').replace(/[^\d]/g, '')
   if (!phone) return null
-  const lines = order.items.map((item) => `• ${item.item_name} × ${item.qty}`).join('\n')
+  const lines = order.lines.map((item) => `• ${item.name} × ${item.qty}`).join('\n')
   const text = `${t('live.common.order')} ${orderNumber(order)}\n${lines}\n${t('live.common.total')}: ${Number(
     order.total ?? 0
-  ).toFixed(2)}\n${formatDateTime(order.created_at, lang)}`
+  ).toFixed(2)}\n${formatDateTime(order.createdAt, lang)}`
   return (
     <Button
       variant="outline"

@@ -55,6 +55,7 @@ const en = {
     cartEmptySub: 'Browse the menu and add dishes.',
     browseMenu: 'Browse menu',
     checkoutBtn: 'Checkout',
+    itemsLabel: 'Your items',
     quantity: 'Quantity',
     remove: 'Remove',
     subtotalLabel: 'Subtotal',
@@ -83,6 +84,7 @@ const en = {
     placing: 'Placing your order…',
     paymentMethodUnavailable: 'This payment method is not available.',
     orderFailed: 'Could not place the order',
+    branchRequired: 'Please select a branch',
 
     /* ------------------------------ success -------------------------------- */
     orderConfirmed: 'Order confirmed',
@@ -146,6 +148,7 @@ const ar: Deep<typeof en> = {
     cartEmptySub: 'تصفح المنيو وأضف الأطباق.',
     browseMenu: 'تصفح المنيو',
     checkoutBtn: 'إتمام الطلب',
+    itemsLabel: 'أصنافك',
     quantity: 'الكمية',
     remove: 'إزالة',
     subtotalLabel: 'المجموع',
@@ -173,6 +176,7 @@ const ar: Deep<typeof en> = {
     placing: 'نرسل طلبك…',
     paymentMethodUnavailable: 'وسيلة الدفع هذه غير متاحة.',
     orderFailed: 'تعذر إرسال الطلب',
+    branchRequired: 'الرجاء اختيار الفرع',
 
     orderConfirmed: 'تم تأكيد طلبك',
     orderNumber: 'طلب #{number}',
@@ -234,6 +238,7 @@ const ku: Deep<typeof en> = {
     cartEmptySub: 'مێنیوو ببینە و خواردنەکان زیادبکە.',
     browseMenu: 'مێنیوو ببینە',
     checkoutBtn: 'تەواوکردنی داوا',
+    itemsLabel: 'داواکەتە تایبەت',
     quantity: 'بەرز',
     remove: 'دەرهێنان',
     subtotalLabel: 'کۆی گشتی',
@@ -261,6 +266,7 @@ const ku: Deep<typeof en> = {
     placing: 'داوا بۆماوەیە…',
     paymentMethodUnavailable: 'ئەم ڕێگای پارەدانە بەردەست نییە.',
     orderFailed: 'داوا نەدانرا',
+    branchRequired: 'لەم لقە هەڵبژێرە',
 
     orderConfirmed: 'داوا پەسەند کرا',
     orderNumber: 'داوا #{number}',

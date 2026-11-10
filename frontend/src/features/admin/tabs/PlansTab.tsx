@@ -2,7 +2,7 @@
  * Plans Tab — إدارة الباقات للسوبر أدمن
  * إضافة، تعديل، حذف الباقات وعرض عدد المشتركين في كل باقة
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useI18n } from '../../../shared/i18n'
 import { Button, Card } from '../../../shared/ui/ui.tsx'
 import { PanelHeading, DarkEmpty } from '../parts.tsx'
@@ -26,6 +26,9 @@ export default function PlansTab() {
   const addPlan = usePlatformStore((s) => s.addPlan)
   const updatePlan = usePlatformStore((s) => s.updatePlan)
   const deletePlan = usePlatformStore((s) => s.deletePlan)
+  const refreshPlans = usePlatformStore((s) => s.refreshPlans)
+
+  useEffect(() => { refreshPlans() }, [refreshPlans])
 
   const editing = plans.find((p) => p.id === editingId) ?? null
 

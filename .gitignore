@@ -11,3 +11,6 @@ _*
 npm-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# Secrets — nunca se rastreen en Git. Copiar .env.example a .env y definir valores reales por entorno.
+backend/.env

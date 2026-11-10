@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { Icon } from '../../shared/ui/icons.tsx'
 import { Button, Card, Field, Input } from '../../shared/ui/ui.tsx'
 import { useBackendAuth } from '../../shared/store/useBackendAuth.ts'
@@ -64,7 +64,7 @@ export default function AdminLogin() {
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="super@menucraft.demo"
+                  placeholder="super@menudigital.demo"
                   autoComplete="username"
                 />
               </Field>
@@ -101,6 +101,11 @@ export default function AdminLogin() {
             <div className="mt-6 flex items-center gap-2 text-[11px] text-ivory/30">
               <Icon name="lock" size={12} />
               <span>Only users with <strong className="text-ivory/70">super_admin</strong> role are authorized.</span>
+                   <NavLink to={'/'}> 
+                   <Button className="ml-auto text-[11px] text-ivory/30 hover:text-ivory/70 w-[10em] bg-[white/10]"   size="sm">
+               Back To Home
+              </Button>
+</NavLink>
             </div>
           </div>
         </Card>

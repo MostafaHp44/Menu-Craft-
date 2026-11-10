@@ -1,55 +1,87 @@
 /**
- * Branch service — simple, working CRUD against Branches table.
+ * Branch service — MariaDB / mysql2 version.
  * Every operation validates restaurant ownership via restaurant_id filter.
+ * Schema note: MariaDB `Branches` uses a single `name` column (not name_en/ar/ku).
  */
-const { getPool, sql } = require('../config/db');
+const { getMySQLPool } = require('../config/mysql');
 
 async function listBranches(restaurantId) {
-  const pool = await getPool();
-  return (await pool.request().input('rid', sql.NVarChar, restaurantId)
-    .query('SELECT id, name_en, name_ar, name_ku, address, phone, accepting_orders, is_active, opening_hours FROM Branches WHERE restaurant_id = @rid ORDER BY created_at')).recordset;
+  const pool = await getMySQLPool();
+  const c = await pool.getConnection();
+  try {
+    const [rows] = await c.execute(
+      'SELECT id, restaurant_id, name, address, phone, accepting_orders, is_active, opening_hours, created_at, updated_at FROM Branches WHERE restaurant_id = ? ORDER BY created_at',
+      [restaurantId]
+    );
+    return rows;
+  } finally { c.release(); }
 }
 
 async function getBranch(restaurantId, branchId) {
-  const pool = await getPool();
-  const r = await pool.request().input('rid', sql.NVarChar, restaurantId).input('bid', sql.NVarChar, branchId)
-    .query('SELECT * FROM Branches WHERE id = @bid AND restaurant_id = @rid');
-  return r.recordset[0] || null;
+  const pool = await getMySQLPool();
+  const c = await pool.getConnection();
+  try {
+    const [rows] = await c.execute('SELECT * FROM Branches WHERE id = ? AND restaurant_id = ?', [branchId, restaurantId]);
+    return rows[0] || null;
+  } finally { c.release(); }
+}
+
+/** Back-compat helper used elsewhere */
+async function getBranchById(id) {
+  const pool = await getMySQLPool();
+  const c = await pool.getConnection();
+  try {
+    const [rows] = await c.execute('SELECT * FROM Branches WHERE id = ?', [id]);
+    return rows[0] || null;
+  } finally { c.release(); }
 }
 
 async function createBranch(rid, data) {
-  const pool = await getPool();
-  await pool.request()
-    .input('rid', sql.NVarChar, rid)
-    .input('n', sql.NVarChar, data.name || '')
-    .input('a', sql.NVarChar, (data.address || '').substring(0, 500))
-    .input('p', sql.NVarChar, data.phone || '')
-    .input('acc', sql.Bit, data.acceptingOrders === false ? 0 : 1)
-    .input('h', sql.NVarChar, data.openingHours || null)
-    .query(`INSERT INTO Branches (restaurant_id, name_en, address, phone, accepting_orders, opening_hours) VALUES (@rid, @n, @a, @p, @acc, @h)`);
-  return { created: true };
+  const pool = await getMySQLPool();
+  const c = await pool.getConnection();
+  try {
+    const id = `br-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    // `opening_hours` is longtext with CHECK (json_valid(opening_hours)) — store a JSON string (or NULL)
+    const openingHours = data.openingHours ? JSON.stringify(String(data.openingHours)) : null;
+    await c.execute(
+      'INSERT INTO Branches (id, restaurant_id, name, address, phone, accepting_orders, is_active, opening_hours, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, NOW(), NOW())',
+      [
+        id,
+        rid,
+        String(data.name || '').slice(0, 200),
+        String(data.address || '').slice(0, 500),
+        data.phone || null,
+        data.acceptingOrders === false ? 0 : 1,
+        openingHours,
+      ]
+    );
+    return { created: true, id };
+  } finally { c.release(); }
 }
 
 async function updateBranch(rid, bid, data) {
-  const pool = await getPool();
-  const fields = [];
-  if (data.name !== undefined) { fields.push('name_en = @n'); }
-  if (data.address !== undefined) { fields.push('address = @a'); }
-  if (data.phone !== undefined) { fields.push('phone = @p'); }
-  if (data.acceptingOrders !== undefined) { fields.push('accepting_orders = @acc'); }
-  if (data.isActive !== undefined) { fields.push('is_active = @act'); }
-  if (data.openingHours !== undefined) { fields.push('opening_hours = @h'); }
-  if (!fields.length) return { updated: false };
-  const q = `UPDATE Branches SET ${fields.join(', ')}, updated_at = GETDATE() WHERE id = @bid AND restaurant_id = @rid`;
-  const req = pool.request().input('rid', sql.NVarChar, rid).input('bid', sql.NVarChar, bid);
-  if (data.name !== undefined) req.input('n', sql.NVarChar, data.name);
-  if (data.address !== undefined) req.input('a', sql.NVarChar, data.address);
-  if (data.phone !== undefined) req.input('p', sql.NVarChar, data.phone);
-  if (data.acceptingOrders !== undefined) req.input('acc', sql.Bit, data.acceptingOrders === false ? 0 : 1);
-  if (data.isActive !== undefined) req.input('act', sql.Bit, data.isActive ? 1 : 0);
-  if (data.openingHours !== undefined) req.input('h', sql.NVarChar, data.openingHours);
-  await req.query(q);
-  return { updated: true };
+  const pool = await getMySQLPool();
+  const c = await pool.getConnection();
+  try {
+    const fields = [];
+    const params = [];
+    // يُقبل الاسم الـ snake_case القادم من الواجهة والـ camelCase معًا —
+    // وإلا يتجاهَل الحقل ويُعاد `{ updated: false }` دون أي كتابة في القاعدة.
+    const accepting = data.acceptingOrders !== undefined ? data.acceptingOrders : data.accepting_orders;
+    const active = data.isActive !== undefined ? data.isActive : data.is_active;
+    if (data.name !== undefined) { fields.push('name = ?'); params.push(data.name); }
+    if (data.address !== undefined) { fields.push('address = ?'); params.push(data.address); }
+    if (data.phone !== undefined) { fields.push('phone = ?'); params.push(data.phone); }
+    if (accepting !== undefined) { fields.push('accepting_orders = ?'); params.push(accepting === false || accepting === 0 ? 0 : 1); }
+    if (active !== undefined) { fields.push('is_active = ?'); params.push(active === false || active === 0 ? 0 : 1); }
+    if (data.openingHours !== undefined) { fields.push('opening_hours = ?'); params.push(data.openingHours ? JSON.stringify(String(data.openingHours)) : null); }
+    if (!fields.length) return { updated: false, reason: 'EMPTY_UPDATE' };
+    fields.push('updated_at = NOW()');
+    params.push(bid, rid);
+    const [r] = await c.execute(`UPDATE Branches SET ${fields.join(', ')} WHERE id = ? AND restaurant_id = ?`, params);
+    // affectedRows = 0 يعني إما أن الفرع غير موجود أو أنه تابع لمطعم آخر (عزل المستأجرين)
+    return { updated: r.affectedRows > 0, affectedRows: r.affectedRows };
+  } finally { c.release(); }
 }
 
-module.exports = { listBranches, getBranch, createBranch, updateBranch };
+module.exports = { listBranches, getBranch, getBranchById, createBranch, updateBranch };

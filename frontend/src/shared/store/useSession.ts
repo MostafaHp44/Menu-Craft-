@@ -35,6 +35,7 @@ function withProfile(user: ApiUser): ApiUser {
     name: user.name ?? stored.name,
     status: user.status ?? stored.status,
     needsPasswordChange: stored.needsPasswordChange ?? false,
+    restaurant_id: user.restaurant_id ?? stored.restaurant_id,
   }
 }
 
@@ -50,21 +51,42 @@ interface SessionState {
   clearError: () => void
 }
 
+/**
+ * Single-flight guard for refresh().
+ *
+ * The access token lives 15 minutes and the refresh cookie is single-use
+ * (rotated on every use). React StrictMode mounts effects twice in dev and
+ * several components call refresh() on the same screen — without sharing one
+ * in-flight promise, concurrent calls race the cookie jar, the loser gets
+ * 401 and wipes a valid session — the "page keeps restarting" flicker.
+ * (Mirrors the same guard in useBackendAuth.)
+ */
+let refreshInFlight: Promise<ApiUser | null> | null = null
+
 export const useSession = create<SessionState>()((set) => ({
   user: null,
   status: 'idle',
   error: null,
 
   refresh: async () => {
-    set({ status: 'loading', error: null })
+    if (refreshInFlight) return refreshInFlight
+    const run = (async () => {
+      set({ status: 'loading', error: null })
+      try {
+        const user = withProfile(await authApi.me())
+        writeProfile(user)
+        set({ user, status: 'ready' })
+        return user
+      } catch {
+        set({ user: null, status: 'ready' })
+        return null
+      }
+    })()
+    refreshInFlight = run
     try {
-      const user = withProfile(await authApi.me())
-      writeProfile(user)
-      set({ user, status: 'ready' })
-      return user
-    } catch {
-      set({ user: null, status: 'ready' })
-      return null
+      return await run
+    } finally {
+      if (refreshInFlight === run) refreshInFlight = null
     }
   },
 
@@ -87,13 +109,15 @@ export const useSession = create<SessionState>()((set) => ({
       await authApi.logout()
     } finally {
       writeProfile(null)
-      set({ user: null, status: 'ready', error: null })
+      // idle (مش ready): الـ PanelGate التالي يجب أن يتحقق من الكوكي من جديد
+      // بدل أن يردّ فوراً بدون تحقق فيدخل في loop بعد التسجيل
+      set({ user: null, status: 'idle', error: null })
     }
   },
 
   setUser: (user) => {
     writeProfile(user)
-    set({ user })
+    set({ user, status: user ? 'ready' : 'idle' })
   },
   clearError: () => set({ error: null }),
 }))
@@ -105,17 +129,36 @@ export function isRole(user: ApiUser | null, ...roles: ApiRole[]): boolean {
   return roles.includes(user.role as ApiRole)
 }
 
+function normalizeRole(role: string | undefined): string | undefined {
+  if (!role) return role;
+  const r = role.toLowerCase();
+  if (r === 'owner' || r === 'client') return 'Owner'
+  if (r === 'cashier') return 'Cashier'
+  if (r === 'kitchen') return 'Kitchen'
+  if (r === 'waiter') return 'Waiter'
+  if (r === 'super_admin' || r === 'admin') return r // keep as is
+  return role
+}
+
 export function homePathFor(user: ApiUser | null): string {
   if (!user) return '/workspace/login'
-  switch (user.role) {
+  const role = normalizeRole(user.role as string | undefined)
+  switch (role) {
     case 'Cashier':
       return '/workspace/orders'
     case 'Kitchen':
       return '/workspace/kitchen'
     case 'Waiter':
       return '/workspace/waiter'
+    // فصل تام: صاحب المطعم يذهب إلى لوحته مباشرة
+    case 'Owner':
+      return '/dashboard'
+    case 'super_admin':
+    case 'admin':
+      return '/admin'
     default:
-      return '/workspace/overview'
+      // دور غير معروف — لا يفتح أي لوحة
+      return '/'
   }
 }
 

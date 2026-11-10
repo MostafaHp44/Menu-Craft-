@@ -1,17 +1,42 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon } from '../../shared/ui/icons.tsx'
 import { Badge, Button, Card, Img } from '../../shared/ui/ui.tsx'
 import { useCustomize } from '../../shared/lib/hooks.ts'
 import { getTemplate } from '../../templates/data/templates.ts'
 import { useTemplateList } from '../../templates/data/useTemplateList.ts'
-import { cx } from '../../shared/lib/utils.ts'
+import { cx, tx } from '../../shared/lib/utils.ts'
 import { useActiveRestaurant } from '../../shared/store/useStore.ts'
+import { useSubscriptionStatus } from '../../shared/store/usePlatform.ts'
+import { SubscribeModal } from './billing/SubscribeModal.tsx'
+import { useSelectedTemplates } from './useSelectedTemplates.ts'
 
 export default function TemplatesPage() {
   const r = useActiveRestaurant()
   const customize = useCustomize()
   const templates = useTemplateList()
   const current = getTemplate(r.templateId)
+  const { has } = useSelectedTemplates()
+  const { isActive } = useSubscriptionStatus(r.id)
+  const [subOpen, setSubOpen] = useState(false)
+  const [pendingTemplate, setPendingTemplate] = useState<string | null>(null)
+
+  /** اختيار أي تمبلت يتطلب باقة نشطة — لو مفيش اشتراك يظهر بوب بالباقات */
+  const handleUse = (templateId: string) => {
+    if (!isActive) {
+      setPendingTemplate(templateId)
+      setSubOpen(true)
+      return
+    }
+    void customize(templateId)
+  }
+
+  const handleSubscribed = () => {
+    if (pendingTemplate) {
+      setPendingTemplate(null)
+      void customize(pendingTemplate)
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -66,6 +91,11 @@ export default function TemplatesPage() {
                     </Badge>
                   ) : null}
                   {template.featured && !active ? <Badge tone="dark">Featured</Badge> : null}
+                  {has(template.id) && !active ? (
+                    <Badge tone="dark" className="bg-moss text-white">
+                      Saved
+                    </Badge>
+                  ) : null}
                 </span>
                 <span className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-3">
                   <span className="text-white">
@@ -105,7 +135,7 @@ export default function TemplatesPage() {
                     size="sm"
                     className="h-9 flex-1"
                     variant={active ? 'outline' : 'dark'}
-                    onClick={() => customize(template.id)}
+                    onClick={() => handleUse(template.id)}
                   >
                     {active ? 'Re-open' : 'Use template'}
                   </Button>
@@ -115,6 +145,14 @@ export default function TemplatesPage() {
           )
         })}
       </div>
+
+      <SubscribeModal
+        open={subOpen}
+        onClose={() => setSubOpen(false)}
+        restaurantId={r.id}
+        restaurantName={tx(r.name) || ''}
+        onSuccess={handleSubscribed}
+      />
     </div>
   )
 }
