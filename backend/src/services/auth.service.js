@@ -5,6 +5,7 @@ const { getMySQLPool } = require('../config/mysql');
 const { hashPassword, comparePassword } = require('../utils/hash');
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../utils/token');
 const { linkUserToSite, getSubscriptionForUser } = require('./site.service');
+const { ensurePlansReady } = require('./plan.service');
 const { z } = require('zod');
 
 const signupSchema = z.object({
@@ -51,6 +52,7 @@ function parseInput(schema, input) {
 
 async function signup(input) {
   const parsed = parseInput(signupSchema, input);
+  await ensurePlansReady();
   const pool = await getMySQLPool();
   const connection = await pool.getConnection();
   const emailLower = parsed.email.toLowerCase();
@@ -74,13 +76,31 @@ async function signup(input) {
       const restaurantId = `rest-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       // أول onboarding (UPGRADE_FLOW_SPEC §2): النوع (live/static) + الباقة المختارة
       const mode = parsed.mode === 'live' ? 'live' : 'static';
-      const planKey = String(parsed.planId || '').toLowerCase().replace(/^plan-?/, '');
-      const planValue = ['professional', 'business', 'starter'].includes(planKey)
-        ? planKey
-        : (mode === 'static' ? 'starter' : 'professional');
+      // الباقة تُقرأ من جدول Plans (هو المرجع): يجب أن تكون فعّالة وتنتمي للوضع المختار
+      const requestedPlanId = String(parsed.planId || '').trim();
+      const fallbackPlanId = mode === 'static' ? 'plan-starter' : 'plan-professional';
+      let chosenPlan = null;
+      if (requestedPlanId) {
+        const [planRows] = await connection.execute(
+          'SELECT id, name, price, mode FROM Plans WHERE id = ? AND is_active = 1',
+          [requestedPlanId]
+        );
+        // الباقة يجب أن تكون فعّالة وتنتمي للوضع المختار — وإلا نرجع للافتراضي
+        if (planRows.length && String(planRows[0].mode || 'live').toLowerCase() === mode) chosenPlan = planRows[0];
+      }
+      if (!chosenPlan) {
+        const [fr] = await connection.execute('SELECT id, name, price FROM Plans WHERE id = ?', [fallbackPlanId]);
+        if (fr.length) chosenPlan = fr[0];
+      }
+      const planId = chosenPlan ? chosenPlan.id : fallbackPlanId;
+      const planKey = String(planId).replace(/^plan-?/, '').toLowerCase();
+      const planName = chosenPlan ? chosenPlan.name : (mode === 'static' ? 'Starter' : 'Professional');
+      // الباقة المجانية (سعر 0) تُفعَّل فوراً بدون موافقة — والمجانية دائماً static.
+      // أي باقة مدفوعة تبقى بلا اشتراك حتى يُرفع الطلب ويوافق عليه Super Admin.
+      const planPrice = chosenPlan ? Number(chosenPlan.price) || 0 : (mode === 'static' ? 0 : 29);
       await connection.execute(
         'INSERT INTO Restaurants (id, name_en, slug, status, plan, language, mode, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
-        [restaurantId, parsed.restaurantName.trim(), slug, 'draft', planValue, parsed.siteLang || parsed.language || 'ar', mode]
+        [restaurantId, parsed.restaurantName.trim(), slug, 'draft', planKey, parsed.siteLang || parsed.language || 'ar', mode]
       );
 
       const userId = `usr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -100,16 +120,16 @@ async function signup(input) {
 
       await connection.commit();
 
-      // أول onboarding: النوع المختار يحدّد الاشتراك —
-      //  - static → باقة Starter المجانية مباشرة (لا يحتاج موافقة).
-      //  - live   → لا ننشئ اشتراكًا الآن؛ ينتظر رفع الطلب المدفوع وتمرير الموافقة
-      //            (مدير الاشتراك / Super Admin) ليتم تفعيل الباقة فعليًا.
-      if (mode === 'static') {
+      // أول onboarding: الاشتراك الفوري —
+      //  - باقة مجانية (سعر 0) → تُفعَّل مباشرة (لا تحتاج موافقة).
+      //  - باقة مدفوعة → لا ننشئ اشتراكًا الآن؛ ينتظر رفع الطلب المدفوع وتمرير
+      //    الموافقة (Super Admin) ليتم تفعيل الباقة فعليًا.
+      if (planPrice === 0) {
         const starterSubId = `sub-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
         await connection.execute(
           `INSERT INTO Subscriptions (id, user_id, restaurant_id, plan_id, plan_name, plan, price, status, started_at, renews_at, auto_renew, created_at, updated_at)
-           VALUES (?, ?, ?, 'plan-starter', 'Starter', 'starter', 0, 'active', NOW(), NULL, 0, NOW(), NOW())`,
-          [starterSubId, userId, restaurantId]
+           VALUES (?, ?, ?, ?, ?, ?, 0, 'active', NOW(), NULL, 0, NOW(), NOW())`,
+          [starterSubId, userId, restaurantId, planId, planName, planKey]
         );
       }
 

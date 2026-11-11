@@ -73,6 +73,9 @@ const en = {
       perMonth: '/ month',
       startFree: 'Start free demo',
       choosePlan: 'Choose {name}',
+      viewAllPlans: 'See all 6 plans',
+      modeLive: 'Live',
+      modeStatic: 'Digital Menu',
     },
     finalCta: {
       eyebrow: 'Ready when you are',
@@ -146,6 +149,9 @@ const ar: Deep<typeof en> = {
       perMonth: 'شهرياً',
       startFree: 'ابدأ عرضاً مجانياً',
       choosePlan: 'اختر خطة {name}',
+      viewAllPlans: 'شاهد كل الباقات الست',
+      modeLive: 'مباشر',
+      modeStatic: 'القائمة الرقمية',
     },
     finalCta: {
       eyebrow: 'جاهز عندما تكون مستعداً',
@@ -219,6 +225,9 @@ const ku: Deep<typeof en> = {
       perMonth: 'ژێ مانگێک',
       startFree: 'بەخۆڕایی دەست پێ بکە',
       choosePlan: 'پلانی {name} هەڵبژێر',
+      viewAllPlans: 'هەموو شەش پلانەکان ببینە',
+      modeLive: 'ژینگا',
+      modeStatic: 'مینیۆی دیجیتاڵی',
     },
     finalCta: {
       eyebrow: 'ئامادەیە کاتێک تۆ ئامادەیت',

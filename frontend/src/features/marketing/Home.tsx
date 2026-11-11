@@ -1044,15 +1044,29 @@ function Pricing({
                   : 'border-sand bg-paper hover:border-clay'
               )}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <h3 className="text-[15px] font-semibold uppercase tracking-[0.14em]">
                   {plan.name}
                 </h3>
-                {plan.highlight ? (
-                  <span className="rounded-full bg-flame px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white">
-                    {t('home.pricing.mostPopular')}
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className={cx(
+                      'rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider',
+                      plan.mode === 'static'
+                        ? 'bg-sand text-espresso'
+                        : plan.highlight
+                          ? 'bg-ivory/15 text-ivory'
+                          : 'bg-moss/12 text-moss'
+                    )}
+                  >
+                    {t(plan.mode === 'static' ? 'home.pricing.modeStatic' : 'home.pricing.modeLive')}
                   </span>
-                ) : null}
+                  {plan.highlight ? (
+                    <span className="rounded-full bg-flame px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white">
+                      {t('home.pricing.mostPopular')}
+                    </span>
+                  ) : null}
+                </span>
               </div>
 
               <div className="mt-5 flex items-end gap-2">
@@ -1115,6 +1129,13 @@ function Pricing({
               </div>
             </div>
           ))}
+        </div>
+
+        {/* زر بعد قسم أول 3 باقات → صفحة مخصّصة تعرض كل الباقات الست */}
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+          <Button to="/plans" size="lg" variant="dark" iconRight="arrowRight">
+            {t('home.pricing.viewAllPlans')}
+          </Button>
         </div>
 
         <p className="mt-7 text-center text-[13px] text-clay">{section.note}</p>

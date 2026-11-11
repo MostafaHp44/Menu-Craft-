@@ -119,6 +119,7 @@ export const en = {
     myTemplates: 'My templates',
     qrCode: 'QR code',
     subscription: 'Subscription',
+    changePlan: 'Plan & mode',
     settings: 'Settings',
     orders: 'Orders',
     earnings: 'Earnings',
@@ -150,6 +151,7 @@ export const en = {
     subPayments: 'How your guests pay — connect a method in one tap.',
     subQr: 'Print-ready codes for tables and windows.',
     subSubscription: 'Your plan — billing is handled by the platform.',
+    subChangePlan: 'Move to another plan or switch between the Live and Digital Menu products.',
     subSettings: 'Restaurant details, contact info and settings.',
     subTeam: 'Add staff who follow your orders.',
     subscriptionRequired: 'Active subscription required',
@@ -352,14 +354,29 @@ export const en = {
     planDetailsTitle: '{plan} — price & specifications',
     planDetailsSub: 'This is exactly what you will get once the request is approved.',
     finalStepTitle: 'Request awaiting approval',
-    finalStepSub: 'Your public menu and website stop immediately after the request is confirmed — they come back online only after the administration approves it.',
+    finalStepSub: 'Your request goes to the platform administration — nothing changes in your restaurant until they approve it.',
     finalApprove: 'Confirm the request',
     approve: 'Approve',
-    pendingApprovalBanner: 'Your subscription request for {plan} is pending — the menu and website are paused until the administration approves it.',
+    pendingApprovalBanner: 'Your subscription request for {plan} is pending — nothing changes until the administration approves it.',
     free: 'Free',
     price: 'Price',
     maxSites: 'Sites',
     maxItems: 'Menu items',
+    /* -------- change plan / change mode (separate dashboard tab) -------- */
+    changeModeTitle: 'Change plan or mode',
+    changeModeSub:
+      'Pick the plan you want to move to. Nothing changes in your restaurant until the platform administration approves the request.',
+    currentMode: 'Your current mode',
+    currentModePlansOnly: 'This tab shows only the plans of your current mode: {mode}.',
+    modeChangeTitle: 'This moves you to {mode}',
+    modeChangeSub:
+      'After approval your restaurant switches to {mode}. Until then everything stays exactly as it is.',
+    pendingChangeBanner:
+      'Your request to move to {plan} is waiting for platform approval — nothing has changed yet.',
+    otherModePlans: 'Plans of the other mode',
+    currentModePlans: 'Plans of your current mode',
+    switchModeHint:
+      'Switching products? Choose any plan below — including the other product’s plans — and send it for approval.',
   },
 
   worker: {

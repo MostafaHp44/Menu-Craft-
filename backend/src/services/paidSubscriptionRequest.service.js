@@ -13,6 +13,13 @@
 const { getMySQLPool } = require('../config/mysql');
 
 async function stopRestaurantSite(connection, restaurantId) {
+  // "لا شيء يتغير قبل موافقة السوبر أدمن": إن كان للمطعم اشتراك فعّال فإن
+  // الموقع/القائمة العامة يبقيان يعملان أثناء مراجعة طلب تغيير الباقة أو الوضع.
+  const [active] = await connection.execute(
+    "SELECT id FROM Subscriptions WHERE restaurant_id = ? AND status = 'active' AND (renews_at IS NULL OR renews_at >= NOW()) LIMIT 1",
+    [restaurantId]
+  );
+  if (active.length > 0) return;
   await connection.execute("UPDATE Restaurants SET status = 'pending' WHERE id = ? AND LOWER(status) = 'published'", [restaurantId]);
 }
 
@@ -102,7 +109,7 @@ async function listAllPaidSubscriptionRequests({ status } = {}) {
     if (status) { clauses.push('psr.status = ?'); params.push(status); }
     const [rows] = await c.execute(
       `SELECT psr.*, r.slug AS restaurant_slug, r.name_en AS restaurant_name,
-              u.name AS user_name, u.email AS user_email, p.name AS plan_display_name
+              u.name AS user_name, u.email AS user_email, p.name AS plan_display_name, p.mode AS plan_mode
        FROM paid_subscription_requests psr
        JOIN restaurants r ON r.id = psr.restaurant_id
        JOIN users u ON u.id = psr.user_id
@@ -133,7 +140,10 @@ async function approvePaidSubscriptionRequest(requestId, adminId) {
     }
     const reqRow = rows[0];
     const planKey = String(reqRow.plan_name || '').toLowerCase().replace(/[^a-z0-9]/g, '') || 'plan';
-    const [plan] = await connection.execute('SELECT interval_type FROM plans WHERE id = ?', [reqRow.plan_id]);
+    const [plan] = await connection.execute('SELECT interval_type, mode FROM plans WHERE id = ?', [reqRow.plan_id]);
+    // وضع الباقة المطلوبة هو الذي يُفعَّل: باقة static تُبقي الوضع static،
+    // وباقات live تفعّل الطور المباشر — وليس 'live' دائماً.
+    const targetMode = String(plan[0]?.mode || 'live').toLowerCase() === 'static' ? 'static' : 'live';
 
     await activateSubscription(connection, {
       restaurantId: reqRow.restaurant_id,
@@ -148,8 +158,8 @@ async function approvePaidSubscriptionRequest(requestId, adminId) {
       "UPDATE paid_subscription_requests SET status = 'approved', admin_id = ?, activated_at = NOW(), updated_at = NOW() WHERE id = ?",
       [adminId || null, requestId]
     );
-    // الموافقة على طلب ترقية/اشتراك مدفوع → يُفعَّل الطور (live) فعليًا مع تفعيل الباقة
-    await connection.execute("UPDATE Restaurants SET mode = 'live' WHERE id = ?", [reqRow.restaurant_id]);
+    // الموافقة على طلب تغيير الباقة/الوضع → يُضبط وضع المطعم على وضع الباقة المطلوبة
+    await connection.execute('UPDATE Restaurants SET mode = ? WHERE id = ?', [targetMode, reqRow.restaurant_id]);
     // لا شيء آخر ينقص الموقع — status الخاص بالمستخدم: نشغل الموقع مرة أخرى
     await restoreRestaurantSite(connection, reqRow.restaurant_id);
     await connection.commit();

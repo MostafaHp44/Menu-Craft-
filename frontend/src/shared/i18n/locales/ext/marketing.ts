@@ -113,6 +113,22 @@ const en = {
       backHome: 'Back home',
     },
 
+    /* ------------------------- dedicated plans page ---------------------- */
+    plans: {
+      eyebrow: 'Plans',
+      title: 'Six plans — three for each product',
+      sub: 'Pick the Digital Menu (design only) or the Live Digital Menu (ordering + payments). Every mode has its own three plans and its own prices.',
+      liveGroup: 'Live Digital Menu plans',
+      liveGroupSub: 'Full ordering, branches, staff and payments.',
+      staticGroup: 'Digital Menu plans',
+      staticGroupSub: 'Design and menu editing only — no ordering, no checkout.',
+      startFree: 'Start free',
+      choose: 'Choose {name}',
+      backHome: 'Back home',
+      createAccount: 'Create your account',
+      footerNote: 'Prices are simulated in this demo — no real charge happens.',
+    },
+
     /* -------------------------- published menu demo ----------------------- */
     demo: {
       backDashAria: 'Back to dashboard',
@@ -323,6 +339,21 @@ const ar: Deep<typeof en> = {
       backHome: 'العودة إلى الرئيسية',
     },
 
+    plans: {
+      eyebrow: 'الباقات',
+      title: 'ست باقات — ثلاث لكل منتج',
+      sub: 'اختر القائمة الرقمية (تصميم فقط) أو القائمة الرقمية المباشرة (طلبات + مدفوعات). لكل وضع ثلاث باقات وأسعاره الخاصة.',
+      liveGroup: 'باقات القائمة الرقمية المباشرة',
+      liveGroupSub: 'طلبات كاملة + فروع + موظفون + مدفوعات.',
+      staticGroup: 'باقات القائمة الرقمية',
+      staticGroupSub: 'تصميم وتحرير القائمة فقط — بلا طلبات ولا استلام.',
+      startFree: 'ابدأ مجاناً',
+      choose: 'اختر {name}',
+      backHome: 'العودة إلى الرئيسية',
+      createAccount: 'إنشاء حسابك',
+      footerNote: 'الأسعار محاكاة في هذا العرض — لا توجد خصم حقيقي.',
+    },
+
     demo: {
       backDashAria: 'العودة إلى لوحة التحكم',
       editMenu: 'تعديل القائمة',
@@ -530,6 +561,21 @@ const ku: Deep<typeof en> = {
       sub: 'پەڕەیەکەی بەدواداگەڕیوەت گۆڕدراوە، ناوی گۆڕدراوە یان لەم دیمۆدا نەبووە.',
       browse: 'قاڵبەکان ببینە',
       backHome: 'گەڕانەوە بۆ سەرەتا',
+    },
+
+    plans: {
+      eyebrow: 'پلانەکان',
+      title: 'شەش پلان — سێیەک بۆ هەر بەرهەمێک',
+      sub: 'مینیۆی دیجیتاڵی (تەنها دیزاین) یان مینیۆی ژینگا (داواکاری + پارەدان) هەڵبژێرە. هەر شێوازێک سێ پلانی خۆی و نرخی خۆی هەیە.',
+      liveGroup: 'پلانەکانی مینیۆی ژینگا',
+      liveGroupSub: 'داواکاری تەواو + قۆناغ + کارگێڕ + پارەدان.',
+      staticGroup: 'پلانەکانی مینیۆی دیجیتاڵی',
+      staticGroupSub: 'تەنها دیزاین و دەستکاریی مینیۆ — بەبێ داواکاری و کڕین.',
+      startFree: 'بەخۆڕایی دەست پێبکە',
+      choose: '{name} هەڵبژێرە',
+      backHome: 'گەڕانەوە بۆ سەرەتا',
+      createAccount: 'هەژمارەکەت دروست بکە',
+      footerNote: 'نرخەکان لەم دیمۆدا سیمولەیشنن — هیچ پارەیەکی ڕاستی ناکرێتەوە.',
     },
 
     demo: {

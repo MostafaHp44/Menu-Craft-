@@ -15,9 +15,9 @@ const UNLIMITED = -1;
 const DEFAULT_PLAN_ID = 'trial';
 
 /**
- * المواصفات الافتراضية للباقات الثلاث.
- * تُزرع في جدول Plans عبر database/migrate.js، وتُستخدم هنا كـ fallback
- * لو لم تتوفر الباقات في القاعدة.
+ * المواصفات الافتراضية للباقات الست (3 live + 3 static).
+ * تُزرع في جدول Plans عبر database/seed.js وensurePlansReady، وتُستخدم هنا
+ * كـ fallback لو لم تتوفر الباقات في القاعدة.
  */
 const PLAN_SPECS = {
   trial: {
@@ -37,6 +37,101 @@ const PLAN_SPECS = {
       removeBranding: false,
       gallery: true,
       featuredItems: true,
+      templatePriority: false,
+      brandKit: false,
+      teamAccounts: false,
+      prioritySupport: false
+    }
+  },
+  /* ------------------------------ باقات static ----------------------------- */
+  starter: {
+    id: 'starter',
+    name: 'Starter',
+    nameAr: 'البداية',
+    price: 0,
+    interval: 'forever',
+    trialDays: 0,
+    maxSites: 5,
+    maxMenuItems: 15,
+    features: {
+      maxSites: 5,
+      maxMenuItems: 15,
+      unlimitedMenuItems: false,
+      customization: false,
+      qrCode: true,
+      removeBranding: false,
+      gallery: false,
+      featuredItems: false,
+      templatePriority: false,
+      brandKit: false,
+      teamAccounts: false,
+      prioritySupport: false
+    }
+  },
+  'static-plus': {
+    id: 'static-plus',
+    name: 'Static Plus',
+    nameAr: 'ستاتيك بلس',
+    price: 12,
+    interval: 'month',
+    trialDays: 0,
+    maxSites: 10,
+    maxMenuItems: -1,
+    features: {
+      maxSites: 10,
+      unlimitedMenuItems: true,
+      customization: true,
+      qrCode: true,
+      removeBranding: true,
+      gallery: true,
+      featuredItems: true,
+      templatePriority: false,
+      brandKit: false,
+      teamAccounts: false,
+      prioritySupport: false
+    }
+  },
+  'static-studio': {
+    id: 'static-studio',
+    name: 'Static Studio',
+    nameAr: 'ستاتيك ستوديو',
+    price: 24,
+    interval: 'month',
+    trialDays: 0,
+    maxSites: UNLIMITED,
+    maxMenuItems: -1,
+    features: {
+      maxSites: -1,
+      unlimitedMenuItems: true,
+      customization: true,
+      qrCode: true,
+      removeBranding: true,
+      gallery: true,
+      featuredItems: true,
+      templatePriority: true,
+      brandKit: true,
+      teamAccounts: false,
+      prioritySupport: true
+    }
+  },
+  /* ------------------------------- باقات live ------------------------------ */
+  'live-basic': {
+    id: 'live-basic',
+    name: 'Live Basic',
+    nameAr: 'لايف باسيك',
+    price: 19,
+    interval: 'month',
+    trialDays: 0,
+    maxSites: 1,
+    maxMenuItems: -1,
+    features: {
+      maxSites: 1,
+      unlimitedMenuItems: true,
+      customization: true,
+      qrCode: true,
+      removeBranding: false,
+      gallery: false,
+      featuredItems: false,
       templatePriority: false,
       brandKit: false,
       teamAccounts: false,
@@ -94,11 +189,14 @@ const PLAN_SPECS = {
 /** مطابقة اسم/معرّف الباقة القادمة من القاعدة إلى مفتاح موحّد */
 function normalizePlanKey(value) {
   if (!value) return null;
-  const v = String(value).toLowerCase().trim();
-  if (v === 'trial' || v === 'free trial' || v.includes('trial')) return 'trial';
+  // 'plan-static-plus' → 'static-plus'، 'Static Plus' → 'static-plus'
+  const v = String(value).toLowerCase().trim().replace(/^plan-?/, '').replace(/[\s_]+/g, '-');
+  if (v.includes('trial')) return 'trial';
+  if (v.startsWith('static-')) return v; // static-plus / static-studio
+  if (v.startsWith('live-')) return v;   // live-basic
   if (v === 'professional' || v.includes('pro')) return 'professional';
   if (v === 'business' || v.includes('business')) return 'business';
-  if (v === 'starter') return 'starter'; // باقة قديمة غير فعّالة
+  if (v === 'starter') return 'starter';
   return v;
 }
 

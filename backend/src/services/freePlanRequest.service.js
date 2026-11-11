@@ -10,6 +10,13 @@
 const { getMySQLPool } = require('../config/mysql');
 
 async function stopRestaurantSite(connection, restaurantId) {
+  // لا نوقف الموقع إن كان اشتراكه فعّالاً — طلب تغيير الباقة لا يغيّر شيئاً
+  // قبل موافقة السوبر أدمن.
+  const [active] = await connection.execute(
+    "SELECT id FROM Subscriptions WHERE restaurant_id = ? AND status = 'active' AND (renews_at IS NULL OR renews_at >= NOW()) LIMIT 1",
+    [restaurantId]
+  );
+  if (active.length > 0) return;
   await connection.execute("UPDATE Restaurants SET status = 'pending' WHERE id = ? AND LOWER(status) = 'published'", [restaurantId]);
 }
 
@@ -90,15 +97,26 @@ async function approveFreePlanRequest(requestId, adminId) {
     }
     const reqRow = rows[0];
     const subId = `sub-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    // الباقة المجانية تُطلب بمعطياتها من جدول Plans (وضعها + سعرها) — الافتراضي Starter.
+    const [planRows] = await connection.execute(
+      "SELECT id, name, price, mode FROM plans WHERE id = 'plan-starter'"
+    );
+    const freePlan = planRows[0] || { id: 'plan-starter', name: 'Starter', price: 0, mode: 'static' };
+    const freePlanId = freePlan.id || 'plan-starter';
+    const freePlanName = freePlan.name || 'Starter';
+    const freePlanKey = String(freePlanId).replace(/^plan-?/, '').toLowerCase();
+    const freeMode = String(freePlan.mode || 'static').toLowerCase() === 'live' ? 'live' : 'static';
     await connection.execute(
       `INSERT INTO Subscriptions (id, user_id, restaurant_id, plan_id, plan_name, plan, price, status, started_at, renews_at, auto_renew, created_at, updated_at)
-       VALUES (?, ?, ?, 'plan-starter', 'Starter', 'starter', 0, 'active', NOW(), NULL, 0, NOW(), NOW())`,
-      [subId, reqRow.user_id, reqRow.restaurant_id]
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NOW(), NULL, 0, NOW(), NOW())`,
+      [subId, reqRow.user_id, reqRow.restaurant_id, freePlanId, freePlanName, freePlanKey, Number(freePlan.price) || 0]
     );
     await connection.execute(
       "UPDATE free_plan_requests SET status = 'approved', admin_id = ?, approved_at = NOW(), updated_at = NOW() WHERE id = ?",
       [adminId || null, requestId]
     );
+    // الباقة المجانية تنتمي لوضعها — الموافقة تضبط وضع المطعم على وضع الباقة
+    await connection.execute('UPDATE Restaurants SET mode = ? WHERE id = ?', [freeMode, reqRow.restaurant_id]);
     await restoreRestaurantSite(connection, reqRow.restaurant_id);
     await connection.commit();
     return { approved: true, requestId, restaurantId: reqRow.restaurant_id };

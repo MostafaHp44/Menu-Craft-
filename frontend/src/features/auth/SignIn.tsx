@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Icon, Wordmark } from '../../shared/ui/icons.tsx'
 import { Button, Card, ChoiceCard, Img, Input, Segmented } from '../../shared/ui/ui.tsx'
@@ -125,6 +125,70 @@ export default function SignIn() {
   const [signupPhase, setSignupPhase] = useState<SignupPhase>('account')
   const [chosenMode, setChosenMode] = useState<'static' | 'live'>('live')
   const [chosenPlanId, setChosenPlanId] = useState<string>('plan-professional')
+
+  /* الباقات الست من القاعدة (3 live + 3 static) — كل وضع يعرض باقاته فقط */
+  const [dbPlans, setDbPlans] = useState<
+    Array<{ id: string; name: string; price: number; mode?: 'live' | 'static'; features?: string[] }>
+  >([])
+  const [dbPlansLoading, setDbPlansLoading] = useState(true)
+  /* رابط عميق من صفحة الباقات: /signin?mode=signup&plan=plan-static-plus */
+  const [requestedPlanId] = useState<string>(() => params.get('plan') || '')
+
+  useEffect(() => {
+    let alive = true
+    billingAPI
+      .listPlans()
+      .then((res) => {
+        if (!alive) return
+        const rows = Array.isArray(res?.data) ? res.data : []
+        setDbPlans(
+          rows
+            .filter((p: any) => String(p?.is_active) === '1' || p?.is_active === true)
+            .map((p: any) => ({
+              id: String(p.id),
+              name: String(p.name),
+              price: Number(p.price) || 0,
+              mode: p.mode === 'static' ? ('static' as const) : ('live' as const),
+              features: Array.isArray(p.features) ? p.features.map(String) : [],
+            }))
+        )
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (alive) setDbPlansLoading(false)
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  /** باقات الوضع المختار من القاعدة — واحتياطي لبيانات العرض لو فشل الجلب */
+  const modePlans = useMemo(() => {
+    const fromDb = dbPlans.filter((p) => p.mode === chosenMode)
+    if (fromDb.length) return fromDb
+    return (chosenMode === 'static' ? PLANS.filter((p) => p.id === 'starter') : PLANS.filter((p) => p.id !== 'starter')).map(
+      (p) => ({
+        id: `plan-${p.id}`,
+        name: p.name,
+        price: p.price,
+        mode: (p.mode ?? (p.id === 'starter' ? 'static' : 'live')) as 'live' | 'static',
+        features: p.features,
+      })
+    )
+  }, [dbPlans, chosenMode])
+
+  const planPriceOf = (planId: string): number | undefined => {
+    const db = dbPlans.find((p) => p.id === planId)
+    if (db) return db.price
+    const demo = PLANS.find((p) => `plan-${p.id}` === planId)
+    return demo ? demo.price : undefined
+  }
+  const planNameOf = (planId: string): string => {
+    const db = dbPlans.find((p) => p.id === planId)
+    if (db) return db.name
+    const demo = PLANS.find((p) => `plan-${p.id}` === planId)
+    return demo ? demo.name : planId
+  }
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -262,9 +326,11 @@ export default function SignIn() {
     const redirect = params.get('redirect') || ''
     navigate(redirect || '/dashboard')
 
-    // Live Digital Menu: إرسال طلب اشتراك مدفوع (pending_payment) — يُعاد تفعيل
-    // الطور والباقة فقط بعد موافقة Super Admin (flow مطابق لـ upgrade-request).
-    if (mode === 'live') {
+    // Live Digital Menu / باقة مدفوعة: إرسال طلب اشتراك مدفوع (pending_payment) —
+    // يُفعَّل الطور والباقة فقط بعد موافقة Super Admin (وضع الباقة يحدّد الوضع).
+    const price = planPriceOf(planId)
+    const planName = planNameOf(planId)
+    if (price !== undefined && price > 0) {
       const restaurantId: string | undefined = backendResponse?.user?.restaurant_id
       try {
         await billingAPI.checkout(planId)
@@ -275,7 +341,12 @@ export default function SignIn() {
           await apiFetch<{ ok: boolean; data?: { requestId: string } }>('/api/paid-subscription-requests', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ restaurantId, planId, planName: PLANS.find((p) => `plan-${p.id}` === planId)?.name ?? planId, price: PLANS.find((p) => `plan-${p.id}` === planId)?.price ?? 0 }),
+            body: JSON.stringify({
+              restaurantId,
+              planId,
+              planName: planName ?? planId,
+              price: price ?? 0,
+            }),
           })
         } catch (err2) {
           console.warn('paid subscription request on signup failed:', err2 instanceof Error ? err2.message : err2)
@@ -355,6 +426,15 @@ export default function SignIn() {
 
     // أول onboarding (UPGRADE_FLOW_SPEC §2): الحساب → اختيار النوع → اختيار الباقة
     if (mode === 'signup') {
+      // رابط عميق من صفحة الباقات: نعرف المنتج والباقة مسبقاً فنتخطى خطوة النوع
+      const requested = dbPlans.find((p) => p.id === requestedPlanId)
+      if (requested) {
+        setChosenMode(requested.mode === 'static' ? 'static' : 'live')
+        setChosenPlanId(requested.id)
+        setSignupPhase('plan')
+        setBusy(false)
+        return
+      }
       // ننتقل لاختيار النوع (Live Digital Menu / Static) قبل إنشاء الحساب
       setSignupPhase('mode')
       setBusy(false)
@@ -492,22 +572,26 @@ export default function SignIn() {
                       <p className="mt-1 text-[13px] text-umber">{t('flow.planStepSub')}</p>
                     </div>
                     <div className="grid gap-3">
-                      {(chosenMode === 'static'
-                        ? PLANS.filter((p) => p.id === 'starter')
-                        : PLANS.filter((p) => p.id !== 'starter')
+                      {(dbPlansLoading && modePlans.length === 0
+                        ? []
+                        : modePlans
                       ).map((plan) => {
-                        const planId = `plan-${plan.id}` as const
+                        const planId = plan.id
                         return (
                           <ChoiceCard
                             key={plan.id}
                             label={`${plan.name} — ${plan.price === 0 ? t('flow.freeForever') : `$${plan.price}/month`}`}
-                            note={plan.features[0] ?? ''}
+                            note={plan.features?.[0] ?? ''}
                             active={chosenPlanId === planId}
                             onClick={() => { setChosenPlanId(planId); void finalizeSignUp(planId, chosenMode) }}
                           />
                         )
                       })}
                     </div>
+                    <p className="flex items-start gap-1.5 text-[12.5px] leading-relaxed text-clay">
+                      <Icon name="info" size={14} className="mt-0.5 shrink-0" />
+                      {t('flow.planApprovalNote')}
+                    </p>
                     <Button variant="outline" size="lg" full onClick={() => setSignupPhase('mode')}>
                       {t('flow.backToMode')}
                     </Button>

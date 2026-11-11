@@ -27,6 +27,8 @@ export interface PlanCard {
   blurb: string
   features: string[]
   highlight: boolean
+  /** المنتج الذي تنتمي إليه الباقة: live (طلبات/مدفوعات) أو static (تصميم فقط) */
+  mode: 'live' | 'static'
 }
 
 export const PLANS: PlanCard[] = [
@@ -44,6 +46,7 @@ export const PLANS: PlanCard[] = [
       'configured deployment domain (demo)',
     ],
     highlight: false,
+    mode: 'static',
   },
   {
     id: 'professional',
@@ -60,6 +63,7 @@ export const PLANS: PlanCard[] = [
       'Priority template releases',
     ],
     highlight: true,
+    mode: 'live',
   },
   {
     id: 'business',
@@ -76,6 +80,7 @@ export const PLANS: PlanCard[] = [
       'Priority support',
     ],
     highlight: false,
+    mode: 'live',
   },
 ]
 

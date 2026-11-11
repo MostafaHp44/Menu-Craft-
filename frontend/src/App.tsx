@@ -21,8 +21,10 @@ import DashboardTemplates from './features/client/TemplatesPage.tsx'
 import MyTemplatesPage from './features/client/MyTemplatesPage.tsx'
 import WebsitesPage from './features/client/WebsitesPage.tsx'
 import SubscriptionPage from './features/client/SubscriptionPage.tsx'
+import ChangePlanPage from './features/client/ChangePlanPage.tsx'
 import Editor from './features/client/Editor.tsx'
 import Home from './features/marketing/Home.tsx'
+import PlansPage from './features/marketing/PlansPage.tsx'
 import MenuDemo from './features/marketing/MenuDemo.tsx'
 import NotFound from './features/marketing/NotFound.tsx'
 import SignIn from './features/auth/SignIn.tsx'
@@ -79,6 +81,8 @@ export default function App() {
         <Toaster />
         <Routes>
           <Route path="/" element={<Home />} />
+          {/* صفحة الباقات المخصّصة — كل الباقات الست (3 Live + 3 Static) */}
+          <Route path="/plans" element={<PlansPage />} />
           <Route path="/templates" element={<Templates />} />
           <Route path="/templates/:id" element={<TemplatePreview />} />
           <Route path="/signin" element={<SignIn />} />
@@ -107,6 +111,8 @@ export default function App() {
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="qr-code" element={<QrCodePage />} />
             <Route path="subscription" element={<SubscriptionPage />} />
+            {/* تبويب منفصل: تغيير الوضع/الباقة → طلب ينتظر موافقة Super Admin */}
+            <Route path="change-plan" element={<ChangePlanPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="team" element={<TeamPage />} />
             <Route path="branches" element={<BranchesPage />} />

@@ -11,6 +11,18 @@ Implementation summary (2026-11-11):
 - `mode` is exposed on `/api/auth/signup|signin|me` so the dashboard knows the current mode and re-checks it on every subscription refresh (flips live right after approval).
 - Verified live: `onboarding_test.js` 22/22, full regression battery green (t1_auth 74, t2 32, t3 35, t4_endpoints 81, t4b 67, t5 15, t6 11, t7 12, t1b 6, p1_probe 73, p2_limits 24, p2_logout 15 = 567 total).
 
+### 2026-11-11 — Six plans (3 Live + 3 Static) + dedicated change-plan tab
+
+- `Plans.mode` column (`live` | `static`, default `live`) added via lazy migration `ensurePlansReady()` in `plan.service.js` (auto-adds column, backfills modes, `INSERT IGNORE` seeds all 6 plans: `plan-starter`/`plan-static-plus`/`plan-static-studio` static + `plan-live-basic`/`plan-professional`/`plan-business` live). Prices of the 3 new plans are placeholders pending product-owner review.
+- `backend/src/config/plans.js` holds the 6 `PLAN_SPECS` + `normalizePlanKey` (strips `plan-` prefix).
+- Signup resolves the chosen plan by id + mode (fallback to the mode's default) and activates a subscription immediately **only when the plan price is 0** (free Starter); paid plans go through the paid request flow.
+- Approval of a paid request sets `Restaurants.mode` from the **plan's mode** (not hardcoded `live`); free-plan approval sets mode from the `plan-starter` row.
+- Site stop/restore now skipped when the restaurant already has an active subscription (nothing changes before approval).
+- Admin `paid_subscription_requests` list now returns `plan_mode`.
+- Frontend: new shared `PlanRequestModal.tsx` (3-step confirm → details → final) used by the Subscription tab; new dashboard tab `/dashboard/change-plan` (same-mode section + other-mode section, pending banner, shared modal); Subscription tab shows only plans of the current mode.
+- Marketing: new `/plans` page listing all 6 plans grouped by mode; Home pricing section now has a "See all 6 plans" button → `/plans`; plan CTAs deep-link to `/signin?mode=signup&plan=<id>`.
+- Verified live: `plans_mode_test.js` 34/34 (six plans, mode-change request → nothing changes → approve → mode flips, signup free vs paid).
+
 ## 1. Two product modes (per restaurant)
 
 | Mode | Dashboard | Public site |

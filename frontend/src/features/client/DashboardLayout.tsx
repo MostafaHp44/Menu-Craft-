@@ -23,6 +23,8 @@ const NAV: Array<{ to: string; label: TKey; icon: string; end?: boolean; require
   { to: '/dashboard/payments', label: 'dashboard.payments', icon: 'card', requiresActiveSub: true },
   { to: '/dashboard/qr-code', label: 'dashboard.qrCode', icon: 'qr', requiresActiveSub: true },
   { to: '/dashboard/subscription', label: 'dashboard.subscription', icon: 'tag' },
+  // تبويب منفصل لتغيير الوضع/الباقة — يظهر في الوضعين (static و live)
+  { to: '/dashboard/change-plan', label: 'dashboard.changePlan', icon: 'refresh' },
   { to: '/dashboard/team', label: 'dashboard.team', icon: 'users', requiresActiveSub: true },
   { to: '/dashboard/settings', label: 'dashboard.settings', icon: 'settings' },
 ]
@@ -47,6 +49,7 @@ const TITLES: Record<string, { title: TKey; sub: TKey }> = {
   '/dashboard/payments': { title: 'payments.title', sub: 'dashboard.subPayments' },
   '/dashboard/qr-code': { title: 'dashboard.qrCode', sub: 'dashboard.subQr' },
   '/dashboard/subscription': { title: 'subscription.title', sub: 'dashboard.subSubscription' },
+  '/dashboard/change-plan': { title: 'subscription.changeModeTitle', sub: 'dashboard.subChangePlan' },
   '/dashboard/team': { title: 'team.title', sub: 'dashboard.subTeam' },
   '/dashboard/settings': { title: 'dashboard.settings', sub: 'dashboard.subSettings' },
   '/dashboard/branches': { title: 'branches.title', sub: 'branches.sub' },
@@ -120,10 +123,14 @@ export default function DashboardLayout() {
   }, [restaurantId])
 
   /* القفل الكامل: أي اشتراك غير نشط (cancelled/expired/past_due أو مفيش اشتراك
-     أصلاً) يقفل الداشبورد — ما عدا صفحة الاشتراك عشان يطلب تجديد.
+     أصلاً) يقفل الداشبورد — ما عدا صفحتي الاشتراك وتغيير الباقة/الوضع عشان
+     يطلب تجديد أو يرسل طلب تغيير.
      القفل يفتح فقط بعد موافقة السوبر أدمن على طلب جديد (يرجع نشطاً من السيرفر). */
   const locked = subChecked && !isActive
-  const isSubPage = pathname === '/dashboard/subscription'
+  /** الصفحتان المفتوحتان دائماً (حتى مع اشتراك موقوف) */
+  const openWhenLocked = (to: string) =>
+    to === '/dashboard/subscription' || to === '/dashboard/change-plan'
+  const isSubPage = openWhenLocked(pathname)
   const showLock = locked && !isSubPage
 
   /* أول onboarding: م حماية المسار — رابط مباشر لتبويب Live في وضع Static
@@ -218,7 +225,7 @@ export default function DashboardLayout() {
           </p>
           <ul className="space-y-0.5">
             {navItems.map((item) => {
-              const disabled = locked && item.to !== '/dashboard/subscription'
+              const disabled = locked && !openWhenLocked(item.to)
               return (
                 <li key={item.to}>
                   <NavLink
@@ -463,7 +470,7 @@ export default function DashboardLayout() {
         <ul className="mx-auto flex max-w-lg items-stretch justify-between px-2 pb-[env(safe-area-inset-bottom)]">
           {primary.map((item) => {
             const active = isPrimaryActive(item.to)
-            const disabled = locked && item.to !== '/dashboard/subscription'
+            const disabled = locked && !openWhenLocked(item.to)
             return (
               <li key={item.to} className="flex-1">
                 <NavLink
@@ -546,7 +553,7 @@ export default function DashboardLayout() {
               <ul className="grid grid-cols-2 gap-2">
                 {navItems.map((item) => {
                   const active = pathname === item.to || pathname.startsWith(`${item.to}/`)
-                  const disabled = locked && item.to !== '/dashboard/subscription'
+                  const disabled = locked && !openWhenLocked(item.to)
                   return (
                     <li key={item.to}>
                       <NavLink

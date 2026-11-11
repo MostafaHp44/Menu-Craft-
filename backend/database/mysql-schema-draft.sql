@@ -29,6 +29,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE IF NOT EXISTS Plans (
   id VARCHAR(100) PRIMARY KEY,
   name VARCHAR(150) NOT NULL,
+  mode VARCHAR(10) NOT NULL DEFAULT 'live',
   price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
   currency VARCHAR(10) DEFAULT 'USD',
   interval_type VARCHAR(20) DEFAULT 'month',
@@ -38,8 +39,19 @@ CREATE TABLE IF NOT EXISTS Plans (
   is_active TINYINT(1) DEFAULT 1,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_plans_active (is_active)
+  INDEX idx_plans_active (is_active),
+  INDEX idx_plans_mode (mode)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 6 باقات: 3 للوضع Live + 3 للوضع Static (الأسعار مؤقتة حتى المراجعة).
+-- تُزرع أيضاً تلقائياً من backend/src/services/plan.service.js (ensurePlansReady).
+INSERT IGNORE INTO Plans (id, name, mode, price, currency, interval_type, max_restaurants, max_menu_items, features, is_active) VALUES
+  ('plan-starter',        'Starter',       'static', 0.00,  'USD', 'forever',  5,   15,  '["Up to 5 restaurant websites","Up to 15 menu items","All 8 templates included","QR code generator"]', 1),
+  ('plan-static-plus',    'Static Plus',   'static', 12.00, 'USD', 'month',    10,  -1,  '["Up to 10 restaurant websites","Unlimited menu items","All 8 templates included","Remove Digital Menu badge","Photo gallery & featured dishes","QR code generator"]', 1),
+  ('plan-static-studio',  'Static Studio', 'static', 24.00, 'USD', 'month',    -1,  -1,  '["Everything in Static Plus","Unlimited restaurant websites","Shared brand kit across locations","Priority template releases","Priority support"]', 1),
+  ('plan-live-basic',     'Live Basic',    'live',   19.00, 'USD', 'month',    1,   -1,  '["1 restaurant website with live ordering","Unlimited menu items","QR ordering at the table","Cash & card payment methods","Order tracking page","Email support"]', 1),
+  ('plan-professional',   'Professional',  'live',   29.00, 'USD', 'month',    3,   -1,  '["Up to 3 restaurant websites","Unlimited menu items","Full design studio: fonts, colors, layout","Remove Digital Menu badge","Photo gallery & featured dishes","Priority template releases"]', 1),
+  ('plan-business',       'Business',      'live',   79.00, 'USD', 'month',    -1,  -1,  '["Everything in Professional","Unlimited restaurant sites","Custom subdomain (simulated)","Shared brand kit across locations","Team seats (demo)","Priority support"]', 1);
 
 -- ====================================================================
 -- 2. Restaurants (confirmed: init.sql + migrate.js + all restaurant refs)

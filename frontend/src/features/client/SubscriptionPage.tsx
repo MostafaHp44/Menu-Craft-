@@ -11,25 +11,7 @@ import { usePlatformStore, useSubscription } from '../../shared/store/usePlatfor
 import { billingAPI, apiFetch } from '../../shared/lib/api.service.ts'
 import type { SubscriptionStatus } from '../../shared/lib/types.ts'
 import { isSubscriptionSuspended } from '../../shared/lib/types.ts'
-import { Modal } from '../../shared/ui/ui.tsx'
-
-interface DbPlan {
-  id: string
-  name: string
-  price: number
-  currency: string
-  interval_type: string
-  max_restaurants: number
-  max_menu_items: number
-  features: string[]
-  is_active: boolean | number
-}
-
-function intervalLabel(t: (key: string, vars?: Record<string, string | number>) => string, interval: string): string {
-  if (interval === 'month') return t('common.perMonth')
-  if (interval === 'year') return t('common.perYear')
-  return t('kitchenMore.freeForever')
-}
+import PlanRequestModal, { intervalLabel, type DbPlan } from './PlanRequestModal.tsx'
 
 const STATUS_LABEL: Record<SubscriptionStatus, TKey> = {
   active: 'common.active',
@@ -51,6 +33,8 @@ export default function SubscriptionPage() {
   const { t } = useI18n()
   const r = useActiveRestaurant()
   const backendRid = useBackendAuth((s) => s.user?.restaurant_id || s.user?.restaurantId || '')
+  // وضع المطعم الحالي — تبويب الاشتراك يعرض باقات وضعه فقط
+  const userMode = useBackendAuth((s) => s.user?.mode)
   // المصدر الحقيقي دائمًا: المطعم المرتبط بجلسة الباك إند — لا نستخدم مطعم الديمو
   const restaurantId = backendRid || r.id
   const [siteSlug, setSiteSlug] = useState<string>('')
@@ -87,6 +71,7 @@ export default function SubscriptionPage() {
 
   /* -------------- real plans from the DB (source of truth) -------------- */
   const [plans, setPlans] = useState<DbPlan[]>([])
+  const [allPlans, setAllPlans] = useState<DbPlan[]>([])
   const [plansLoading, setPlansLoading] = useState(true)
   const [plansError, setPlansError] = useState(false)
 
@@ -97,7 +82,9 @@ export default function SubscriptionPage() {
       .then((res) => {
         if (!alive) return
         const rows = Array.isArray(res?.data) ? res.data : []
-        setPlans(rows.filter((p: any) => String(p?.is_active) === '1' || p?.is_active === true))
+        const active = rows.filter((p: any) => String(p?.is_active) === '1' || p?.is_active === true)
+        setAllPlans(active)
+        setPlans(active)
       })
       .catch(() => {
         if (!alive) return
@@ -110,6 +97,14 @@ export default function SubscriptionPage() {
       })
     return () => { alive = false }
   }, [refreshPlans])
+
+  /* تبويب الاشتراك: باقات وضع المطعم الحالي فقط (static ↔ live منفصلتان) */
+  useEffect(() => {
+    const mode = userMode === 'static' || userMode === 'live' ? userMode : null
+    if (!mode) { setPlans(allPlans); return }
+    const sameMode = allPlans.filter((p) => (p.mode || 'live') === mode)
+    setPlans(sameMode.length ? sameMode : allPlans)
+  }, [allPlans, userMode])
 
   const handleAutoRenew = (on: boolean) => {
     if (!record) return
@@ -131,79 +126,24 @@ export default function SubscriptionPage() {
     })
   }
 
+  /* ---------------- 3-step subscription request flow (shared modal) ------ */
+  const [modalPlan, setModalPlan] = useState<DbPlan | null>(null)
+  const [pendingRequest, setPendingRequest] = useState<{ planName: string } | null>(null)
+
+  const openFlow = (plan: DbPlan) => setModalPlan(plan)
+  const closeFlow = () => setModalPlan(null)
+
+  /** المطابقة تتم بعد تجريد المسافات/الرموز: 'staticplus' ≡ 'Static Plus' */
+  const normalize = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, '')
+  const isCurrent = (plan: DbPlan) =>
+    Boolean(record?.plan) && normalize(String(record!.plan)) === normalize(plan.name)
+
   // When admin has cancelled the subscription, this opens the 3-step
   // subscription request flow for the FIRST available plan so the user can
   // quickly choose and then select their preferred plan from the picker below.
   const openReSubscribe = () => {
     if (!plans.length) return
     openFlow(plans[0])
-  }
-
-  /* ---------------- 3-step subscription request flow ---------------- */
-  const [modalPlan, setModalPlan] = useState<DbPlan | null>(null)
-  const [stage, setStage] = useState<'confirm' | 'details' | 'final'>('confirm')
-  const [sending, setSending] = useState(false)
-  const [pendingRequest, setPendingRequest] = useState<{ planName: string } | null>(null)
-
-  const openFlow = (plan: DbPlan) => {
-    setModalPlan(plan)
-    setStage('confirm')
-  }
-
-  const closeFlow = () => {
-    if (sending) return
-    setModalPlan(null)
-    setStage('confirm')
-  }
-
-  const isCurrent = (plan: DbPlan) => record?.plan?.toLowerCase() === plan.name.toLowerCase()
-
-  const submitRequest = async () => {
-    if (!modalPlan) return
-    setSending(true)
-    try {
-      const headers = { 'Content-Type': 'application/json' }
-      if (modalPlan.price === 0) {
-        // الباقة المجانية → طلب باقة مجانية
-        const data = await apiFetch<{ ok: boolean; error?: string }>('/api/free-plan-requests', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ restaurantId }),
-        })
-        if (data?.ok === false) throw new Error(data?.error || 'Request failed')
-      } else {
-        // الباقة المدفوعة → طلب اشتراك مدفوع
-        const data = await apiFetch<{ ok: boolean; error?: string }>('/api/paid-subscription-requests', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            restaurantId,
-            planId: modalPlan.id,
-            planName: modalPlan.name,
-            price: modalPlan.price,
-          }),
-        })
-        if (data?.ok === false) throw new Error(data?.error || 'Request failed')
-      }
-      const sentName = modalPlan.name
-      setPendingRequest({ planName: sentName })
-      showToast({
-        title: t('subscription.confirmSubscribeTitle'),
-        message: t('subscription.pendingApprovalBanner', { plan: sentName }),
-        tone: 'success',
-      })
-      setModalPlan(null)
-      setStage('confirm')
-      fetchSubscription(restaurantId).catch(() => {})
-    } catch (err) {
-      showToast({
-        title: t('common.error'),
-        message: err instanceof Error ? err.message : String(err),
-        tone: 'error',
-      })
-    } finally {
-      setSending(false)
-    }
   }
 
   /* ----------------------------- plan picker ----------------------------- */
@@ -217,7 +157,17 @@ export default function SubscriptionPage() {
           </h3>
           <p className="mt-1 text-[13.5px] text-umber">{t('subscription.choosePlanSub')}</p>
         </div>
+        <Button to="/dashboard/change-plan" variant="outline" size="sm" icon="refresh">
+          {t('dashboard.changePlan')}
+        </Button>
       </div>
+
+      <p className="mt-3 flex items-center gap-1.5 text-[12.5px] text-clay">
+        <Icon name="info" size={14} className="shrink-0" />
+        {t('subscription.currentModePlansOnly', {
+          mode: t(userMode === 'static' ? 'flow.modeStatic' : 'flow.modeLive'),
+        })}
+      </p>
 
       {plansLoading ? (
         <Card className="mt-4 p-6 text-center text-[13.5px] text-umber">
@@ -318,135 +268,19 @@ export default function SubscriptionPage() {
     </div>
   ) : null
 
-  /* ---------------- 3-step modal (confirm → details → final) ---------------- */
+  /* ---------------- 3-step modal (shared component) ---------------- */
   const flowModal = (
-    <>
-      {/* الخطوة 1: هل أنت متأكد؟ */}
-      <Modal
-        open={Boolean(modalPlan) && stage === 'confirm'}
-        onClose={closeFlow}
-        size="sm"
-        title={t('subscription.confirmSubscribeTitle')}
-        description={
-          modalPlan ? t('subscription.confirmSubscribeSub', { plan: modalPlan.name }) : undefined
-        }
-        footer={
-          <div className="flex w-full gap-2">
-            <Button variant="outline" full onClick={closeFlow}>
-              {t('common.cancel')}
-            </Button>
-            <Button variant="accent" full icon="check" onClick={() => setStage('details')}>
-              {t('subscription.approve')}
-            </Button>
-          </div>
-        }
-      >
-        {modalPlan ? (
-          <div className="flex items-center gap-4">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-flame/12 text-flame-dark">
-              <Icon name="tag" size={24} strokeWidth={2} />
-            </span>
-            <div className="min-w-0">
-              <p className="text-[18px] font-semibold text-charcoal">{modalPlan.name}</p>
-              <p className="text-[15px] text-umber">
-                {modalPlan.price === 0
-                  ? t('kitchenMore.freeForever')
-                  : `${money(modalPlan.price)} ${intervalLabel(t, modalPlan.interval_type)}`}
-              </p>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
-
-      {/* الخطوة 2: السعر والمواصفات */}
-      <Modal
-        open={Boolean(modalPlan) && stage === 'details'}
-        onClose={closeFlow}
-        size="md"
-        title={modalPlan ? t('subscription.planDetailsTitle', { plan: modalPlan.name }) : ''}
-        description={t('subscription.planDetailsSub')}
-        footer={
-          <div className="flex w-full gap-2">
-            <Button variant="outline" icon="arrowLeft" onClick={() => setStage('confirm')}>
-              {t('common.back')}
-            </Button>
-            <Button variant="accent" full iconRight="arrowRight" onClick={() => setStage('final')}>
-              {t('subscription.approve')}
-            </Button>
-          </div>
-        }
-      >
-        {modalPlan ? (
-          <div>
-            <dl className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-sand bg-cream/60 p-3.5">
-                <dt className="text-[11px] uppercase tracking-wide text-clay">{t('subscription.price')}</dt>
-                <dd className="mt-1 text-[20px] font-semibold leading-none text-charcoal">
-                  {modalPlan.price === 0
-                    ? t('kitchenMore.freeForever')
-                    : `${money(modalPlan.price)}${intervalLabel(t, modalPlan.interval_type)}`}
-                </dd>
-              </div>
-              <div className="rounded-2xl border border-sand bg-cream/60 p-3.5">
-                <dt className="text-[11px] uppercase tracking-wide text-clay">{t('subscription.maxSites')}</dt>
-                <dd className="mt-1 text-[20px] font-semibold leading-none text-charcoal">
-                  {modalPlan.max_restaurants === -1 ? '∞' : modalPlan.max_restaurants}
-                </dd>
-              </div>
-              <div className="rounded-2xl border border-sand bg-cream/60 p-3.5">
-                <dt className="text-[11px] uppercase tracking-wide text-clay">{t('subscription.maxItems')}</dt>
-                <dd className="mt-1 text-[20px] font-semibold leading-none text-charcoal">
-                  {modalPlan.max_menu_items === -1 ? '∞' : modalPlan.max_menu_items}
-                </dd>
-              </div>
-              <div className="rounded-2xl border border-sand bg-cream/60 p-3.5">
-                <dt className="text-[11px] uppercase tracking-wide text-clay">{t('subscription.intervalType')}</dt>
-                <dd className="mt-1 text-[16px] font-semibold leading-tight text-charcoal">
-                  {intervalLabel(t, modalPlan.interval_type)}
-                </dd>
-              </div>
-            </dl>
-
-            <ul className="mt-4 space-y-2">
-              {modalPlan.features.map((feature) => (
-                <li key={feature} className="flex items-start gap-2 text-[13px] leading-snug text-espresso">
-                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-moss/15 text-moss">
-                    <Icon name="check" size={11} strokeWidth={3} />
-                  </span>
-                  <span className="min-w-0">{feature}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-      </Modal>
-
-      {/* الخطوة 3: تأكيد نهائي — الموقع سيتوقف */}
-      <Modal
-        open={Boolean(modalPlan) && stage === 'final'}
-        onClose={closeFlow}
-        size="md"
-        title={t('subscription.finalStepTitle')}
-        description={t('subscription.finalStepSub')}
-        footer={
-          <div className="flex w-full gap-2">
-            <Button variant="outline" icon="arrowLeft" onClick={() => setStage('details')} disabled={sending}>
-              {t('common.back')}
-            </Button>
-            <Button variant="danger" full loading={sending} icon="clock" onClick={submitRequest}>
-              {t('subscription.finalApprove')}
-            </Button>
-          </div>
-        }
-      >
-        <div className="rounded-2xl border border-sun/50 bg-sun/10 px-4 py-3 text-center">
-          <Icon name="alert" size={22} strokeWidth={2.2} className="mx-auto text-sun" />
-          <p className="mt-2 text-[12px] leading-relaxed text-espresso">
-            {t('subscription.finalStepSub')}
-          </p>
-        </div>
-      </Modal>
-    </>
+    <PlanRequestModal
+      plan={modalPlan}
+      restaurantId={restaurantId}
+      targetMode={userMode === 'static' || userMode === 'live' ? userMode : undefined}
+      onClose={closeFlow}
+      onSent={(plan) => {
+        setPendingRequest({ planName: plan.name })
+        setModalPlan(null)
+        fetchSubscription(restaurantId).catch(() => {})
+      }}
+    />
   )
 
   /* ------------------- no subscription record at all -------------------- */
@@ -465,7 +299,13 @@ export default function SubscriptionPage() {
     )
   }
 
-  const details = SUBSCRIPTIONS[record.plan]
+  const details = SUBSCRIPTIONS[record.plan as keyof typeof SUBSCRIPTIONS]
+  // الباقة قد تكون واحدة من الست الجديد غير المعرّفة في بيانات العرض — نكمل من قائمة الباقات
+  const dbPlan = allPlans.find(
+    (p) => p.name.toLowerCase().replace(/[^a-z0-9]/g, '') === String(record.plan).toLowerCase().replace(/[^a-z0-9]/g, '')
+  )
+  const heroName = details?.name ?? dbPlan?.name ?? record.plan
+  const heroFeatures = details?.features ?? dbPlan?.features ?? []
   const daysLeft = Math.max(
     0,
     Math.ceil((new Date(record.renewsAt).getTime() - Date.now()) / 86_400_000)
@@ -504,7 +344,7 @@ export default function SubscriptionPage() {
 
             <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h2 className="display-serif text-[clamp(26px,3.6vw,38px)] leading-none text-charcoal">
-                {details?.name ?? record.plan}
+                {heroName}
               </h2>
               <span className="text-[15px] font-medium text-umber">{priceLabel}</span>
             </div>
@@ -523,7 +363,7 @@ export default function SubscriptionPage() {
             </div>
 
             <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
-              {(details?.features ?? []).map((feature) => (
+              {heroFeatures.map((feature) => (
                 <li key={feature} className="flex items-start gap-1.5 text-[13px] text-espresso">
                   <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-moss/15 text-moss">
                     <Icon name="check" size={11} strokeWidth={3} />

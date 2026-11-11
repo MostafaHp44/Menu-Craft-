@@ -16,6 +16,8 @@ type RequestRow = {
   user_name?: string | null
   user_email?: string | null
   plan_name?: string | null
+  /** وضع الباقة (live/static) — يحدّد الوضع الذي سيُفعَّل عند الموافقة */
+  plan_mode?: string | null
   price?: number | string | null
   status: string
   created_at: string
@@ -226,7 +228,14 @@ export default function SubscriptionRequestsPage() {
                               </div>
                               <div>
                                 <dt className="text-[10.5px] uppercase tracking-wide text-clay">Plan</dt>
-                                <dd className="text-espresso">{row.plan_name || 'Starter'}</dd>
+                                <dd className="flex flex-wrap items-center gap-1.5 text-espresso">
+                                  {row.plan_name || 'Starter'}
+                                  {row.plan_mode ? (
+                                    <Badge tone={row.plan_mode === 'static' ? 'outline' : 'moss'}>
+                                      {row.plan_mode === 'static' ? 'Static' : 'Live'}
+                                    </Badge>
+                                  ) : null}
+                                </dd>
                               </div>
                               <div>
                                 <dt className="text-[10.5px] uppercase tracking-wide text-clay">Price</dt>

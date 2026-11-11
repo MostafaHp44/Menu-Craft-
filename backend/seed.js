@@ -32,7 +32,7 @@ const { hashPassword } = require('./src/utils/hash');
     const [roleRows] = await conn.execute('SELECT id, name FROM roles');
     console.log('roles now:', JSON.stringify(roleRows));
 
-    // ---------- 2) Plans ----------
+    // ---------- 2) Plans (6 باقات: 3 live + 3 static) ----------
     console.log('--- plans ---');
     const plans = [
       {
@@ -41,6 +41,7 @@ const { hashPassword } = require('./src/utils/hash');
         price: 0,
         currency: 'USD',
         interval_type: 'forever',
+        mode: 'static',
         max_restaurants: 5,
         max_menu_items: 15,
         features: [
@@ -52,11 +53,68 @@ const { hashPassword } = require('./src/utils/hash');
         is_active: 1,
       },
       {
+        id: 'plan-static-plus',
+        name: 'Static Plus',
+        price: 12,
+        currency: 'USD',
+        interval_type: 'month',
+        mode: 'static',
+        max_restaurants: 10,
+        max_menu_items: -1,
+        features: [
+          'Up to 10 restaurant websites',
+          'Unlimited menu items',
+          'All 8 templates included',
+          'Remove Digital Menu badge',
+          'Photo gallery & featured dishes',
+          'QR code generator',
+        ],
+        is_active: 1,
+      },
+      {
+        id: 'plan-static-studio',
+        name: 'Static Studio',
+        price: 24,
+        currency: 'USD',
+        interval_type: 'month',
+        mode: 'static',
+        max_restaurants: -1,
+        max_menu_items: -1,
+        features: [
+          'Everything in Static Plus',
+          'Unlimited restaurant websites',
+          'Shared brand kit across locations',
+          'Priority template releases',
+          'Priority support',
+        ],
+        is_active: 1,
+      },
+      {
+        id: 'plan-live-basic',
+        name: 'Live Basic',
+        price: 19,
+        currency: 'USD',
+        interval_type: 'month',
+        mode: 'live',
+        max_restaurants: 1,
+        max_menu_items: -1,
+        features: [
+          '1 restaurant website with live ordering',
+          'Unlimited menu items',
+          'QR ordering at the table',
+          'Cash & card payment methods',
+          'Order tracking page',
+          'Email support',
+        ],
+        is_active: 1,
+      },
+      {
         id: 'plan-professional',
         name: 'Professional',
         price: 29,
         currency: 'USD',
         interval_type: 'month',
+        mode: 'live',
         max_restaurants: 3,
         max_menu_items: -1,
         features: [
@@ -75,6 +133,7 @@ const { hashPassword } = require('./src/utils/hash');
         price: 79,
         currency: 'USD',
         interval_type: 'month',
+        mode: 'live',
         max_restaurants: -1,
         max_menu_items: -1,
         features: [
@@ -88,13 +147,18 @@ const { hashPassword } = require('./src/utils/hash');
         is_active: 1,
       },
     ];
+    // عمود mode (live/static) — يُضاف إن لم يكن موجوداً (استضافة جديدة)
+    const [planCols] = await conn.execute("SHOW COLUMNS FROM plans LIKE 'mode'");
+    if (!planCols.length) {
+      await conn.execute("ALTER TABLE plans ADD COLUMN mode VARCHAR(10) NOT NULL DEFAULT 'live' AFTER name");
+    }
     for (const p of plans) {
       await conn.execute(
-        'INSERT INTO plans (id, name, price, currency, interval_type, max_restaurants, max_menu_items, features, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE name=VALUES(name), price=VALUES(price), interval_type=VALUES(interval_type), max_restaurants=VALUES(max_restaurants), max_menu_items=VALUES(max_menu_items), features=VALUES(features), is_active=VALUES(is_active)',
-        [p.id, p.name, p.price, p.currency, p.interval_type, p.max_restaurants, p.max_menu_items, JSON.stringify(p.features), p.is_active]
+        'INSERT INTO plans (id, name, mode, price, currency, interval_type, max_restaurants, max_menu_items, features, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE name=VALUES(name), mode=VALUES(mode), price=VALUES(price), interval_type=VALUES(interval_type), max_restaurants=VALUES(max_restaurants), max_menu_items=VALUES(max_menu_items), features=VALUES(features), is_active=VALUES(is_active)',
+        [p.id, p.name, p.mode, p.price, p.currency, p.interval_type, p.max_restaurants, p.max_menu_items, JSON.stringify(p.features), p.is_active]
       );
     }
-    const [planRows] = await conn.execute('SELECT id, name, price, interval_type, is_active FROM plans');
+    const [planRows] = await conn.execute('SELECT id, name, mode, price, interval_type, is_active FROM plans ORDER BY price ASC');
     console.log('plans now:', JSON.stringify(planRows));
 
     // ---------- 3) Super admin ----------
