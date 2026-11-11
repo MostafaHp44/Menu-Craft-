@@ -1,11 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Icon, Wordmark } from '../../shared/ui/icons.tsx'
-import { Button, Card, Img, Input, Segmented } from '../../shared/ui/ui.tsx'
+import { Button, Card, ChoiceCard, Img, Input, Segmented } from '../../shared/ui/ui.tsx'
 import { IMG } from '../../shared/lib/images.ts'
 import { TEMPLATES } from '../../templates/data/templates.ts'
+import { PLANS } from '../../shared/lib/demoData.ts'
 import { cx, tx } from '../../shared/lib/utils.ts'
 import { useI18n } from '../../shared/i18n'
+import { apiFetch, billingAPI } from '../../shared/lib/api.service'
 import { useStore } from '../../shared/store/useStore.ts'
 import { useAuthStore } from '../../shared/store/useAuth.ts'
 import { useBackendAuth } from '../../shared/store/useBackendAuth.ts'
@@ -14,6 +16,8 @@ import { panelForRole } from '../../shared/auth/panels.tsx'
 type Mode = 'signin' | 'signup'
 /** 'forgot' only shows an honest "recovery unavailable" panel — there is no backend reset endpoint. */
 type Step = 'account' | 'forgot'
+/** أول onboarding (UPGRADE_FLOW_SPEC §2): account → product mode → plan → create */
+type SignupPhase = 'account' | 'mode' | 'plan'
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/
 const PASSWORD_MIN = 6
@@ -117,6 +121,11 @@ export default function SignIn() {
     return query === 'forgot' || query === 'reset' ? 'forgot' : 'account'
   })
 
+  /* أول onboarding (UPGRADE_FLOW_SPEC §2): account → product mode (Live/Static) → plan */
+  const [signupPhase, setSignupPhase] = useState<SignupPhase>('account')
+  const [chosenMode, setChosenMode] = useState<'static' | 'live'>('live')
+  const [chosenPlanId, setChosenPlanId] = useState<string>('plan-professional')
+
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -130,6 +139,7 @@ export default function SignIn() {
   const switchMode = (next: Mode) => {
     setMode(next)
     setStep('account')
+    setSignupPhase('account')
     setError('')
   }
 
@@ -186,26 +196,16 @@ export default function SignIn() {
     }
   }
 
-  const submitSignUp = async (e: FormEvent) => {
-    e.preventDefault()
-    // Validate locally first so the user always sees a message in the UI
-    // language instead of a backend string.
-    if (name.trim().length < 2) {
-      setError(t('flow.nameRequired'))
-      return
-    }
-    if (!EMAIL_RE.test(email)) {
-      setError(t('flow.validEmail'))
-      return
-    }
-    if (password.length < PASSWORD_MIN) {
-      setError(t('flow.passwordMin'))
-      return
-    }
-    if (restaurantName.trim().length < 2) {
-      setError(t('flow.restaurantRequired'))
-      return
-    }
+  /* أول onboarding (UPGRADE_FLOW_SPEC §2): الحساب → اختيار النوع (Live/Static) → اختيار الباقة → إنشاء */
+  const validateSignUpInput = (): string => {
+    if (name.trim().length < 2) return t('flow.nameRequired')
+    if (!EMAIL_RE.test(email)) return t('flow.validEmail')
+    if (password.length < PASSWORD_MIN) return t('flow.passwordMin')
+    if (restaurantName.trim().length < 2) return t('flow.restaurantRequired')
+    return ''
+  }
+
+  const finalizeSignUp = async (planId: string, mode: 'static' | 'live') => {
     setError('')
     setBusy(true)
 
@@ -225,9 +225,11 @@ export default function SignIn() {
         email: email.trim(),
         password,
         name,
-        restaurantName,
+        restaurantName: restaurantName.trim(),
         templateId: savedTemplateId,
         language,
+        mode,
+        planId,
       })
     } catch (err) {
       // fetch() only rejects on transport problems — the backend's own
@@ -259,6 +261,27 @@ export default function SignIn() {
     const params = new URLSearchParams(window.location.search)
     const redirect = params.get('redirect') || ''
     navigate(redirect || '/dashboard')
+
+    // Live Digital Menu: إرسال طلب اشتراك مدفوع (pending_payment) — يُعاد تفعيل
+    // الطور والباقة فقط بعد موافقة Super Admin (flow مطابق لـ upgrade-request).
+    if (mode === 'live') {
+      const restaurantId: string | undefined = backendResponse?.user?.restaurant_id
+      try {
+        await billingAPI.checkout(planId)
+      } catch (err) {
+        // الاشتراك عبر Stripe غير مهيأ في هذه البيئة — نرسل طلب ترقية/اشتراك مدفوع
+        // ينتظر الموافقة (pending_payment) عبر نقطة النهاية الرسمية.
+        try {
+          await apiFetch<{ ok: boolean; data?: { requestId: string } }>('/api/paid-subscription-requests', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ restaurantId, planId, planName: PLANS.find((p) => `plan-${p.id}` === planId)?.name ?? planId, price: PLANS.find((p) => `plan-${p.id}` === planId)?.price ?? 0 }),
+          })
+        } catch (err2) {
+          console.warn('paid subscription request on signup failed:', err2 instanceof Error ? err2.message : err2)
+        }
+      }
+    }
 
     // ==== RESTORE template customization to the new restaurant ====
     // The backend signup creates a new restaurant; we now update it with
@@ -318,6 +341,29 @@ export default function SignIn() {
     }
   }
 
+  const submitSignUp = async (e: FormEvent) => {
+    e.preventDefault()
+    // Validate locally first so the user always sees a message in the UI
+    // language instead of a backend string.
+    const validationError = validateSignUpInput()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+    setError('')
+    setBusy(true)
+
+    // أول onboarding (UPGRADE_FLOW_SPEC §2): الحساب → اختيار النوع → اختيار الباقة
+    if (mode === 'signup') {
+      // ننتقل لاختيار النوع (Live Digital Menu / Static) قبل إنشاء الحساب
+      setSignupPhase('mode')
+      setBusy(false)
+      return
+    }
+
+    await finalizeSignUp(chosenPlanId, chosenMode)
+  }
+
   /* --------------------------------- bits ---------------------------------- */
 
   const emailField = (
@@ -370,14 +416,22 @@ export default function SignIn() {
             {step === 'forgot'
               ? t('flow.forgotTitle')
               : mode === 'signup'
-                ? t('auth.signUpTitle')
+                ? signupPhase === 'mode'
+                  ? t('flow.modeStepTitle')
+                  : signupPhase === 'plan'
+                    ? t('flow.planStepTitle')
+                    : t('auth.signUpTitle')
                 : t('auth.signInSub')}
           </h1>
           <p className="mt-4 text-[15px] leading-relaxed text-umber">
             {step === 'forgot'
               ? t('flow.recoveryUnavailable')
               : mode === 'signup'
-                ? t('flow.signUpLead')
+                ? signupPhase === 'mode'
+                  ? t('flow.modeStepSub')
+                  : signupPhase === 'plan'
+                    ? t('flow.planStepSub')
+                    : t('flow.signUpLead')
                 : t('flow.signInLead')}
           </p>
 
@@ -395,14 +449,72 @@ export default function SignIn() {
                   ]}
                 />
 
-                {mode === 'signup' && draft ? (
+                {mode === 'signup' && signupPhase === 'account' && draft ? (
                   <p className="mt-4 flex items-start gap-2 rounded-xl border border-flame/25 bg-flame/8 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-flame-dark">
                     <Icon name="sparkles" size={14} className="mt-0.5 shrink-0" />
                     {t('flow.draftBecomesSite')}
                   </p>
                 ) : null}
 
-                {mode === 'signup' ? (
+                {mode === 'signup' && signupPhase === 'mode' ? (
+                  <div className="mt-4 space-y-5">
+                    <p className="text-[13px] leading-relaxed text-umber">{t('flow.modeStepSub')}</p>
+                    <div className="grid gap-3">
+                      <ChoiceCard
+                        label={t('flow.modeLive')}
+                        note={t('flow.modeLiveDesc')}
+                        active={chosenMode === 'live'}
+                        onClick={() => { setChosenMode('live'); setSignupPhase('plan') }}
+                      />
+                      <ChoiceCard
+                        label={t('flow.modeStatic')}
+                        note={t('flow.modeStaticDesc')}
+                        active={chosenMode === 'static'}
+                        onClick={() => { setChosenMode('static'); setSignupPhase('plan') }}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="lg" full onClick={() => setSignupPhase('account')}>
+                        {t('flow.modeBackToAccount')}
+                      </Button>
+                      <Button variant="accent" size="lg" full icon="arrowRight" onClick={() => setSignupPhase('plan')}>
+                        {t('flow.modeContinue')}
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {mode === 'signup' && signupPhase === 'plan' ? (
+                  <div className="mt-4 space-y-5">
+                    <div>
+                      <span className="eyebrow">{t('flow.planEyebrow')}</span>
+                      <h3 className="mt-1.5 text-[17px] font-semibold tracking-tight text-charcoal">{t('flow.planStepTitle')}</h3>
+                      <p className="mt-1 text-[13px] text-umber">{t('flow.planStepSub')}</p>
+                    </div>
+                    <div className="grid gap-3">
+                      {(chosenMode === 'static'
+                        ? PLANS.filter((p) => p.id === 'starter')
+                        : PLANS.filter((p) => p.id !== 'starter')
+                      ).map((plan) => {
+                        const planId = `plan-${plan.id}` as const
+                        return (
+                          <ChoiceCard
+                            key={plan.id}
+                            label={`${plan.name} — ${plan.price === 0 ? t('flow.freeForever') : `$${plan.price}/month`}`}
+                            note={plan.features[0] ?? ''}
+                            active={chosenPlanId === planId}
+                            onClick={() => { setChosenPlanId(planId); void finalizeSignUp(planId, chosenMode) }}
+                          />
+                        )
+                      })}
+                    </div>
+                    <Button variant="outline" size="lg" full onClick={() => setSignupPhase('mode')}>
+                      {t('flow.backToMode')}
+                    </Button>
+                  </div>
+                ) : null}
+
+                {mode === 'signup' && signupPhase === 'account' ? (
                   <form key="signup" onSubmit={submitSignUp} className="space-y-4" noValidate>
                     <label className="block">
                       <span className="mb-1.5 block text-[13px] font-medium text-espresso">{t('auth.fullName')}</span>
@@ -463,7 +575,7 @@ export default function SignIn() {
                       {busy ? t('flow.creatingAccount') : t('auth.submitSignUp')}
                     </Button>
                   </form>
-                ) : (
+                ) : mode === 'signin' ? (
                   <form key="signin" onSubmit={submitSignIn} className="space-y-4" noValidate>
                     {emailField}
 
@@ -508,7 +620,7 @@ export default function SignIn() {
                       {busy ? t('flow.openingWorkspace') : t('auth.submitSignIn')}
                     </Button>
                   </form>
-                )}
+                ) : null}
               </>
             ) : (
               <Button variant="outline" size="lg" full onClick={backToAccount}>

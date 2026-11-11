@@ -11,7 +11,7 @@
  */
 const { getMySQLPool } = require('../config/mysql');
 const { z } = require('zod');
-const { ensureRestaurantFitColumns } = require('./imageFit.service');
+const { ensureRestaurantFitColumns, ensureRestaurantModeColumn } = require('./imageFit.service');
 const { getTemplateSampleMenu } = require('../data/templateSamples');
 const { syncMenuItemsFromJson } = require('./menuSync.service');
 
@@ -22,6 +22,8 @@ const restaurantSchema = z.object({
   slug: z.string().min(1).optional(),
   status: z.enum(['draft', 'published']).optional(),
   plan: z.enum(['trial', 'starter', 'professional', 'business']).optional(),
+  /** Two product modes (UPGRADE_FLOW_SPEC §1): live = ordering-enabled, static = design-only */
+  mode: z.enum(['static', 'live']).optional(),
   tagline_en: z.string().optional(),
   tagline_ar: z.string().optional(),
   tagline_ku: z.string().optional(),
@@ -62,6 +64,7 @@ const FIELD_MAP = {
   slug: { column: 'slug' },
   status: { column: 'status' },
   plan: { column: 'plan' },
+  mode: { column: 'mode' },
   tagline_en: { column: 'tagline_en' },
   tagline_ar: { column: 'tagline_ar' },
   tagline_ku: { column: 'tagline_ku' },
@@ -112,6 +115,7 @@ function notFound() {
 
 async function withConnection(fn) {
   await ensureRestaurantFitColumns();
+  await ensureRestaurantModeColumn();
   const pool = await getMySQLPool();
   const connection = await pool.getConnection();
   try {

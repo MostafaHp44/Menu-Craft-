@@ -1,6 +1,15 @@
 # Upgrade Flow Spec — Static Menu → Live Digital Menu
 
-Status: **agreed with product owner (2026-11-10), not yet implemented.**
+Status: **agreed with product owner (2026-11-10), implemented (2026-11-11).**
+
+Implementation summary (2026-11-11):
+- `Restaurants.mode` (`static` | `live`, default `live`) + lazy migration `ensureRestaurantModeColumn()` (imageFit.service pattern).
+- Onboarding wizard in `SignIn.tsx`: account → mode (Live/Static) → plan (each mode has its own plan list) → finalize.
+- Static signup → immediate **active Starter** subscription (no approval), dashboard hides Orders/Branches/Team (nav filter + direct-URL redirect in `DashboardLayout`).
+- Live signup → no subscription at signup; paid request (`paid_subscription_requests`, `pending_payment`) → Super Admin approve (`PATCH /api/admin/paid-subscription-requests/:id/approve`) → subscription **active** + `mode='live'`.
+- Public menu (`GET /api/public/menu/:slug`) exposes `mode`; static forces `ordering.enabled=false` and disables cash payment methods (read-only site).
+- `mode` is exposed on `/api/auth/signup|signin|me` so the dashboard knows the current mode and re-checks it on every subscription refresh (flips live right after approval).
+- Verified live: `onboarding_test.js` 22/22, full regression battery green (t1_auth 74, t2 32, t3 35, t4_endpoints 81, t4b 67, t5 15, t6 11, t7 12, t1b 6, p1_probe 73, p2_limits 24, p2_logout 15 = 567 total).
 
 ## 1. Two product modes (per restaurant)
 

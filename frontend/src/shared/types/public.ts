@@ -97,6 +97,8 @@ export interface PublicRestaurant {
   design?: unknown;
   language?: string;
   status?: string;
+  /** Two product modes (UPGRADE_FLOW_SPEC §1): live = ordering-enabled, static = design-only */
+  mode?: string;
   updatedAt?: string;
   copy?: unknown;
   inline?: unknown;

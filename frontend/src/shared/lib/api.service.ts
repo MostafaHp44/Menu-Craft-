@@ -159,7 +159,7 @@ async function request<T>(
 
 /* ---------- Auth ---------- */
 export const authAPI = {
-  signup: (body: { name: string; email: string; password: string; restaurantName: string }) =>
+  signup: (body: { name: string; email: string; password: string; restaurantName: string; mode?: 'static' | 'live'; planId?: string }) =>
     request<{ ok: boolean; user: any; accessToken: string; refreshToken: string }>('/api/auth/signup', {
       method: 'POST',
       body: JSON.stringify(body),

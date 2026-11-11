@@ -44,6 +44,36 @@ async function ensureRestaurantFitColumns() {
   }
 }
 
+/**
+ * Restaurants.mode — the two product modes (per UPGRADE_FLOW_SPEC §1):
+ *   - 'live'  → Live Digital Menu (ordering + branches + team + payments)
+ *   - 'static'→ Digital Menu (design/template editing only, no ordering)
+ * Created lazily at runtime exactly like the fit columns (best effort).
+ */
+let modeEnsured = false;
+async function ensureRestaurantModeColumn() {
+  if (modeEnsured) return;
+  try {
+    const pool = await getMySQLPool();
+    const conn = await pool.getConnection();
+    try {
+      const [exists] = await conn.execute(
+        `SELECT COUNT(*) AS c FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Restaurants'`
+      );
+      if (Number(exists[0].c) > 0) {
+        if (!(await columnExists(conn, 'Restaurants', 'mode'))) {
+          await conn.execute("ALTER TABLE Restaurants ADD COLUMN mode VARCHAR(20) DEFAULT 'live' NOT NULL");
+        }
+      }
+    } finally {
+      conn.release();
+    }
+    modeEnsured = true;
+  } catch (_) {
+    // best-effort: queries surface a clear error if the column self-creation fails
+  }
+}
+
 let menuEnsured = false;
 async function ensureMenuFitColumns(conn) {
   if (menuEnsured) return;
@@ -82,4 +112,4 @@ function parseFit(value) {
   }
 }
 
-module.exports = { ensureRestaurantFitColumns, ensureMenuFitColumns, stringifyFit, parseFit };
+module.exports = { ensureRestaurantFitColumns, ensureRestaurantModeColumn, ensureMenuFitColumns, stringifyFit, parseFit };

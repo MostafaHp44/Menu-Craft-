@@ -4,7 +4,7 @@
 const { getMySQLPool } = require('../config/mysql');
 const { hashPassword, comparePassword } = require('../utils/hash');
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../utils/token');
-const { linkUserToSite, getSubscriptionForUser, ensureTrialSubscription } = require('./site.service');
+const { linkUserToSite, getSubscriptionForUser } = require('./site.service');
 const { z } = require('zod');
 
 const signupSchema = z.object({
@@ -14,7 +14,10 @@ const signupSchema = z.object({
   restaurantName: z.string().min(2, 'اسم المطعم مطلوب'),
   siteLang: z.string().optional(),
   // the sign-up form sends `language`; accept it as an alias of siteLang
-  language: z.string().optional()
+  language: z.string().optional(),
+  // أول onboarding (UPGRADE_FLOW_SPEC §2): النوع المطلوب للمطعم + الباقة المختارة
+  mode: z.enum(['static', 'live']).optional(),
+  planId: z.string().optional()
 });
 
 const signinSchema = z.object({
@@ -69,9 +72,15 @@ async function signup(input) {
     await connection.beginTransaction();
     try {
       const restaurantId = `rest-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      // أول onboarding (UPGRADE_FLOW_SPEC §2): النوع (live/static) + الباقة المختارة
+      const mode = parsed.mode === 'live' ? 'live' : 'static';
+      const planKey = String(parsed.planId || '').toLowerCase().replace(/^plan-?/, '');
+      const planValue = ['professional', 'business', 'starter'].includes(planKey)
+        ? planKey
+        : (mode === 'static' ? 'starter' : 'professional');
       await connection.execute(
-        'INSERT INTO Restaurants (id, name_en, slug, status, plan, language, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())',
-        [restaurantId, parsed.restaurantName.trim(), slug, 'draft', 'trial', parsed.siteLang || parsed.language || 'ar']
+        'INSERT INTO Restaurants (id, name_en, slug, status, plan, language, mode, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
+        [restaurantId, parsed.restaurantName.trim(), slug, 'draft', planValue, parsed.siteLang || parsed.language || 'ar', mode]
       );
 
       const userId = `usr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -89,12 +98,26 @@ async function signup(input) {
         [linkId, userId, restaurantId]
       );
 
-      await ensureTrialSubscription({ transaction: connection, userId, restaurantId });
       await connection.commit();
+
+      // أول onboarding: النوع المختار يحدّد الاشتراك —
+      //  - static → باقة Starter المجانية مباشرة (لا يحتاج موافقة).
+      //  - live   → لا ننشئ اشتراكًا الآن؛ ينتظر رفع الطلب المدفوع وتمرير الموافقة
+      //            (مدير الاشتراك / Super Admin) ليتم تفعيل الباقة فعليًا.
+      if (mode === 'static') {
+        const starterSubId = `sub-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+        await connection.execute(
+          `INSERT INTO Subscriptions (id, user_id, restaurant_id, plan_id, plan_name, plan, price, status, started_at, renews_at, auto_renew, created_at, updated_at)
+           VALUES (?, ?, ?, 'plan-starter', 'Starter', 'starter', 0, 'active', NOW(), NULL, 0, NOW(), NOW())`,
+          [starterSubId, userId, restaurantId]
+        );
+      }
 
       // Fetch user back
       const [userRows] = await connection.execute('SELECT id, name, email, role, restaurant_id FROM Users WHERE id = ?', [userId]);
       const user = userRows[0];
+      // أول onboarding: إرجاع الوضع المختار مع الحساب
+      user.mode = mode;
       const accessToken = signAccessToken({ userId: user.id, email: user.email, role: user.role, restaurantId });
       const refreshToken = signRefreshToken({ userId: user.id });
       return { user, accessToken, refreshToken };
@@ -112,7 +135,7 @@ async function signin(input) {
   const connection = await (await getMySQLPool()).getConnection();
   try {
     const [rows] = await connection.execute(
-      'SELECT u.id, u.name, u.email, u.password_hash, u.role, u.restaurant_id, u.status, r.name_en AS restaurant_name FROM Users u LEFT JOIN Restaurants r ON u.restaurant_id = r.id WHERE u.email = ?',
+      'SELECT u.id, u.name, u.email, u.password_hash, u.role, u.restaurant_id, u.status, r.name_en AS restaurant_name, r.mode AS restaurant_mode FROM Users u LEFT JOIN Restaurants r ON u.restaurant_id = r.id WHERE u.email = ?',
       [parsed.email.toLowerCase()]
     );
     if (rows.length === 0) {
@@ -124,6 +147,9 @@ async function signin(input) {
     if (user.status !== 'active') { const err = new Error('الحساب معطل، راسل الدعم الفني'); err.status = 403; throw err; }
     // never expose the credential hash to the client
     const { password_hash: _ignoredHash, ...safeUser } = user;
+    // أول onboarding: وضع المطعم (static/live) حتى يُخفى تبويبات Live في الداشبورد
+    safeUser.mode = String(user.restaurant_mode || '').toLowerCase() === 'static' ? 'static' : 'live';
+    delete safeUser.restaurant_mode;
     const accessToken = signAccessToken({ userId: user.id, email: user.email, role: user.role, restaurantId: user.restaurant_id });
     const refreshToken = signRefreshToken({ userId: user.id });
     return { user: safeUser, accessToken, refreshToken };
@@ -221,7 +247,7 @@ async function getMe(userId) {
   const connection = await (await getMySQLPool()).getConnection();
   try {
     const [rows] = await connection.execute(
-      'SELECT u.id, u.name, u.email, u.role, u.restaurant_id, u.status, u.created_at, r.name_en AS restaurant_name FROM Users u LEFT JOIN Restaurants r ON u.restaurant_id = r.id WHERE u.id = ?',
+      'SELECT u.id, u.name, u.email, u.role, u.restaurant_id, u.status, u.created_at, r.name_en AS restaurant_name, r.mode AS restaurant_mode FROM Users u LEFT JOIN Restaurants r ON u.restaurant_id = r.id WHERE u.id = ?',
       [userId]
     );
     if (rows.length === 0) { const err = new Error('المستخدم غير موجود'); err.status = 401; throw err; }
@@ -236,6 +262,8 @@ async function getMe(userId) {
         role: user.role,
         restaurant_id: user.restaurant_id,
         restaurant_name: user.restaurant_name ?? null,
+        // أول onboarding: وضع المطعم (static/live) — يقود إخفاء تبويبات Live
+        mode: String(user.restaurant_mode || '').toLowerCase() === 'static' ? 'static' : 'live',
         status: user.status,
         createdAt: user.created_at,
       },

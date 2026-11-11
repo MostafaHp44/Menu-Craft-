@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Icon } from '../../shared/ui/icons.tsx'
 import { Badge, Button } from '../../shared/ui/ui.tsx'
@@ -30,6 +30,10 @@ const NAV: Array<{ to: string; label: TKey; icon: string; end?: boolean; require
 /** what the phone bottom bar shows before "More" */
 const MOBILE_PRIMARY = ['/dashboard', '/dashboard/templates', '/dashboard/my-templates', '/dashboard/orders']
 
+/** أول onboarding (UPGRADE_FLOW_SPEC §1): وضع Static = تحرير التصميم فقط —
+ *  تبويبات الطلبات/الفروع/الفريق مخفية ومحمية من الانتقال المباشر بالرابط. */
+const STATIC_HIDDEN_TABS = ['/dashboard/orders', '/dashboard/branches', '/dashboard/team']
+
 const TITLES: Record<string, { title: TKey; sub: TKey }> = {
   '/dashboard': { title: 'dashboard.overview', sub: 'dashboard.subOverview' },
   '/dashboard/orders': { title: 'orders.title', sub: 'dashboard.subOrders' },
@@ -58,6 +62,11 @@ export default function DashboardLayout() {
   // المصدر الحقيقي: restaurant_id من جلسة الباك إند — الـ ID المحلي (rst-...)
   // مش موجود في السيرفر، فهنتعرض لـ 403 وهنفضل شايفين الحالة المحلية القديمة
   const backendRid = useBackendAuth((s) => s.user?.restaurant_id || s.user?.restaurantId || '')
+  /* أول onboarding: وضع المطعم من الجلسة — static يخفي تبويبات Live.
+     يعاد قراءته مع كل جلب اشتراك حتى ينفتح التبويب فور موافقة السوبر أدمن. */
+  const backendMode = useBackendAuth((s) => s.user?.mode)
+  const refreshBackendUser = useBackendAuth((s) => s.refresh)
+  const isStaticMode = backendMode === 'static'
   const restaurantId = backendRid || restaurant.id
   const { isActive, status: subStatus } = useSubscriptionStatus(restaurantId)
   const fetchSubscription = usePlatformStore((s) => s.fetchSubscription)
@@ -94,7 +103,7 @@ export default function DashboardLayout() {
      تلقائياً بعد موافقة السوبر أدمن على طلب اشتراك جديد. */
   const loadSub = async () => {
     try {
-      await fetchSubscription(restaurantId)
+      await Promise.all([fetchSubscription(restaurantId), refreshBackendUser()])
     } finally {
       setSubChecked(true)
     }
@@ -117,9 +126,19 @@ export default function DashboardLayout() {
   const isSubPage = pathname === '/dashboard/subscription'
   const showLock = locked && !isSubPage
 
+  /* أول onboarding: م حماية المسار — رابط مباشر لتبويب Live في وضع Static
+     يعود للرئيسية (بعد وضوح mode من الجلسة حتى لا نحجب أول تحميل). */
+  if (backendMode != null && isStaticMode && STATIC_HIDDEN_TABS.includes(pathname)) {
+    return <Navigate to="/dashboard" replace />
+  }
+
   // team management is owner-only — hide the item for worker sessions
-  const navItems =
+  const navItemsAll =
     session?.role === 'worker' ? NAV.filter((item) => item.to !== '/dashboard/team') : NAV
+  // أول onboarding: وضع Static يخفي تبويبات الطلبات/الفروع/الفريق
+  const navItems = navItemsAll.filter(
+    (item) => !(isStaticMode && STATIC_HIDDEN_TABS.includes(item.to))
+  )
   const primary = navItems.filter((item) => MOBILE_PRIMARY.includes(item.to))
   const isPrimaryActive = (to: string) => pathname === to || pathname.startsWith(`${to}/`)
   const moreActive = navItems.some(

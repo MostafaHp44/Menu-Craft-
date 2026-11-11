@@ -148,6 +148,8 @@ async function approvePaidSubscriptionRequest(requestId, adminId) {
       "UPDATE paid_subscription_requests SET status = 'approved', admin_id = ?, activated_at = NOW(), updated_at = NOW() WHERE id = ?",
       [adminId || null, requestId]
     );
+    // الموافقة على طلب ترقية/اشتراك مدفوع → يُفعَّل الطور (live) فعليًا مع تفعيل الباقة
+    await connection.execute("UPDATE Restaurants SET mode = 'live' WHERE id = ?", [reqRow.restaurant_id]);
     // لا شيء آخر ينقص الموقع — status الخاص بالمستخدم: نشغل الموقع مرة أخرى
     await restoreRestaurantSite(connection, reqRow.restaurant_id);
     await connection.commit();

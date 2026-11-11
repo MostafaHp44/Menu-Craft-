@@ -181,6 +181,8 @@ export interface Restaurant {
   menu: MenuCategory[]
   status: PublishStatus
   plan: DemoPlanId
+  /** Two product modes (UPGRADE_FLOW_SPEC §1): live = ordering-enabled, static = design-only */
+  mode?: 'static' | 'live'
   stats: RestaurantStats
   updatedAt: string
 

@@ -121,7 +121,7 @@ async function getPublicMenuBySlug(slug, lang = 'en') {
   await ensureRestaurantFitColumns();
   const pool = await getMySQLPool();
   const [result] = await pool.execute(
-    `SELECT id, name_en, name_ar, name_ku, slug, status, templateId, design, menu, draft_menu, published_menu, language, ordering, updated_at, created_at,
+    `SELECT id, name_en, name_ar, name_ku, slug, status, templateId, design, menu, draft_menu, published_menu, language, ordering, updated_at, created_at, mode,
       tagline_en, tagline_ar, tagline_ku, description_en, description_ar, description_ku,
       logoText_en, logoText_ar, logoText_ku, logoStyle, heroImage, hero_image_fit, heroVideo, gallery, gallery_fits,
       phone, email, address, hours, socials
@@ -136,6 +136,12 @@ async function getPublicMenuBySlug(slug, lang = 'en') {
   }
   const r = result[0];
   const settings = orderingSettingsFromRow(r);
+  // أول onboarding (UPGRADE_FLOW_SPEC §1): وضع Static = منيو مقروء بلا طلبات/دفع —
+  // الموقع العام يظل يعرض الممنيو لكن لا يُفعَّل سلة الشراء/Checkout.
+  const restaurantMode = String(r.mode || '').toLowerCase() === 'static' ? 'static' : 'live';
+  const effectiveSettings = restaurantMode === 'static'
+    ? { ...settings, enabled: false, paymentMethods: { ...settings.paymentMethods, cash: { ...settings.paymentMethods.cash, enabled: false }, cash_at_pickup: { ...settings.paymentMethods.cash_at_pickup, enabled: false } } }
+    : settings;
 
   const [categoriesResult] = await pool.execute(
     `SELECT * FROM MenuCategories WHERE restaurant_id = ? ORDER BY sort_order ASC`,
@@ -206,13 +212,14 @@ async function getPublicMenuBySlug(slug, lang = 'en') {
       design: parseJson(r.design, null),
       language: r.language || 'en',
       status: r.status,
+      mode: restaurantMode,
       updatedAt: r.updated_at,
       copy: parseJson(r.copy, null),
       inline: parseJson(r.inline, null)
     },
     menu: categories,
     ordering: {
-      enabled: settings.enabled,
+      enabled: effectiveSettings.enabled,
       currency: settings.currency || 'USD',
       fulfillment: settings.fulfillment,
       deliveryFee: Number(settings.deliveryFee || 0),
@@ -221,7 +228,7 @@ async function getPublicMenuBySlug(slug, lang = 'en') {
         code: settings.promo.code,
         announce: true
       } : null,
-      paymentMethods: availablePaymentMethods(settings)
+      paymentMethods: availablePaymentMethods(effectiveSettings)
     }
   };
 }

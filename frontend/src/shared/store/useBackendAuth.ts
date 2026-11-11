@@ -15,6 +15,8 @@ export interface BackendUser {
   role?: string | null
   restaurant_id?: string | null
   restaurantId?: string | null
+  /** أول onboarding: وضع المطعم — static (تصميم فقط) / live (طلبات كاملة) */
+  mode?: 'static' | 'live' | null
 }
 
 /** Non-sensitive hint that a backend cookie probably exists (the cookie itself is HttpOnly). */
@@ -42,6 +44,10 @@ interface BackendAuthState {
     restaurantName: string
     templateId?: string
     language?: 'ar' | 'en' | 'ku'
+    /** أول onboarding: النوع (Live Digital Menu / Static) */
+    mode?: 'static' | 'live'
+    /** أول onboarding: معرّف الباقة المختارة */
+    planId?: string
   }) => Promise<BackendUser>
   logout: () => Promise<void>
   setUser: (user: BackendUser | null) => void

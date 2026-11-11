@@ -93,6 +93,20 @@ const en = {
     pausedTitle: 'This menu is paused',
     pausedSub: 'The subscription for this restaurant ended. Renew it to bring this public menu back online.',
     backToMenuCraft: 'Back to Digital Menu',
+
+    /* ------------------------------- onboarding --------------------------- */
+    modeStepTitle: 'Choose your product',
+    modeStepSub: 'Start with a Digital Menu (design only) or a Live Digital Menu (ordering + payments).',
+    modeLive: 'Live Digital Menu',
+    modeLiveDesc: 'Full ordering, branches, staff and payments — the complete experience.',
+    modeStatic: 'Digital Menu',
+    modeStaticDesc: 'Design and menu editing only — no ordering, no checkout, no staff.',
+    modeBackToAccount: 'Back',
+    modeContinue: 'Continue',
+    planEyebrow: 'Pick your plan',
+    planStepTitle: 'Choose your plan',
+    planStepSub: 'The restaurant starts on the plan you choose — the site goes live after platform approval.',
+    backToMode: 'Back',
   },
 }
 
@@ -169,6 +183,20 @@ const ar: Deep<typeof en> = {
     cancelledNotice: 'تم إلغاء اشتراكك من قبل مدير المنصة — النشر متوقف وقائمتك العامة غير متاحة حتى إعادة التفعيل.',
     pastDueNotice: 'اشتراكك متأخر في السداد — النشر متوقف وقائمتك العامة غير متاحة حتى إتمام الدفع.',
     backToMenuCraft: 'العودة إلى Digital Menu',
+
+    /* ------------------------------- onboarding --------------------------- */
+    modeStepTitle: 'اختر منتجك',
+    modeStepSub: 'ابدأ بنظام قائمة ديجيتال فقط (تصميم) أو بنظام قائمة ديجيتال مباشرة (طلبات + مدفوعات).',
+    modeLive: 'القائمة الرقمية المباشرة',
+    modeLiveDesc: 'طلبات كاملة + فروع + موظفون + مدفوعات — التجربة الكاملة.',
+    modeStatic: 'القائمة الرقمية',
+    modeStaticDesc: 'تصميم وتحرير القائمة فقط — بلا طلبات ولا استلام.',
+    modeBackToAccount: 'رجوع',
+    modeContinue: 'متابعة',
+    planEyebrow: 'اختر خطتك',
+    planStepTitle: 'اختر خطتك',
+    planStepSub: 'المطعم يبدأ على الخطة التي تختارها — ويب الموقع يشتغل بعد موافقة الإدارة.',
+    backToMode: 'رجوع',
   },
 }
 
@@ -245,6 +273,20 @@ const ku: Deep<typeof en> = {
     cancelledNotice: 'ئابونەتەکەت لەلایەن بەڕێوەبەری پلاتفۆرمەوە هەڵوەشایەوە — بڵاوکردنەوە وەستاوە و مینیۆی گشتیت ناچالاکە تا دووبارە چالاک بکرێتەوە.',
     pastDueNotice: 'ئاکامەکەت دویر لە قەرزەکەدا تەواو بووە — بڵاوکردنەوە وەستاوە و مینیۆی گشتیت ناچالاکە تا پارەدان تەواو بکرێت.',
     backToMenuCraft: 'گەڕانەوە بۆ Digital Menu',
+
+    /* ------------------------------- onboarding --------------------------- */
+    modeStepTitle: 'بەرهەمەکەت هەڵبژێرە',
+    modeStepSub: 'لەلایەن بنەڕەتەوە یان بنەڕەتێکی قاڵاقە، یان قاڵاقی ژینگا.',
+    modeLive: 'قاڵاقی ژینگا',
+    modeLiveDesc: 'ئەرنا کامل + قۆناغ + کارگێڕ + پارەدان.',
+    modeStatic: 'قاڵاقی ژینگا',
+    modeStaticDesc: 'دیزاین و وێکردنەوەی قاڵاقی تەنها — بەبێ ئەرنا و وەکردنەوە.',
+    modeBackToAccount: 'گەڕانەوە',
+    modeContinue: 'بەردەوام',
+    planEyebrow: 'خەڵتەکەت هەڵبژێرە',
+    planStepTitle: 'خەڵتەکەت هەڵبژێرە',
+    planStepSub: 'ماڵپەڕەکەت لە خەڵتێکدا دەبێت — ماڵپەڕەکە پەیوەندی بە دوای پەسەندی تایبەتدا دەکات.',
+    backToMode: 'گەڕانەوە',
   },
 }
 
