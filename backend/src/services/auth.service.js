@@ -95,8 +95,8 @@ async function signup(input) {
       const planId = chosenPlan ? chosenPlan.id : fallbackPlanId;
       const planKey = String(planId).replace(/^plan-?/, '').toLowerCase();
       const planName = chosenPlan ? chosenPlan.name : (mode === 'static' ? 'Starter' : 'Professional');
-      // الباقة المجانية (سعر 0) تُفعَّل فوراً بدون موافقة — والمجانية دائماً static.
-      // أي باقة مدفوعة تبقى بلا اشتراك حتى يُرفع الطلب ويوافق عليه Super Admin.
+      // أي باقة — مجانية أو مدفوعة — تتطلب موافقة Super Admin قبل أي تفعيل.
+      // لا ننشئ اشتراكًا وقت التسجيل إطلاقًا؛ الطلب ينتظر القرار.
       const planPrice = chosenPlan ? Number(chosenPlan.price) || 0 : (mode === 'static' ? 0 : 29);
       await connection.execute(
         'INSERT INTO Restaurants (id, name_en, slug, status, plan, language, mode, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
@@ -118,20 +118,26 @@ async function signup(input) {
         [linkId, userId, restaurantId]
       );
 
-      await connection.commit();
-
-      // أول onboarding: الاشتراك الفوري —
-      //  - باقة مجانية (سعر 0) → تُفعَّل مباشرة (لا تحتاج موافقة).
-      //  - باقة مدفوعة → لا ننشئ اشتراكًا الآن؛ ينتظر رفع الطلب المدفوع وتمرير
-      //    الموافقة (Super Admin) ليتم تفعيل الباقة فعليًا.
+      // أول onboarding: كل تسجيل (بأي نوع باقة) يفتح طلب موافقة للسوبر ادمن —
+      //  - باقة مجانية (سعر 0) → free_plan_requests بحالة 'pending'.
+      //  - باقة مدفوعة → paid_subscription_requests بحالة 'pending_payment'.
+      // لا شيء يتغير (الوضع/الباقة/الموقع) قبل الموافقة، والرد approve في
+      // الخدمات الخاصة هو الذي ينشئ الاشتراك ويفعّل المطعم.
       if (planPrice === 0) {
-        const starterSubId = `sub-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+        const freeRequestId = `fpr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
         await connection.execute(
-          `INSERT INTO Subscriptions (id, user_id, restaurant_id, plan_id, plan_name, plan, price, status, started_at, renews_at, auto_renew, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, 0, 'active', NOW(), NULL, 0, NOW(), NOW())`,
-          [starterSubId, userId, restaurantId, planId, planName, planKey]
+          'INSERT INTO free_plan_requests (id, user_id, restaurant_id, status, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',
+          [freeRequestId, userId, restaurantId, 'pending']
+        );
+      } else {
+        const paidRequestId = `psr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+        await connection.execute(
+          'INSERT INTO paid_subscription_requests (id, user_id, restaurant_id, plan_id, plan_name, price, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
+          [paidRequestId, userId, restaurantId, planId, planName, planPrice, 'pending_payment']
         );
       }
+
+      await connection.commit();
 
       // Fetch user back
       const [userRows] = await connection.execute('SELECT id, name, email, role, restaurant_id FROM Users WHERE id = ?', [userId]);
@@ -274,6 +280,40 @@ async function getMe(userId) {
     const user = rows[0];
     const sites = await linkSafeSites(userId);
     const subscription = await getSubscriptionForUser(userId);
+    // الطلب المعلق الحالي (إن وُجد) — حتى تعرض الواجهة "بانتظار موافقة السوبر ادمن"
+    // وأي باقة طُلِبت. لا يُعرض إلا الأحدث.
+    const [paidPending] = await connection.execute(
+      "SELECT id, plan_id, plan_name, price, status, created_at FROM paid_subscription_requests WHERE user_id = ? AND status = 'pending_payment' ORDER BY created_at DESC LIMIT 1",
+      [userId]
+    );
+    const [freePending] = await connection.execute(
+      "SELECT id, status, created_at FROM free_plan_requests WHERE user_id = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1",
+      [userId]
+    );
+    const paidRow = paidPending[0] || null;
+    const freeRow = freePending[0] || null;
+    let pendingRequest = null;
+    if (paidRow && (!freeRow || new Date(paidRow.created_at) >= new Date(freeRow.created_at))) {
+      pendingRequest = {
+        id: paidRow.id,
+        type: 'paid',
+        planId: paidRow.plan_id,
+        planName: paidRow.plan_name,
+        price: Number(paidRow.price ?? 0),
+        status: paidRow.status,
+        createdAt: paidRow.created_at,
+      };
+    } else if (freeRow) {
+      pendingRequest = {
+        id: freeRow.id,
+        type: 'free',
+        planId: 'plan-starter',
+        planName: 'Starter',
+        price: 0,
+        status: freeRow.status,
+        createdAt: freeRow.created_at,
+      };
+    }
     return {
       user: {
         id: user.id,
@@ -288,7 +328,8 @@ async function getMe(userId) {
         createdAt: user.created_at,
       },
       sites,
-      subscription
+      subscription,
+      pendingRequest
     };
   } finally {
     connection.release();

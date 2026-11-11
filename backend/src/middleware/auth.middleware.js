@@ -1,6 +1,48 @@
 const { verifyAccessToken } = require('../utils/token');
 const { isAccessTokenRevoked } = require('./rateLimiter');
+const { getMySQLPool } = require('../config/mysql');
 const cookie = require('cookie');
+
+/**
+ * بوابة الاشتراك — أي مطعم بدون اشتراك فعّال (أي أن السوبر ادمن لم يوافق بعد)
+ * تُقفل كل مسارات المستأجر (tenant routes) وتُبقي فقط:
+ *   • مسارات /api/auth/* (جلسة، /me، خروج) — ليعرف صاحب المطعم حالة طلبه
+ *   • PUT /api/restaurants/:id — تخصيص المسودة أثناء الـ onboarding (الملكية تتحقق داخل المتحكّم)
+ * فريق المنصة (super_admin/admin) لا يُقفل أبدًا. القراءة العامة (public menu...) غير متأثرة.
+ */
+async function hasActiveSubscription(restaurantId) {
+  const pool = await getMySQLPool();
+  const connection = await pool.getConnection();
+  try {
+    const [rows] = await connection.execute(
+      "SELECT id FROM Subscriptions WHERE restaurant_id = ? AND status = 'active' AND (renews_at IS NULL OR renews_at >= NOW()) LIMIT 1",
+      [restaurantId]
+    );
+    return rows.length > 0;
+  } finally {
+    connection.release();
+  }
+}
+
+async function subscriptionGate(request, reply) {
+  const role = String(request.user?.role || '').toLowerCase();
+  if (role === 'super_admin' || role === 'admin') return true;
+  const path = String(request.routerPath || '');
+  if (path.startsWith('/api/auth/')) return true;
+  // التخصيص أثناء الـ onboarding: يقبل routerPath النمطي أو المسار الخام
+  if (request.method === 'PUT' && (path === '/api/restaurants/:id' || /^\/api\/restaurants\/[^/]+$/.test(path))) return true;
+  const restaurantId = request.user?.restaurantId || null;
+  if (!restaurantId) return true;
+  try {
+    if (await hasActiveSubscription(restaurantId)) return true;
+  } catch (err) {
+    request.log?.error?.({ err }, 'subscription gate check failed');
+    await reply.status(503).send({ ok: false, error: 'تعذر التحقق من حالة الاشتراك', code: 'SUBSCRIPTION_CHECK_FAILED' });
+    return false;
+  }
+  await reply.status(403).send({ ok: false, error: 'حسابك قيد مراجعة السوبر أدمن — ستُفعَّل الداشبورد فور الموافقة', code: 'SUBSCRIPTION_PENDING_APPROVAL' });
+  return false;
+}
 
 async function authMiddleware(request, reply) {
   // المسارات العامة التي لا تحتاج توكن — لكل مسار METHOD محدد
@@ -53,6 +95,7 @@ async function authMiddleware(request, reply) {
         return reply.status(401).send({ ok: false, error: 'توكن غير صالح' });
       }
       request.user = decoded;
+      await subscriptionGate(request, reply);
       return;
     } catch (err) {
       if (err.name === 'TokenExpiredError') {
@@ -82,6 +125,8 @@ async function authMiddleware(request, reply) {
     }
     return reply.status(401).send({ ok: false, error: 'توكن غير صالح' });
   }
+
+  await subscriptionGate(request, reply);
 }
 
 /**

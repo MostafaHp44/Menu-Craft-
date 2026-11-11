@@ -694,6 +694,15 @@ export const en = {
     },
   },
 
+  pendingApproval: {
+    title: 'Your account is under review',
+    message: 'We received your request. The platform team is reviewing your account and chosen plan — your dashboard unlocks as soon as the super admin approves.',
+    requestedPlan: 'Requested plan',
+    checkStatus: 'Check again',
+    signOut: 'Sign out',
+    note: 'We will email you as soon as your account is approved.',
+  },
+
   toast: {
     draftSaved: 'Draft saved',
     published: 'Published',

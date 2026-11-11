@@ -7,7 +7,7 @@ import { TEMPLATES } from '../../templates/data/templates.ts'
 import { PLANS } from '../../shared/lib/demoData.ts'
 import { cx, tx } from '../../shared/lib/utils.ts'
 import { useI18n } from '../../shared/i18n'
-import { apiFetch, billingAPI } from '../../shared/lib/api.service'
+import { billingAPI } from '../../shared/lib/api.service'
 import { useStore } from '../../shared/store/useStore.ts'
 import { useAuthStore } from '../../shared/store/useAuth.ts'
 import { useBackendAuth } from '../../shared/store/useBackendAuth.ts'
@@ -177,19 +177,6 @@ export default function SignIn() {
     )
   }, [dbPlans, chosenMode])
 
-  const planPriceOf = (planId: string): number | undefined => {
-    const db = dbPlans.find((p) => p.id === planId)
-    if (db) return db.price
-    const demo = PLANS.find((p) => `plan-${p.id}` === planId)
-    return demo ? demo.price : undefined
-  }
-  const planNameOf = (planId: string): string => {
-    const db = dbPlans.find((p) => p.id === planId)
-    if (db) return db.name
-    const demo = PLANS.find((p) => `plan-${p.id}` === planId)
-    return demo ? demo.name : planId
-  }
-
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -326,33 +313,8 @@ export default function SignIn() {
     const redirect = params.get('redirect') || ''
     navigate(redirect || '/dashboard')
 
-    // Live Digital Menu / باقة مدفوعة: إرسال طلب اشتراك مدفوع (pending_payment) —
-    // يُفعَّل الطور والباقة فقط بعد موافقة Super Admin (وضع الباقة يحدّد الوضع).
-    const price = planPriceOf(planId)
-    const planName = planNameOf(planId)
-    if (price !== undefined && price > 0) {
-      const restaurantId: string | undefined = backendResponse?.user?.restaurant_id
-      try {
-        await billingAPI.checkout(planId)
-      } catch (err) {
-        // الاشتراك عبر Stripe غير مهيأ في هذه البيئة — نرسل طلب ترقية/اشتراك مدفوع
-        // ينتظر الموافقة (pending_payment) عبر نقطة النهاية الرسمية.
-        try {
-          await apiFetch<{ ok: boolean; data?: { requestId: string } }>('/api/paid-subscription-requests', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              restaurantId,
-              planId,
-              planName: planName ?? planId,
-              price: price ?? 0,
-            }),
-          })
-        } catch (err2) {
-          console.warn('paid subscription request on signup failed:', err2 instanceof Error ? err2.message : err2)
-        }
-      }
-    }
+    // الطلب للسوبر ادمن يُنشأ داخل تسجيل التسجيل نفسه في الباك إند (أي نوع باقة)
+    // — الداشبورد تُقفل حتى الموافقة، فلا نرسل أي طلب إضافي من هنا.
 
     // ==== RESTORE template customization to the new restaurant ====
     // The backend signup creates a new restaurant; we now update it with
@@ -724,6 +686,7 @@ export default function SignIn() {
                 {mode === 'signup' ? t('flow.signInTab') : t('flow.signUpTab')}
               </button>
             </p>
+            
           ) : null}
 
           <p className="mt-5 text-center text-[13px] text-umber">

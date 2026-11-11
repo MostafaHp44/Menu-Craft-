@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { authApi, errorMessage, type ApiRole, type ApiUser } from '../api/client.ts'
+import { authApi, errorMessage, type ApiRole, type ApiUser, type SubscriptionSummary, type PendingRequestSummary } from '../api/client.ts'
+import { useBackendAuth } from './useBackendAuth.ts'
 
 export type LoginMode = 'owner' | 'employee'
 
@@ -41,6 +42,10 @@ function withProfile(user: ApiUser): ApiUser {
 
 interface SessionState {
   user: ApiUser | null
+  /** حالة الاشتراك من /api/auth/me — null = لا يوجد اشتراك (بانتظار موافقة السوبر ادمن) */
+  subscription: SubscriptionSummary | null
+  /** الطلب المعلق الحالي (إن وجد) — يُعرض في شاشة انتظار الموافقة */
+  pendingRequest: PendingRequestSummary | null
   /** idle = never checked this page load */
   status: 'idle' | 'loading' | 'ready'
   error: string | null
@@ -63,22 +68,49 @@ interface SessionState {
  */
 let refreshInFlight: Promise<ApiUser | null> | null = null
 
+/**
+ * مهلة قصيرة تمنع تكرار طلبات /auth/me أثناء فشل المصادقة.
+ * بدونها: كل mount لـ PanelGate يطلب /auth/me → 401 → إعادة توجيه → mount جديد →
+ * طوفان طلبات لا نهائي في وحدة التحكم وخادم الباك إند.
+ */
+const REFRESH_FAILURE_THROTTLE_MS = 3000
+let lastFailureAt = 0
+
 export const useSession = create<SessionState>()((set) => ({
   user: null,
+  subscription: null,
+  pendingRequest: null,
   status: 'idle',
   error: null,
 
   refresh: async () => {
     if (refreshInFlight) return refreshInFlight
     const run = (async () => {
+      // لا نُكرر طلب /auth/me أثناء فشل المصادقة — إلا إذا كانت هناك جلسة
+      // فعّالة معروفة (useBackendAuth يقرأ نفس الكوكي) فعندها نعيد المحاولة فورًا.
+      const backend = useBackendAuth.getState()
+      const backendSaysLoggedOut = backend.status === 'ready' && !backend.user
+      if (backendSaysLoggedOut && Date.now() - lastFailureAt < REFRESH_FAILURE_THROTTLE_MS) {
+        set({ user: null, subscription: null, pendingRequest: null, status: 'ready' })
+        return null
+      }
       set({ status: 'loading', error: null })
       try {
-        const user = withProfile(await authApi.me())
+        const full = await authApi.meFull()
+        const rawUser = full?.user ?? null
+        const user = rawUser ? withProfile(rawUser) : null
         writeProfile(user)
-        set({ user, status: 'ready' })
+        lastFailureAt = 0
+        set({
+          user,
+          subscription: full?.subscription ?? null,
+          pendingRequest: full?.pendingRequest ?? null,
+          status: 'ready',
+        })
         return user
       } catch {
-        set({ user: null, status: 'ready' })
+        lastFailureAt = Date.now()
+        set({ user: null, subscription: null, pendingRequest: null, status: 'ready' })
         return null
       }
     })()
@@ -95,6 +127,7 @@ export const useSession = create<SessionState>()((set) => ({
     try {
       const result = mode === 'owner' ? await authApi.login(email, password) : await authApi.employeeLogin(email, password)
       writeProfile(result.user)
+      lastFailureAt = 0
       set({ user: result.user, status: 'ready', error: null })
       return result.user
     } catch (error) {
@@ -111,13 +144,14 @@ export const useSession = create<SessionState>()((set) => ({
       writeProfile(null)
       // idle (مش ready): الـ PanelGate التالي يجب أن يتحقق من الكوكي من جديد
       // بدل أن يردّ فوراً بدون تحقق فيدخل في loop بعد التسجيل
-      set({ user: null, status: 'idle', error: null })
+      set({ user: null, subscription: null, pendingRequest: null, status: 'idle', error: null })
     }
   },
 
   setUser: (user) => {
     writeProfile(user)
-    set({ user, status: user ? 'ready' : 'idle' })
+    if (user) lastFailureAt = 0
+    set({ user, status: user ? 'ready' : 'idle', ...(user ? {} : { subscription: null, pendingRequest: null }) })
   },
   clearError: () => set({ error: null }),
 }))

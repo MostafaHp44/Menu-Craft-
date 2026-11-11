@@ -95,6 +95,41 @@ export interface LoginResponse {
   user: ApiUser
 }
 
+/** /api/auth/me subscription block (restaurant-scoped) — null حتى موافقة السوبر ادمن */
+export interface SubscriptionSummary {
+  id: string
+  userId?: string
+  restaurantId?: string | null
+  status: 'active' | 'trialing' | 'past_due' | 'cancelled' | 'expired' | string
+  rawStatus?: string
+  price?: number
+  startedAt?: string | null
+  renewsAt?: string | null
+  daysLeft?: number | null
+  autoRenew?: boolean
+  isActive?: boolean
+  limits?: {
+    planId?: string | null
+    planName?: string | null
+    price?: number
+    maxRestaurants?: number
+    maxSites?: number
+    maxMenuItems?: number
+    features?: string[]
+  }
+}
+
+/** الطلب المعلق الحالي للحساب (إن وُجد) — يظهر في شاشة انتظار الموافقة */
+export interface PendingRequestSummary {
+  id: string
+  type: 'paid' | 'free'
+  planId?: string | null
+  planName?: string | null
+  price: number
+  status: string
+  createdAt?: string | null
+}
+
 export interface Branch {
   id: string
   restaurant_id?: string
@@ -259,6 +294,11 @@ export const authApi = {
     request<{ ok: boolean; data: { user: ApiUser; sites: any[]; subscription: any } }>('/api/auth/me').then(
       (r) => r?.data?.user
     ),
+  /** النسخة الكاملة — تتضمن حالة الاشتراك والطلب المعلق (للبوابة الجدارية للداشبورد) */
+  meFull: () =>
+    request<{ ok: boolean; data: { user: ApiUser; sites: any[]; subscription: SubscriptionSummary | null; pendingRequest: PendingRequestSummary | null } }>(
+      '/api/auth/me'
+    ).then((r) => r?.data ?? null),
 }
 
 /* -------------------------------- branches ------------------------------- */

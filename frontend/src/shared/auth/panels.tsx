@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useSession } from '../store/useSession.ts'
 import { useBackendAuth } from '../store/useBackendAuth.ts'
+import { PendingApprovalScreen } from './PendingApprovalScreen.tsx'
 
 /**
  * فصل تام بين اللوحات الثلاث — كل دور يدخل لوحته فقط:
@@ -74,6 +75,7 @@ function PanelSpinner({ label }: { label?: string }) {
  */
 export function PanelGate({ panel, children }: { panel: Panel; children: ReactNode }) {
   const user = useSession((s) => s.user)
+  const subscription = useSession((s) => s.subscription)
   const status = useSession((s) => s.status)
   const refresh = useSession((s) => s.refresh)
 
@@ -96,6 +98,22 @@ export function PanelGate({ panel, children }: { panel: Panel; children: ReactNo
   if (status === 'idle' || status === 'loading') return <PanelSpinner />
   if (!user) return <Navigate to={loginForPanel(panel)} replace />
   if (panelForRole(user.role) !== panel) return <Navigate to={homeForRole(user.role)} replace />
+
+  /*
+   * بوابة الموافقة: أي مطعم بلا اشتراك فعّال (≈ بانتظار موافقة السوبر ادمن)
+   * تُقفل لوحتا الكلاينت والموظفين — شاشة واحدة فقط بلا أي محتوى داشبورد.
+   * فريق المنصة (super_admin/admin) لا يُقفل.
+   */
+  const role = String(user.role || '').trim().toLowerCase()
+  const platformTeam = role === 'super_admin' || role === 'admin'
+  if (!platformTeam) {
+    const approved =
+      !!subscription &&
+      (subscription.isActive === true ||
+        subscription.status === 'active' ||
+        subscription.status === 'trialing')
+    if (!approved) return <PendingApprovalScreen />
+  }
   return <>{children}</>
 }
 

@@ -87,7 +87,15 @@ async function getSubscriptionForUser(userId) {
   const pool = await getMySQLPool();
   const connection = await pool.getConnection();
   try {
-    const [subRows] = await connection.execute('SELECT s.*, p.id AS p_id, p.name AS p_name, p.price AS p_price, p.interval_type, p.max_restaurants, p.max_menu_items, p.features FROM Subscriptions s LEFT JOIN Plans p ON p.id = s.plan_id WHERE s.user_id = ? ORDER BY s.started_at DESC LIMIT 1', [userId]);
+    // الاشتراك يتبع المطعم لا المستخدم: حتى يرى الموظفون (users بلا صف في
+    // Subscriptions) نفس حالة المطعم المعتمد. نرجع للمستخدم فقط إن لم يكن
+    // مرتبطاً بمطعم.
+    const [userRows] = await connection.execute('SELECT restaurant_id FROM Users WHERE id = ?', [userId]);
+    const ownedRestaurantId = userRows[0]?.restaurant_id || null;
+    const subQuery = `SELECT s.*, p.id AS p_id, p.name AS p_name, p.price AS p_price, p.interval_type, p.max_restaurants, p.max_menu_items, p.features FROM Subscriptions s LEFT JOIN Plans p ON p.id = s.plan_id WHERE `;
+    const [subRows] = ownedRestaurantId
+      ? await connection.execute(subQuery + 's.restaurant_id = ? ORDER BY s.started_at DESC LIMIT 1', [ownedRestaurantId])
+      : await connection.execute(subQuery + 's.user_id = ? ORDER BY s.started_at DESC LIMIT 1', [userId]);
     if (subRows.length === 0) return null;
     const row = subRows[0];
     const limits = planLimitsFromRow({
