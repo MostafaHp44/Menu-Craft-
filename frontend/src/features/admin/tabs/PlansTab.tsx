@@ -2,19 +2,20 @@
  * Plans Tab — إدارة الباقات للسوبر أدمن
  * إضافة، تعديل، حذف الباقات وعرض عدد المشتركين في كل باقة
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../../../shared/i18n'
+import { confirmDialog } from '../../../shared/components/dialogs.tsx'
 import { Button, Card } from '../../../shared/ui/ui.tsx'
 import { PanelHeading, DarkEmpty } from '../parts.tsx'
 import { usePlatformStore } from '../../../shared/store/usePlatform.ts'
-import PlanPopup from '../PlanPopup.tsx'
+import PlanPopup, { type PlanFormValues } from '../PlanPopup.tsx'
 
 type IntervalValue = 'month' | 'year' | 'forever'
 
-const INTERVAL_LABEL: Record<IntervalValue, string> = {
-  month: 'شهري',
-  year: 'سنوي',
-  forever: 'مدي',
+const INTERVAL_I18N: Record<IntervalValue, string> = {
+  month: 'admin.intervalMonth',
+  year: 'admin.intervalYear',
+  forever: 'admin.intervalForever',
 }
 
 export default function PlansTab() {
@@ -32,6 +33,22 @@ export default function PlansTab() {
 
   const editing = plans.find((p) => p.id === editingId) ?? null
 
+  /* هوية ثابتة حتى لا يُعاد تهيئة الفورم عند كل إعادة رسم (وإلا اختفى ما يُكتب) */
+  const existing = useMemo<PlanFormValues | undefined>(
+    () =>
+      editing
+        ? {
+            name: editing.name,
+            price: editing.price,
+            interval: editing.interval_type,
+            maxSites: editing.max_restaurants,
+            maxItems: editing.max_menu_items,
+            status: editing.is_active ? 'active' : 'inactive',
+          }
+        : undefined,
+    [editing]
+  )
+
   const handleOpen = (planId?: string) => {
     if (planId) setEditingId(planId ?? null)
     else setEditingId(null)
@@ -39,7 +56,14 @@ export default function PlansTab() {
   }
 
   const handleDelete = async (id: string) => {
-    if (window.confirm(t('admin.confirmDeletePlan', { defaultValue: 'هل تريد حذف هذه الباقة؟' }))) {
+    const ok = await confirmDialog({
+      title: t('admin.deletePlanTitle', { defaultValue: 'حذف الباقة؟' }),
+      message: t('admin.confirmDeletePlan', { defaultValue: 'هل تريد حذف هذه الباقة؟' }),
+      confirmLabel: t('common.delete'),
+      cancelLabel: t('common.cancel'),
+      tone: 'danger',
+    })
+    if (ok) {
       await deletePlan(id)
     }
   }
@@ -81,7 +105,9 @@ export default function PlansTab() {
                     {plan.price === 0 ? t('admin.free', { defaultValue: 'مجاني' }) : `$${plan.price}${t('common.perMonth')}`}
                   </td>
                   <td className="py-4 text-[13.5px] text-ivory/60">
-                    {INTERVAL_LABEL[plan.interval_type as IntervalValue] ?? plan.interval_type}
+                    {INTERVAL_I18N[plan.interval_type as IntervalValue]
+                      ? t(INTERVAL_I18N[plan.interval_type as IntervalValue])
+                      : plan.interval_type}
                   </td>
                   <td className="py-4 text-[13.5px] text-ivory/60">{plan.max_restaurants}</td>
                   <td className="py-4 text-[13.5px] text-ivory/60">
@@ -124,29 +150,20 @@ export default function PlansTab() {
       <PlanPopup
         open={open}
         onClose={() => { setOpen(false); setEditingId(null); }}
-        existing={editing ? {
-          name: editing.name,
-          price: editing.price,
-          currency: 'USD',
-          interval: editing.interval_type,
-          maxSites: editing.max_restaurants,
-          maxBranches: 0,
-          status: editing.is_active ? 'active' : 'inactive',
-          features: []
-        } : undefined}
+        existing={existing}
         onSave={async (data) => {
           const payload = {
             name: data.name,
             price: data.price,
             interval_type: data.interval,
             max_restaurants: data.maxSites,
-            max_menu_items: 15,
+            max_menu_items: data.maxItems,
             is_active: data.status === 'active',
           }
           if (editingId) {
-            await updatePlan(editingId, { ...payload, interval_type: payload.interval_type as 'month' | 'year' | 'forever' })
+            await updatePlan(editingId, { ...payload, interval_type: payload.interval_type as IntervalValue })
           } else {
-            await addPlan({ ...payload, interval_type: payload.interval_type as 'month' | 'year' | 'forever' })
+            await addPlan({ ...payload, interval_type: payload.interval_type as IntervalValue })
           }
           setOpen(false)
           setEditingId(null)

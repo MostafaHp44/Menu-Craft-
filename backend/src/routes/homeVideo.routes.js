@@ -10,8 +10,11 @@ const { requirePlatformStaff } = require('../middleware/roles');
  */
 function parseHero(row) {
   if (!row || !row.hero) return {};
+  const h = row.hero;
+  if (typeof h === 'object' && !Buffer.isBuffer(h)) return h && typeof h === 'object' ? h : {};
   try {
-    const parsed = JSON.parse(row.hero);
+    const s = Buffer.isBuffer(h) ? h.toString('utf8') : String(h);
+    const parsed = JSON.parse(s);
     return parsed && typeof parsed === 'object' ? parsed : {};
   } catch (_) {
     return {};

@@ -8,6 +8,7 @@ import { getTemplate } from '../../../templates/data/templates.ts'
 import type { TemplateOverride } from '../../../shared/lib/types.ts'
 import { MediaPickerModal, invalidateUploadedCache } from '../../../shared/ui/MediaPicker.tsx'
 import { useI18n } from '../../../shared/i18n'
+import { confirmDialog } from '../../../shared/components/dialogs.tsx'
 
 function MediaField({
   label,
@@ -193,7 +194,14 @@ export default function TemplateMediaEditor({ baseId, onClose }: { baseId: strin
   }
 
   const reset = async () => {
-    if (!window.confirm(t('adminUi.tplResetConfirm'))) return
+    const ok = await confirmDialog({
+      title: t('adminUi.tplResetTitle', { defaultValue: 'إعادة تعيين الوسائط؟' }),
+      message: t('adminUi.tplResetConfirm'),
+      confirmLabel: t('common.confirm'),
+      cancelLabel: t('common.cancel'),
+      tone: 'danger',
+    })
+    if (!ok) return
     setBusy(true)
     try {
       await deleteOverride(baseId)

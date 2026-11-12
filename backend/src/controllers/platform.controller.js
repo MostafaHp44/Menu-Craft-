@@ -109,7 +109,17 @@ async function updateSubscriptionHandler(request, reply) {
       return reply.status(400).send({ ok: false, error: 'معرف المطعم مطلوب' });
     }
     // تحديث جزئي: الحقول غير المُرسلة تبقى كما هي
-    const { restaurantId: _ignored, ...patch } = request.body || {};
+    const { restaurantId: _ignored, ...raw } = request.body || {};
+    // قبول camelCase من الفرونت (renewsAt/autoRenew/…) — قاعدة البيانات تقرأ
+    // snake_case فقط، وكان أي مفتاح آخر يُتجاهل بصمت بدون خطأ
+    const ALIASES = { renewsAt: 'renews_at', autoRenew: 'auto_renew', planId: 'plan_id', paymentIntentId: 'payment_intent_id' };
+    const patch = { ...raw };
+    for (const [from, to] of Object.entries(ALIASES)) {
+      if (patch[from] !== undefined && patch[to] === undefined) {
+        patch[to] = patch[from];
+        delete patch[from];
+      }
+    }
     await updateSubscription(restaurantId, patch);
     return reply.send({ ok: true, message: 'تم تحديث الاشتراك' });
   } catch (err) {

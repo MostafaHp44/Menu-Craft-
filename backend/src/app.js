@@ -9,7 +9,6 @@ assertJwtSecrets();
 
 const corsPlugin = require('./middleware/cors');
 const authMiddleware = require('./middleware/auth.middleware');
-const authRoutes = require('./routes/auth.routes');
 
 // In production, missing required environment variables must stop startup.
 // In development, preserve the current local workflow.
@@ -41,8 +40,8 @@ const templateRoutes = require('./routes/template.routes');
 const branchRoutes = require('./routes/branch.routes');
 const employeeRoutes = require('./routes/employee.routes');
 const templateDraftRoutes = require('./routes/templateDraft.routes');
-const adminRevenueRoutes = require('./routes/admin.revenue.routes');
 const errorHandler = require('./middleware/errorHandler');
+const registerRoutes = require('./routes');
 
 fastify.setErrorHandler(errorHandler);
 
@@ -112,43 +111,9 @@ fastify.register(require('@fastify/static'), {
   fallthrough: false,
 });
 
-// مسارات عامة
-fastify.register(authRoutes, { prefix: '/api' });
-fastify.register(translateRoutes, { prefix: '/api' });
-fastify.register(orderRoutes, { prefix: '/api' });
-fastify.register(restaurantRoutes, { prefix: '/api' });
-fastify.register(siteRoutes, { prefix: '/api' });
-fastify.register(menuRoutes, { prefix: '/api' });
-fastify.register(homeContentRoutes, { prefix: '/api' });
-
-// مسارات الباقة والعام
-fastify.register(planRoutes, { prefix: '/api' });
-fastify.register(paymentRoutes, { prefix: '/api' });
-
-// مسارات القوالب (العرض عام، الإضافة/الحذف محمية بالتوكن)
-fastify.register(templateRoutes, { prefix: '/api' });
-
-// مسارات الرفع (صور وفيديو العميل) — محمية بالتوكن
-fastify.register(require('./routes/uploads.routes'), { prefix: '/api' });
-
-// مسارات المنصة (محمية بداخلها)
-fastify.register(platformRoutes, { prefix: '/api' });
-
-// مسارات طلبات الباقات المجانية
-fastify.register(freePlanRequestRoutes, { prefix: '/api' });
-
-// مسارات طلبات الاشتراكات المدفوعة
-fastify.register(paidSubscriptionRequestRoutes, { prefix: '/api' });
-
-// مسارات الفروع والموظفين
-fastify.register(branchRoutes, { prefix: '/api' });
-fastify.register(employeeRoutes, { prefix: '/api' });
-fastify.register(require('./routes/owner.routes'), { prefix: '/api' });
-fastify.register(templateDraftRoutes, { prefix: '/api' });
-fastify.register(adminRevenueRoutes, { prefix: '/api' });
-fastify.register(require('./routes/dashboardTheme.routes'), { prefix: '/api' });
-fastify.register(require('./routes/homeVideo.routes'), { prefix: '/api' });
-
+// ===== كوليكشن مسارات المنصة (API) — كل الرواتس في مكان واحد =====
+fastify.register(registerRoutes, { prefix: '/api' });
+// health check
 fastify.get('/health', async () => ({ status: 'ok', service: 'menucraft-backend' }));
 
 // ===== STARTUP (moved to server.js) =====

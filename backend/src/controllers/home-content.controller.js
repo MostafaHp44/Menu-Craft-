@@ -6,6 +6,8 @@ async function getHandler(request, reply) {
     const content = await getHomeContent(lang || 'en');
     return reply.send({ ok: true, data: content });
   } catch (err) {
+    request.log.error(err);
+    console.error('HOME_CONTENT_ERROR:', err && (err.stack || err.message) || err);
     return reply.status(500).send({ ok: false, error: err.message });
   }
 }

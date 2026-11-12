@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { apiUrl } from '../api/url.ts'
 import { persist } from 'zustand/middleware'
 import type { DemoPlanId, Restaurant } from '../lib/types.ts'
 import { ACTIVE_RESTAURANT_ID, createSeedRestaurants } from '../lib/demoData.ts'
@@ -8,7 +9,7 @@ import { useBackendAuth } from './useBackendAuth.ts'
 /** Fetch a full restaurant snapshot from the backend into the working draft. */
 async function loadBackendDraft(restaurantId: string): Promise<Partial<Restaurant> | null> {
   try {
-    const res = await fetch(`/api/restaurants/${encodeURIComponent(restaurantId)}`, {
+    const res = await fetch(apiUrl(`/api/restaurants/${encodeURIComponent(restaurantId)}`), {
       credentials: 'include',
     })
     if (!res.ok) return null
@@ -55,7 +56,7 @@ async function loadBackendDraft(restaurantId: string): Promise<Partial<Restauran
 async function findBackendSiteSlug(backendRid: string | null | undefined): Promise<string | null> {
   if (!backendRid) return null
   try {
-    const res = await fetch('/api/sites', { credentials: 'include' })
+    const res = await fetch(apiUrl('/api/sites'), { credentials: 'include' })
     const json = await res.json().catch(() => null)
     const site = (json?.data || []).find((site: any) => String(site.id) === String(backendRid))
     return site?.slug ? String(site.slug) : null
@@ -77,7 +78,7 @@ async function pushSiteConfig(draft: Restaurant, publish: boolean, includeMenu =
   const backendRid = (useBackendAuth.getState().user as any)?.restaurant_id
   const backendSlug = await findBackendSiteSlug(backendRid)
   const targetSlug = backendSlug || draft.slug
-  const url = `/api/sites/${encodeURIComponent(targetSlug)}`
+  const url = apiUrl(`/api/sites/${encodeURIComponent(targetSlug)}`)
   const init: RequestInit = {
     method: 'PUT',
     credentials: 'include',
@@ -190,9 +191,9 @@ async function pushRestaurantConfig(r: Restaurant, urlSlug?: string): Promise<bo
     }),
   }
   try {
-    let res = await fetch(`/api/sites/${encodeURIComponent(target)}`, init)
+    let res = await fetch(apiUrl(`/api/sites/${encodeURIComponent(target)}`), init)
     if (res.status === 401 && (await useBackendAuth.getState().refresh())) {
-      res = await fetch(`/api/sites/${encodeURIComponent(target)}`, init)
+      res = await fetch(apiUrl(`/api/sites/${encodeURIComponent(target)}`), init)
     }
     const json = await res.json().catch(() => null)
     if (!res.ok || json?.ok === false) {

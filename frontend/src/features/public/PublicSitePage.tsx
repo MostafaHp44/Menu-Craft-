@@ -15,7 +15,7 @@
  *    التسعير النهائي في الخادم، ثم تتبع برمز orderToken.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { resolveLang, useI18n, type Lang } from '../../shared/i18n';
 import { guestOrderAPI, menuAPI } from '../../shared/lib/api.service';
 import type { Restaurant } from '../../shared/lib/types';
@@ -257,6 +257,7 @@ export default function PublicSitePage() {
   return (
     <div className="min-h-dvh" dir={lang === 'en' ? 'ltr' : 'rtl'}>
       <RestaurantSite restaurant={restaurantObj} mode="site" interactive={true}
+        orderingEnabled={orderingOpen}
         onOpenCart={() => { setOverlay('cart'); }} />
 
       {/* branch bar kept from original */}
@@ -285,7 +286,7 @@ export default function PublicSitePage() {
       )}
 
       {/* floating cart bar */}
-      {cart.count > 0 && overlay === 'closed' && (
+      {orderingOpen && cart.count > 0 && overlay === 'closed' && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-sand/70 bg-white/95 backdrop-blur px-4 py-3">
           <div className="mx-auto max-w-5xl flex items-center justify-between gap-3">
             <div className="text-[13px]">
@@ -303,7 +304,7 @@ export default function PublicSitePage() {
         </div>
       )}
 
-      {overlay === 'cart' && (
+      {orderingOpen && overlay === 'cart' && (
         <CartDrawer
           currency={currency}
           deliveryFee={data.ordering.deliveryFee}
@@ -314,7 +315,7 @@ export default function PublicSitePage() {
           onGoCheckout={() => setOverlay('checkout')}
         />
       )}
-      {overlay === 'checkout' && data && (
+      {orderingOpen && overlay === 'checkout' && data && (
         <CheckoutOverlay
           slug={slug}
           restaurantId={data.restaurant.id}
@@ -575,8 +576,8 @@ function CustomizeModal(props: {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal>
       <button className="absolute inset-0 bg-ink-ink/50 backdrop-blur-sm" onClick={props.onClose} aria-label="close" tabIndex={-1} />
-      <div className="relative z-10 w-full sm:max-w-md max-h-[88dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white p-5 shadow-2xl anim-pop">
-        <div className="flex items-start justify-between gap-3">
+      <div className="relative z-10 flex max-h-[88dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl anim-pop sm:max-w-md sm:rounded-3xl">
+        <div className="flex shrink-0 items-start justify-between gap-3 px-5 pt-5">
           <div>
             <h3 className="font-display text-lg font-semibold">{resolveLang(props.item.name, props.lang)}</h3>
             <p className="text-[12px] text-ink-soft">{t('publicUi.customizeSub')}</p>
@@ -584,7 +585,7 @@ function CustomizeModal(props: {
           <button onClick={props.onClose} className="rounded-full bg-sand px-2.5 py-1 text-[12px] font-semibold text-ink-soft" aria-label="close">✕</button>
         </div>
 
-        <div className="mt-4 space-y-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-5 pb-3 pt-2">
           {groups.map((g) => (
             <div key={g.id}>
               <div className="mb-1.5 flex items-center gap-2">
@@ -632,12 +633,14 @@ function CustomizeModal(props: {
           )}
         </div>
 
-        <button
-          onClick={confirm}
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-[14px] font-bold text-white hover:bg-primary-dark transition active:scale-[0.99]"
-        >
-          {t('publicUi.confirmAdd')} · {fmtPrice(props.item.price, props.currency)}
-        </button>
+        <div className="shrink-0 border-t border-sand bg-white px-4 pb-4 pt-2">
+          <button
+            onClick={confirm}
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-[14px] font-bold text-white hover:bg-primary-dark transition active:scale-[0.99]"
+          >
+            {t('publicUi.confirmAdd')} · {fmtPrice(props.item.price, props.currency)}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -661,13 +664,14 @@ function CartDrawer(props: {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal>
       <button className="absolute inset-0 bg-ink-ink/50 backdrop-blur-sm" onClick={props.onClose} aria-label="close" tabIndex={-1} />
-      <div className="relative z-10 w-full sm:max-w-md max-h-[88dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white p-5 shadow-2xl anim-pop">
-        <div className="flex items-center justify-between">
+      <div className="relative z-10 flex max-h-[88dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl anim-pop sm:max-w-md sm:rounded-3xl">
+        <div className="flex shrink-0 items-center justify-between px-5 pt-5">
           <h3 className="font-display text-lg font-semibold">{t('publicUi.cartTitle')}</h3>
           <button onClick={props.onClose} className="rounded-full bg-sand px-2.5 py-1 text-[12px] font-semibold text-ink-soft" aria-label="close">✕</button>
         </div>
 
         {cart.lines.length === 0 ? (
+          <div className="flex-1 overflow-y-auto px-5 pb-5">
           <div className="py-10 text-center">
             <CartIcon className="mx-auto h-9 w-9 text-clay" />
             <p className="mt-3 font-semibold text-ink-ink">{t('publicUi.cartEmpty')}</p>
@@ -676,8 +680,10 @@ function CartDrawer(props: {
               {t('publicUi.browseMenu')}
             </button>
           </div>
+          </div>
         ) : (
           <>
+            <div className="flex-1 overflow-y-auto px-5 pb-3">
             <ul className="mt-4 space-y-3">
               {cart.lines.map((line) => {
                 const sig = cartSignature(line);
@@ -720,13 +726,16 @@ function CartDrawer(props: {
                 </p>
               )}
             </div>
+            </div>
 
-            <button
-              onClick={props.onGoCheckout}
-              className="mt-4 w-full rounded-full bg-primary py-3 text-[14px] font-bold text-white hover:bg-primary-dark transition"
-            >
-              {t('publicUi.checkoutBtn')} · {fmtPrice(cart.subtotal, props.currency)}
-            </button>
+            <div className="shrink-0 border-t border-sand bg-white px-4 pb-4 pt-2">
+              <button
+                onClick={props.onGoCheckout}
+                className="w-full rounded-full bg-primary py-3 text-[14px] font-bold text-white transition hover:bg-primary-dark"
+              >
+                {t('publicUi.checkoutBtn')} · {fmtPrice(cart.subtotal, props.currency)}
+              </button>
+            </div>
           </>
         )}
       </div>
@@ -895,13 +904,13 @@ export function CheckoutOverlay(props: {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal>
       <button className="absolute inset-0 bg-ink-ink/50 backdrop-blur-sm" onClick={props.onClose} aria-label="close" tabIndex={-1} />
-      <div className="relative z-10 w-full sm:max-w-md max-h-[88dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white p-5 shadow-2xl anim-pop">
-        <div className="flex items-center justify-between">
+      <div className="relative z-10 flex max-h-[88dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl anim-pop sm:max-w-md sm:rounded-3xl">
+        <div className="flex shrink-0 items-center justify-between px-5 pt-5">
           <h3 className="font-display text-lg font-semibold">{t('publicUi.checkoutTitle')}</h3>
           <button onClick={props.onClose} className="rounded-full bg-sand px-2.5 py-1 text-[12px] font-semibold text-ink-soft" aria-label="close">✕</button>
         </div>
 
-        <div className="mt-4 space-y-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-5 pb-3 pt-2">
           {/* الاسم/الهاتف */}
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label={t('publicUi.nameLabel')}>
@@ -1032,7 +1041,14 @@ export function CheckoutOverlay(props: {
           {formError && (
             <p className="rounded-lg bg-rose/10 px-3 py-2 text-[12.5px] font-medium text-rose-dark">✕ {formError}</p>
           )}
+        </div>
 
+        {/* فوتر ثابت — زر إتمام الطلب ظاهر دائمًا بغض النظر عن طول النموذج */}
+        <div className="shrink-0 border-t border-sand bg-white px-4 pb-4 pt-2">
+          <div className="mb-1.5 flex items-center justify-between px-1 text-[13px]">
+            <span className="text-ink-soft">{t('publicUi.totalLabel')}</span>
+            <span className="font-bold text-ink-ink">{fmtPrice(total, props.currency)}</span>
+          </div>
           <button
             onClick={submit}
             disabled={sending || subtotal <= 0 || (props.minOrder > 0 && subtotal < props.minOrder)}
@@ -1082,10 +1098,24 @@ function Choice({ active, onClick, children, disabled }: { active: boolean; onCl
 function OrderSuccess(props: { result: OrderResult; onClose: () => void }) {
   const { t } = useI18n();
   const isCash = props.result.paymentMethod === 'cash' || props.result.paymentMethod === 'cash_at_pickup';
+  const trackHref =
+    props.result.id && props.result.token
+      ? `/orders/${encodeURIComponent(props.result.id)}?token=${encodeURIComponent(props.result.token)}`
+      : null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal>
       <div className="absolute inset-0 bg-ink-ink/60 backdrop-blur-sm" />
       <div className="relative z-10 w-full max-w-sm rounded-3xl bg-white p-7 text-center shadow-2xl anim-pop">
+        <button
+          onClick={props.onClose}
+          className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full text-ink-soft hover:bg-sand transition"
+          aria-label="close"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="18" y1="6" x2="6" y2="18" />
+          </svg>
+        </button>
         <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-success/15 text-success">
           <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="m5 12 4 4L19 6" />
@@ -1105,8 +1135,19 @@ function OrderSuccess(props: { result: OrderResult; onClose: () => void }) {
             ? 'Please go to the cashier at your chosen branch to pay. The cashier will confirm once payment is received.'
             : t('publicUi.thanksNote')}
         </p>
-        <button onClick={props.onClose} className="mt-2 w-full rounded-full border border-sand py-2.5 text-[13px] font-semibold text-ink-soft hover:bg-sand/50 transition">
-          ✕
+        {trackHref ? (
+          <Link
+            to={trackHref}
+            className="mt-5 block w-full rounded-full bg-primary py-3 text-[14px] font-bold text-white transition hover:bg-primary-dark active:scale-[0.99]"
+          >
+            {t('publicUi.trackOrder')}
+          </Link>
+        ) : null}
+        <button
+          onClick={props.onClose}
+          className="mt-2 block w-full rounded-full border border-sand py-3 text-[14px] font-semibold text-ink-ink transition hover:bg-sand/50 active:scale-[0.99]"
+        >
+          {t('publicUi.backToMenu')}
         </button>
       </div>
     </div>

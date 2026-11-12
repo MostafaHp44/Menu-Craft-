@@ -315,7 +315,11 @@ async function importTemplateSampleMenu(id, templateId, force = false, design = 
 
     let existing = null;
     try {
-      existing = rows[0].draft_menu ? JSON.parse(rows[0].draft_menu) : null;
+      const dm = rows[0].draft_menu;
+      if (dm) {
+        existing = Buffer.isBuffer(dm) ? JSON.parse(dm.toString('utf8'))
+          : (typeof dm === 'string' ? JSON.parse(dm) : dm);
+      }
     } catch {
       existing = null;
     }

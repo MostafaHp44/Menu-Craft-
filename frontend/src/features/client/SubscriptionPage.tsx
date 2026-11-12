@@ -41,7 +41,6 @@ export default function SubscriptionPage() {
   const restaurantSlug = siteSlug || (backendRid && backendRid !== r.id ? backendRid : r.slug)
   const record = useSubscription(restaurantId)
   const setAutoRenew = usePlatformStore((s) => s.setAutoRenew)
-  const renew = usePlatformStore((s) => s.renew)
   const refreshPlans = usePlatformStore((s) => s.refreshPlans)
   const fetchSubscription = usePlatformStore((s) => s.fetchSubscription)
   const showToast = useStore((s) => s.showToast)
@@ -116,15 +115,9 @@ export default function SubscriptionPage() {
     })
   }
 
-  const handleRenew = () => {
-    if (!record) return
-    renew(restaurantId)
-    showToast({
-      title: t('kitchenMore.renewed'),
-      message: t('dashboard.simulatedNote'),
-      tone: 'success',
-    })
-  }
+  /* لا زر تجديد ذاتي للعميل: الـ PATCH خاص بالسوبر أدمن فقط (كان يرجع 403
+     بصمت مع توست نجاح كاذب). التجديد يتم من لوحة السوبر أدمن بزرار
+     «جدّد شهر» بعد تحصيل الفلوس — هنا رسالة إرشاد للتواصل مع الممثّل. */
 
   /* ---------------- 3-step subscription request flow (shared modal) ------ */
   const [modalPlan, setModalPlan] = useState<DbPlan | null>(null)
@@ -432,18 +425,10 @@ export default function SubscriptionPage() {
                   }
                   onChange={handleAutoRenew}
                 />
-                {isExpired ? null : (
-                  <Button
-                    full
-                    size="lg"
-                    variant="dark"
-                    icon="refresh"
-                    className="mt-4"
-                    onClick={handleRenew}
-                  >
-                    {t('subscription.renew')}
-                  </Button>
-                )}
+                <div className="mt-4 rounded-xl border border-sand bg-paper p-3.5 text-center">
+                  <p className="text-[13px] font-semibold text-charcoal">{t('subscription.renewContact')}</p>
+                  <p className="mt-1 text-[12px] leading-relaxed text-umber">{t('subscription.renewContactSub')}</p>
+                </div>
               </div>
             ) : null}
           </div>

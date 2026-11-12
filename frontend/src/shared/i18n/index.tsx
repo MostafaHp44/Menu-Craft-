@@ -119,7 +119,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const t = useCallback(
     (key: TKey | string, vars?: Vars) => {
-      const value = pick(dictionaries[lang], key) ?? pick(en, key) ?? key
+      // `defaultValue` = بديل يُعرض إذا المفتاح غير موجود (كان يتجاهل ويُظهر
+      // المفتاح نفسه حرفيًا مثل `admin.plansDesc` لأن المعامل الثاني vars)
+      const fallback = typeof vars?.defaultValue === 'string' ? (vars.defaultValue as string) : undefined
+      const value = pick(dictionaries[lang], key) ?? pick(en, key) ?? fallback ?? key
       if (value === key && import.meta.env.DEV) console.warn(`[i18n] missing key: ${key}`)
       return interpolate(value, vars)
     },

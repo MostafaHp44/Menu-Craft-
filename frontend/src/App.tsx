@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { I18nProvider } from './shared/i18n'
 import { Toaster } from './shared/ui/ui.tsx'
+import { DialogHost } from './shared/components/dialogs.tsx'
 import Admin from './features/admin/Admin.tsx'
 import SubscriptionRequestsPage from './features/admin/SubscriptionRequestsPage.tsx'
 import RevenuePage from './features/admin/RevenuePage.tsx'
@@ -79,6 +80,8 @@ export default function App() {
         <BackendSessionBootstrap />
         <ScrollToTop />
         <Toaster />
+        {/* بوب أبس داخل التطبيق — بديل نوافذ المتصفح alert/confirm/prompt */}
+        <DialogHost />
         <Routes>
           <Route path="/" element={<Home />} />
           {/* صفحة الباقات المخصّصة — كل الباقات الست (3 Live + 3 Static) */}

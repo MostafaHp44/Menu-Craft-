@@ -5,16 +5,29 @@ async function getDefaultContent(lang = 'en') {
   return { hero: {}, templates: {}, editorShowcase: {}, workflow: {}, highlights: {}, showcase: {}, pricing: {}, finalCta: {} };
 }
 
+function parseCell(v) {
+  if (v == null || v === '') return {};
+  if (typeof v === 'string') {
+    const t = v.trim();
+    return t ? JSON.parse(t) : {};
+  }
+  if (Buffer.isBuffer(v)) {
+    const t = v.toString('utf8').trim();
+    return t ? JSON.parse(t) : {};
+  }
+  return v; // driver parsed the JSON column already — reuse it
+}
+
 function parseRow(r) {
   return {
-    hero: r.hero ? JSON.parse(r.hero || '{}') : {},
-    templates: r.templates ? JSON.parse(r.templates || '{}') : {},
-    editorShowcase: r.editorShowcase ? JSON.parse(r.editorShowcase || '{}') : {},
-    workflow: r.workflow ? JSON.parse(r.workflow || '{}') : {},
-    highlights: r.highlights ? JSON.parse(r.highlights || '{}') : {},
-    showcase: r.showcase ? JSON.parse(r.showcase || '{}') : {},
-    pricing: r.pricing ? JSON.parse(r.pricing || '{}') : {},
-    finalCta: r.finalCta ? JSON.parse(r.finalCta || '{}') : {}
+    hero: parseCell(r.hero),
+    templates: parseCell(r.templates),
+    editorShowcase: parseCell(r.editorShowcase),
+    workflow: parseCell(r.workflow),
+    highlights: parseCell(r.highlights),
+    showcase: parseCell(r.showcase),
+    pricing: parseCell(r.pricing),
+    finalCta: parseCell(r.finalCta)
   };
 }
 

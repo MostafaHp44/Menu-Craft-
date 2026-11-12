@@ -7,7 +7,7 @@
  * being invented in this file.
  * ------------------------------------------------------------------ */
 
-const API_BASE = import.meta.env.VITE_API_URL_ABSOLUTE || ''
+const API_BASE = (import.meta.env.VITE_API_URL_ABSOLUTE || (import.meta.env.PROD ? 'https://api.vertex-electric.org' : '')).trim().replace(/\/+$/, '')
 
 export class ApiError extends Error {
   status: number

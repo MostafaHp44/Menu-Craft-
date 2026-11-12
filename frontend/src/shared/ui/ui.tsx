@@ -771,6 +771,7 @@ export function StatCard({
   label,
   value,
   delta,
+  note,
   icon,
   trend,
   tone = 'default',
@@ -778,6 +779,8 @@ export function StatCard({
   label: string
   value: string
   delta?: string
+  /** سطر ملاحظة بسيط بدون سهم اتجاه وبدون "vs. last week" */
+  note?: string
   icon?: string
   trend?: number[]
   tone?: 'default' | 'dark'
@@ -832,6 +835,15 @@ export function StatCard({
             {delta}
           </span>
           <span className={tone === 'dark' ? 'text-ivory/45' : 'text-clay'}>vs. last week</span>
+        </div>
+      ) : note ? (
+        <div
+          className={cx(
+            'mt-2.5 text-[12px] font-medium',
+            tone === 'dark' ? 'text-ivory/55' : 'text-umber'
+          )}
+        >
+          {note}
         </div>
       ) : null}
     </div>

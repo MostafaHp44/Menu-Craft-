@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { apiUrl } from '../../shared/api/url.ts'
 import { Link } from 'react-router-dom'
 import { Card, Button, Input, Select } from '../../shared/ui/ui.tsx'
 
@@ -60,7 +61,7 @@ export default function CheckoutPage() {
         note: note.trim() || null,
         channel: mode,
       }
-      const res = await fetch('/api/orders', {
+      const res = await fetch(apiUrl('/api/orders'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

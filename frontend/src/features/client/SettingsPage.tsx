@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { apiUrl } from '../../shared/api/url.ts'
 import { Badge, Button, Card, Field, IconButton, Input, Modal, Toggle } from '../../shared/ui/ui.tsx'
 import { publicUrl } from '../../shared/lib/hooks.ts'
 import { cx, tx, writeText } from '../../shared/lib/utils.ts'
@@ -60,7 +61,7 @@ export default function SettingsPage() {
       return
     }
     const action = v ? 'publish' : 'unpublish'
-    const res = await fetch(`/api/restaurants/${encodeURIComponent(backendRid)}/${action}`, {
+    const res = await fetch(apiUrl(`/api/restaurants/${encodeURIComponent(backendRid)}/${action}`), {
       method: 'PATCH',
       credentials: 'include',
     })

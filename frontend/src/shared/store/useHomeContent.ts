@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { apiUrl } from '../api/url.ts'
 import { persist } from 'zustand/middleware'
 import { useEffect as _useEffectImpl } from 'react'
 import type { Lang } from '../i18n'
@@ -516,7 +517,7 @@ export const useHomeContentStore = create<HomeContentState>()(
           const fetched: Partial<HomeContentByLang> = {}
           for (const lang of langs) {
             try {
-              const res = await fetch(`/api/home-content?lang=${lang}`, { credentials: 'include' })
+              const res = await fetch(apiUrl(`/api/home-content?lang=${lang}`), { credentials: 'include' })
               if (!res.ok) continue
               const json = await res.json().catch(() => null)
               if (json?.ok && json?.data) fetched[lang] = json.data

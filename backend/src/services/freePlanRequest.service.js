@@ -69,8 +69,8 @@ async function listFreePlanRequests(filters = {}) {
       `SELECT fpr.*, r.slug AS restaurant_slug, r.name_en AS restaurant_name,
               u.name AS user_name, u.email AS user_email
        FROM free_plan_requests fpr
-       JOIN restaurants r ON r.id = fpr.restaurant_id
-       JOIN users u ON u.id = fpr.user_id
+       JOIN Restaurants r ON r.id = fpr.restaurant_id
+       JOIN Users u ON u.id = fpr.user_id
        ${clauses.length ? 'WHERE ' + clauses.join(' AND ') : ''}
        ORDER BY fpr.created_at DESC
        LIMIT 100`,
@@ -99,7 +99,7 @@ async function approveFreePlanRequest(requestId, adminId) {
     const subId = `sub-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
     // الباقة المجانية تُطلب بمعطياتها من جدول Plans (وضعها + سعرها) — الافتراضي Starter.
     const [planRows] = await connection.execute(
-      "SELECT id, name, price, mode FROM plans WHERE id = 'plan-starter'"
+      "SELECT id, name, price, mode FROM Plans WHERE id = 'plan-starter'"
     );
     const freePlan = planRows[0] || { id: 'plan-starter', name: 'Starter', price: 0, mode: 'static' };
     const freePlanId = freePlan.id || 'plan-starter';

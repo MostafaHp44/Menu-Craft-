@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { apiUrl } from '../api/url.ts'
 
 /**
  * Real backend session (HttpOnly cookies).
@@ -75,7 +76,7 @@ async function doRefresh(
   set({ status: 'loading' })
 
   const readUser = async (): Promise<{ ok: boolean; user: BackendUser | null }> => {
-    const res = await fetch('/api/auth/me', { credentials: 'include' })
+    const res = await fetch(apiUrl('/api/auth/me'), { credentials: 'include' })
     if (!res.ok) return { ok: false, user: null }
     const payload = await readJson(res)
     return { ok: true, user: payload?.data?.user ?? payload?.user ?? null }
@@ -87,7 +88,7 @@ async function doRefresh(
     // access_token only lives 15 minutes — renew it from the refresh cookie
     // instead of dropping the session.
     if (!result.ok) {
-      const refresh = await fetch('/api/auth/refresh', {
+      const refresh = await fetch(apiUrl('/api/auth/refresh'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -146,7 +147,7 @@ export const useBackendAuth = create<BackendAuthState>()((set) => ({
 
   signin: async (email, password) => {
     set({ status: 'loading' })
-    const res = await fetch('/api/auth/signin', {
+    const res = await fetch(apiUrl('/api/auth/signin'), {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -165,7 +166,7 @@ export const useBackendAuth = create<BackendAuthState>()((set) => ({
 
   signup: async (input) => {
     set({ status: 'loading' })
-    const res = await fetch('/api/auth/signup', {
+    const res = await fetch(apiUrl('/api/auth/signup'), {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -184,7 +185,7 @@ export const useBackendAuth = create<BackendAuthState>()((set) => ({
 
   logout: async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+      await fetch(apiUrl('/api/auth/logout'), { method: 'POST', credentials: 'include' })
     } finally {
       setAuthHint(false)
       set({ user: null, status: 'ready' })

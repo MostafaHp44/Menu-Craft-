@@ -2,7 +2,7 @@
 // افتراضي: مسارات نسبية عبر Vite proxy (نفس أصل الصفحة) حتى تتطابق كوكي الجلسة
 // مع طلبات الـ API دائمًا. للوصول المباشر إلى خادم على منفذ آخر اجمعه تحت نفس
 // الأصل (أو اضبط VITE_API_URL_ABSOLUTE عند الحاجة التصميم الحقيقي).
-const API_URL = import.meta.env.VITE_API_URL_ABSOLUTE || '';
+const API_URL = (import.meta.env.VITE_API_URL_ABSOLUTE || (import.meta.env.PROD ? 'https://api.vertex-electric.org' : '')).trim().replace(/\/+$/, '');
 
 function getToken(): string | null {
   return null; // Token lifecycle handled exclusively via httpOnly cookie
@@ -267,6 +267,12 @@ export const platformAPI = {
     }),
   deleteUser: (userId: string) =>
     request<{ ok: boolean; data?: any }>(`/api/platform/admin/users/${encodeURIComponent(userId)}`, {
+      method: 'DELETE',
+    }),
+  /** حذف حساب كلاينت بالكامل: المالك + كل مطاعمه + موظفيه
+   *  (سجلات الطلبات/الدفعات بتفضل موجودة — راجع deleteClientAccount بالباك إند) */
+  deleteClient: (restaurantId: string) =>
+    request<{ ok: boolean; data?: any }>(`/api/platform/admin/clients/${encodeURIComponent(restaurantId)}`, {
       method: 'DELETE',
     }),
   getStats: () =>

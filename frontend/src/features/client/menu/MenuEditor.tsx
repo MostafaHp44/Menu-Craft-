@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { apiUrl } from '../../../shared/api/url.ts'
 import { Icon } from '../../../shared/ui/icons.tsx'
 import { Badge, Button, EmptyState, Field, IconButton, Img, Input, Modal, Toggle } from '../../../shared/ui/ui.tsx'
 import { ImagePicker } from '../../../shared/ui/ImagePicker.tsx'
@@ -68,7 +69,7 @@ export function MenuEditor({ compact = false, showActions = false }: Props) {
     }
     setSyncing(true)
     try {
-      const saveRes = await fetch(`/api/restaurants/${encodeURIComponent(restaurantId)}`, {
+      const saveRes = await fetch(apiUrl(`/api/restaurants/${encodeURIComponent(restaurantId)}`), {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -79,7 +80,7 @@ export function MenuEditor({ compact = false, showActions = false }: Props) {
         throw new Error(saveJson?.error || `Save failed (HTTP ${saveRes.status})`)
       }
       if (publish) {
-        const pubRes = await fetch(`/api/restaurants/${encodeURIComponent(restaurantId)}/publish`, {
+        const pubRes = await fetch(apiUrl(`/api/restaurants/${encodeURIComponent(restaurantId)}/publish`), {
           method: 'PATCH',
           credentials: 'include',
         })

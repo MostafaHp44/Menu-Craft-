@@ -7,6 +7,7 @@ import { Card, EmptyState, Badge, Button, Input } from '../../shared/ui/ui.tsx'
 import { Icon } from '../../shared/ui/icons.tsx'
 import { restaurantAPI } from '../../shared/lib/api.service.ts'
 import { tx } from '../../shared/lib/utils.ts'
+import { confirmDialog } from '../../shared/components/dialogs.tsx'
 
 interface WebsiteDetails {
   id: string
@@ -142,7 +143,14 @@ export default function WebsiteManagement() {
   // Delete/Archive website
   const deleteWebsite = async () => {
     if (!website) return
-    if (!confirm(t('websitesUi.deleteConfirm'))) return
+    const ok = await confirmDialog({
+      title: t('websitesUi.deleteTitle', { defaultValue: 'حذف الموقع؟' }),
+      message: t('websitesUi.deleteConfirm'),
+      confirmLabel: t('common.delete'),
+      cancelLabel: t('common.cancel'),
+      tone: 'danger',
+    })
+    if (!ok) return
     try {
       const result = await restaurantAPI.delete(website.id)
       if (result.ok) {

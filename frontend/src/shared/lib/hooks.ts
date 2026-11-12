@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { apiUrl } from '../api/url.ts'
 import { useStore } from '../store/useStore.ts'
 import { useBackendRestaurantId } from '../store/useBackendAuth.ts'
 import { getTemplate } from '../../templates/data/templates.ts'
@@ -34,7 +35,7 @@ export function useCustomize() {
     // والـ draft المحلي لسه هيتحدث ويتفتح المحرر كتجربة)
     for (const rid of ids) {
       try {
-        const res = await fetch(`/api/restaurants/${encodeURIComponent(rid)}/import-template`, {
+        const res = await fetch(apiUrl(`/api/restaurants/${encodeURIComponent(rid)}/import-template`), {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
@@ -50,7 +51,7 @@ export function useCustomize() {
       const payload = JSON.stringify({ templateId })
       const headers = { 'Content-Type': 'application/json' }
       for (const rid of ids) {
-        const res = await fetch(`/api/restaurants/${encodeURIComponent(rid)}/templates`, {
+        const res = await fetch(apiUrl(`/api/restaurants/${encodeURIComponent(rid)}/templates`), {
           method: 'POST',
           credentials: 'include',
           headers,
@@ -105,7 +106,7 @@ export function useSalesSeries(
     }
     let cancelled = false
     const token = typeof window !== 'undefined' ? window.localStorage.getItem('menucraft-token') || '' : ''
-    fetch(`/api/orders/sales-series/${encodeURIComponent(restaurantId)}`, {
+    fetch(apiUrl(`/api/orders/sales-series/${encodeURIComponent(restaurantId)}`), {
       credentials: 'include',
       headers: token ? { Authorization: 'Bearer ' + token } : undefined,
     })

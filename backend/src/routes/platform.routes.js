@@ -7,6 +7,7 @@ const {
   statsHandler
 } = require('../controllers/platform.controller');
 const { getAdminSales, getAdminFinancial } = require('../services/adminRevenue.service');
+const { getRestaurantDetailsForAdmin, deleteClientAccount } = require('../services/platform.service');
 const { requireSuperAdmin } = require('../middleware/roles');
 const { getMySQLPool } = require('../config/mysql');
 const { createPlatformAdmin, deleteUserAccount } = require('../services/auth.service');
@@ -41,6 +42,25 @@ function platformRoutes(fastify, opts, done) {
   // ---- NEW: Clients list for admin dashboard ----
   fastify.get('/platform/admin/clients', { preHandler: superAdminOnly }, listClientsHandler);
 
+  // ---- NEW: تفاصيل كلاينت واحد (Sales) — مطعم + مالك + موظفون + فروع ----
+  fastify.get('/platform/admin/clients/:restaurantId/details', { preHandler: superAdminOnly }, async (req, reply) => {
+    try {
+      const period = req.query.period || 'month';
+      const data = await getRestaurantDetailsForAdmin(String(req.params.restaurantId), period);
+      return reply.send({ ok: true, data });
+    } catch (e) { return reply.status(e.status || 500).send({ ok: false, error: e.message }); }
+  });
+
+  // ---- NEW: حذف حساب كلاينت بالكامل (المالك + كل مطاعمه + موظفيه) ----
+  // سجلات الفلوس (Orders/Payments/invoices/اشتراكات معتمدة) تفضل موجودة؛
+  // المطعم اللي فيه طلبات/دفعات بيتحول لـ status='deleted' (tombstone) فيقفل الموقع فورًا.
+  fastify.delete('/platform/admin/clients/:restaurantId', { preHandler: superAdminOnly }, async (req, reply) => {
+    try {
+      const data = await deleteClientAccount(String(req.params.restaurantId));
+      return reply.send({ ok: true, data });
+    } catch (e) { return reply.status(e.status || 500).send({ ok: false, error: e.message }); }
+  });
+
   // ---- NEW: Users list (Team & Access) ----
   fastify.get('/platform/admin/users', { preHandler: superAdminOnly }, async (req, reply) => {
     try {
@@ -54,7 +74,7 @@ function platformRoutes(fastify, opts, done) {
   fastify.get('/platform/admin/stats', { preHandler: superAdminOnly }, async (req, reply) => {
     try {
       const pool = await getMySQLPool();
-      const [[agg]] = await pool.execute(`SELECT (SELECT COUNT(*) FROM Restaurants) AS restaurants, (SELECT COUNT(*) FROM Users) AS users, (SELECT COUNT(*) FROM Subscriptions WHERE status IN ('active','trialing')) AS activeSubscriptions, (SELECT COALESCE(SUM(total),0) FROM Orders) AS orderRevenue`);
+      const [[agg]] = await pool.execute(`SELECT (SELECT COUNT(*) FROM Restaurants WHERE LOWER(COALESCE(status,'')) <> 'deleted') AS restaurants, (SELECT COUNT(*) FROM Users) AS users, (SELECT COUNT(*) FROM Subscriptions WHERE status IN ('active','trialing')) AS activeSubscriptions, (SELECT COALESCE(SUM(total),0) FROM Orders) AS orderRevenue`);
       return reply.send({ ok: true, data: agg });
     } catch (e) { return reply.status(500).send({ ok: false, error: e.message }); }
   });

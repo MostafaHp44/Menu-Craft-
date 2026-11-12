@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { apiUrl } from '../../../shared/api/url.ts'
 import { IMAGE_POSITIONS, type ImageFit } from '../../../shared/lib/types.ts'
 import { Badge, Button, Field, Input, Img, Select } from '../../../shared/ui/ui.tsx'
 import { MediaPickerModal, loadClientUploads } from '../../../shared/ui/MediaPicker.tsx'
@@ -35,7 +36,7 @@ const POSITION_LABEL: Record<string, Record<'en' | 'ar' | 'ku', string>> = {
 async function uploadToServer(file: File): Promise<string> {
   const form = new FormData()
   form.append('file', file)
-  const res = await fetch('/api/uploads', { method: 'POST', body: form, credentials: 'include' })
+  const res = await fetch(apiUrl('/api/uploads'), { method: 'POST', body: form, credentials: 'include' })
   const json = await res.json().catch(() => null)
   if (!res.ok || !json?.ok) throw new Error(json?.error || `Upload failed: ${res.status}`)
   return json.data.url as string

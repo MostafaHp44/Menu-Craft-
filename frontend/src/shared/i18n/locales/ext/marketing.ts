@@ -194,6 +194,7 @@ const en = {
         updatingSub: 'Please check back in a few minutes.',
         categoriesAria: 'Menu categories',
         add: 'Add to cart',
+        addShort: 'Add',
       },
       about: {
         eyebrow: 'Our story',
@@ -417,6 +418,7 @@ const ar: Deep<typeof en> = {
         updatingSub: 'يرجى العودة بعد قليل.',
         categoriesAria: 'أقسام القائمة',
         add: 'أضف إلى السلة',
+        addShort: 'أضف',
       },
       about: {
         eyebrow: 'قصتنا',
@@ -641,6 +643,7 @@ const ku: Deep<typeof en> = {
         updatingSub: 'تکایە لە چەند خولەکێکی دووەم بگەڕێوەوە.',
         categoriesAria: 'بەشەکانی مینیۆ',
         add: 'زیاد بکە',
+        addShort: 'زیاد بکە',
       },
       about: {
         eyebrow: 'چیرۆکەکەمان',

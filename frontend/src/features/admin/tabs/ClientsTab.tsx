@@ -3,11 +3,19 @@ import { Input, StatCard, Badge } from '../../../shared/ui/ui.tsx'
 import { DarkEmpty, Panel, PanelHeading } from '../parts.tsx'
 import { useAdminData } from '../useAdminData.ts'
 import { Icon } from '../../../shared/ui/icons.tsx'
+import { useI18n } from '../../../shared/i18n'
+import { confirmDialog } from '../../../shared/components/dialogs.tsx'
+import { platformAPI } from '../../../shared/lib/api.service.ts'
+import { useStore } from '../../../shared/store/useStore.ts'
 
 type Row = { id: string; name: string; slug: string; owner_name?: string; owner_email?: string; status?: string; subscription_status?: string; price?: number }
 
 export default function ClientsTab({ onOpenSales }: { onOpenSales: (id: string) => void }) {
-  const { data, loading, error } = useAdminData<Row>('/api/platform/admin/clients')
+  const { t } = useI18n()
+  const showToast = useStore((s) => s.showToast)
+  const [reloadNonce, setReloadNonce] = useState(0)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const { data, loading, error } = useAdminData<Row>(`/api/platform/admin/clients?reload=${reloadNonce}`)
   const [q, setQ] = useState('')
   const rows = useMemo(() =>
     data.filter(x => (x.name + ' ' + x.slug + ' ' + (x.owner_email || '')).toLowerCase().includes(q.toLowerCase())),
@@ -18,6 +26,40 @@ export default function ClientsTab({ onOpenSales }: { onOpenSales: (id: string) 
 
   const activeSubs = data.filter(x => ['active', 'trialing'].includes(x.subscription_status || '')).length
   const mrr = data.filter(x => ['active', 'trialing'].includes(x.subscription_status || '')).reduce((n, x) => n + (Number(x.price) || 0), 0)
+
+  /* حذف حساب كلاينت بالكامل — popup تأكيد داخلي (ممنوع window.confirm):
+     المالك + كل مطاعمه + موظفيه بيتمسحوا، وسجلات الطلبات/الدفعات بتفضل
+     موجودة في التقارير (المطعم اللي فيه طلبات بيتحول status='deleted'). */
+  const removeClient = async (x: Row) => {
+    const ok = await confirmDialog({
+      title: t('admin.removeClient.title'),
+      message: t('admin.removeClient.msg', { owner: x.owner_name || x.name }),
+      confirmLabel: t('admin.removeClient.confirm'),
+      cancelLabel: t('admin.removeClient.cancel'),
+      tone: 'danger',
+    })
+    if (!ok) return
+    setBusyId(x.id)
+    try {
+      const res = await platformAPI.deleteClient(x.id)
+      const d = res.data || {}
+      showToast({
+        tone: 'success',
+        title: t('admin.removeClient.toastTitle'),
+        message: t('admin.removeClient.toastMsg', {
+          name: x.name,
+          restaurants: d.restaurants ?? 0,
+          employees: d.employees ?? 0,
+          users: d.usersDeleted ?? 0,
+        }),
+      })
+      setReloadNonce(n => n + 1)
+    } catch (e: any) {
+      showToast({ tone: 'error', title: t('admin.removeClient.failed'), message: e?.message || '' })
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -100,12 +142,21 @@ export default function ClientsTab({ onOpenSales }: { onOpenSales: (id: string) 
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-right align-top">
-                      <button
-                        onClick={e => { e.stopPropagation(); onOpenSales(x.id); }}
-                        className="rounded-md bg-flame/10 px-2.5 py-1 text-xs font-medium text-flame hover:bg-flame/20 transition"
-                      >
-                        Sales
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={e => { e.stopPropagation(); onOpenSales(x.id); }}
+                          className="rounded-md bg-flame/10 px-2.5 py-1 text-xs font-medium text-flame hover:bg-flame/20 transition"
+                        >
+                          Sales
+                        </button>
+                        <button
+                          onClick={e => { e.stopPropagation(); removeClient(x); }}
+                          disabled={busyId === x.id}
+                          className="rounded-md bg-rose/10 px-2.5 py-1 text-xs font-medium text-rose/80 hover:bg-rose/20 hover:text-rose transition disabled:opacity-50"
+                        >
+                          {busyId === x.id ? '…' : t('admin.removeClient.btn')}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -59,7 +59,7 @@ async function createPaidSubscriptionRequest({ userId, restaurantId, planId, pla
       err.status = 400;
       throw err;
     }
-    const [planCheck] = await connection.execute('SELECT id, name, price, interval_type FROM plans WHERE id = ?', [planId]);
+    const [planCheck] = await connection.execute('SELECT id, name, price, interval_type FROM Plans WHERE id = ?', [planId]);
     if (!planCheck.length) {
       await connection.rollback();
       const err = new Error('الباقة غير موجودة');
@@ -111,9 +111,9 @@ async function listAllPaidSubscriptionRequests({ status } = {}) {
       `SELECT psr.*, r.slug AS restaurant_slug, r.name_en AS restaurant_name,
               u.name AS user_name, u.email AS user_email, p.name AS plan_display_name, p.mode AS plan_mode
        FROM paid_subscription_requests psr
-       JOIN restaurants r ON r.id = psr.restaurant_id
-       JOIN users u ON u.id = psr.user_id
-       LEFT JOIN plans p ON p.id = psr.plan_id
+       JOIN Restaurants r ON r.id = psr.restaurant_id
+       JOIN Users u ON u.id = psr.user_id
+       LEFT JOIN Plans p ON p.id = psr.plan_id
        ${clauses.length ? 'WHERE ' + clauses.join(' AND ') : ''}
        ORDER BY psr.created_at DESC
        LIMIT 100`,
@@ -140,7 +140,7 @@ async function approvePaidSubscriptionRequest(requestId, adminId) {
     }
     const reqRow = rows[0];
     const planKey = String(reqRow.plan_name || '').toLowerCase().replace(/[^a-z0-9]/g, '') || 'plan';
-    const [plan] = await connection.execute('SELECT interval_type, mode FROM plans WHERE id = ?', [reqRow.plan_id]);
+    const [plan] = await connection.execute('SELECT interval_type, mode FROM Plans WHERE id = ?', [reqRow.plan_id]);
     // وضع الباقة المطلوبة هو الذي يُفعَّل: باقة static تُبقي الوضع static،
     // وباقات live تفعّل الطور المباشر — وليس 'live' دائماً.
     const targetMode = String(plan[0]?.mode || 'live').toLowerCase() === 'static' ? 'static' : 'live';

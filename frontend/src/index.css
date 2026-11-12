@@ -24,6 +24,20 @@
   --color-moss: #2f7a55;
   --color-gold: #b98a2e;
   --color-rose: #b8574f;
+
+  /* Aliases + tokens used by the public cart/checkout/success overlays (were previously
+     undefined, so Tailwind silently dropped them — buttons rendered invisible) */
+  --color-ink-ink: #0f0d0b;
+  --color-ink-soft: #7d7263;
+  --color-offwhite: #faf7f1;
+  --color-muted: #7d7263;
+  --color-card: #ffffff;
+  --color-primary: #e8571f;
+  --color-primary-dark: #c84612;
+  --color-success: #2f7a55;
+  --color-amber: #b98a2e;
+  --color-amber-dark: #8a6420;
+  --color-rose-dark: #96453d;
 }
 
 @layer base {

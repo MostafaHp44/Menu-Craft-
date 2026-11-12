@@ -15,7 +15,11 @@ async function getTheme(restaurantId) {
   const connection = await pool.getConnection();
   try {
     const [rows] = await connection.execute('SELECT theme_json FROM DashboardThemes WHERE restaurant_id = ?', [restaurantId]);
-    return rows[0] ? JSON.parse(rows[0].theme_json || '{}') : {};
+    const j0 = rows[0] ? rows[0].theme_json : null;
+    if (j0 == null || j0 === '') return {};
+    if (typeof j0 === 'string') { const t = j0.trim(); return t ? JSON.parse(t) : {}; }
+    if (Buffer.isBuffer(j0)) { const t = j0.toString('utf8').trim(); return t ? JSON.parse(t) : {}; }
+    return j0;
   } finally { connection.release(); }
 }
 

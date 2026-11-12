@@ -5,6 +5,7 @@ import { useAdminData } from '../useAdminData.ts'
 import { Icon } from '../../../shared/ui/icons.tsx'
 import { useStore } from '../../../shared/store/useStore.ts'
 import { useI18n } from '../../../shared/i18n'
+import { confirmDialog } from '../../../shared/components/dialogs.tsx'
 import { platformAPI } from '../../../shared/lib/api.service.ts'
 
 type User = { id: string; name: string; email: string; role: string; restaurant_id?: string; status: string; created_at: string }
@@ -51,7 +52,14 @@ export default function TeamTab() {
   }
 
   const removeUser = async (x: User) => {
-    if (!window.confirm(`Delete ${x.name} (${x.email}) permanently? This cannot be undone.`)) return
+    const ok = await confirmDialog({
+      title: 'Delete account',
+      message: `Delete ${x.name} (${x.email}) permanently? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      tone: 'danger',
+    })
+    if (!ok) return
     setBusyId(x.id)
     try {
       await platformAPI.deleteUser(x.id)

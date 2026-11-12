@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { apiUrl } from '../api/url.ts'
 import { Button, Img } from './ui.tsx'
 import { templateAPI } from '../lib/api.service.ts'
 import { IMAGE_LIBRARY } from '../lib/images.ts'
@@ -65,7 +66,7 @@ export function invalidateUploadedCache() {
 
 /** Client media (the caller's own restaurant uploads) — any signed-in user. */
 export async function loadClientUploads(): Promise<MediaItem[]> {
-  const res = await fetch('/api/uploads', { credentials: 'include' })
+  const res = await fetch(apiUrl('/api/uploads'), { credentials: 'include' })
   const json = await res.json().catch(() => null)
   if (!res.ok || !json?.ok) throw new Error(json?.error || `Request failed: ${res.status}`)
   return (json.data || []) as MediaItem[]

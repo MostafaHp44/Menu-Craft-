@@ -4,7 +4,9 @@ import { platformAPI } from '../../../shared/lib/api.service.ts'
 import { apiFetch } from '../../../shared/lib/api.service.ts'
 import { DarkEmpty, Panel, PanelHeading } from '../parts.tsx'
 import { Badge, Button } from '../../../shared/ui/ui.tsx'
+import { formatDate, money, cx } from '../../../shared/lib/utils.ts'
 import { useStore } from '../../../shared/store/useStore.ts'
+import { confirmDialog } from '../../../shared/components/dialogs.tsx'
 
 interface SubRow {
   id: string
@@ -95,10 +97,34 @@ export default function SubscriptionsTab() {
 
   const planLabel = (s: SubRow) => s.plan_name || s.plan_id || '—'
   const restaurantLabel = (s: SubRow) => s.restaurant_name || s.restaurant_slug || s.restaurant_id || '—'
-  const intervalLabel = (s: SubRow) => s.interval_type || '—'
+  const ownerLabel = (s: SubRow) => s.owner_name || s.owner_email || ''
   const priceLabel = (s: SubRow) => Number(s.plan_price ?? s.price ?? 0)
   const statusLabel = (s: SubRow) => String(s.status || 'unknown')
   const isAutoRenew = (s: SubRow) => Boolean(s.auto_renew)
+
+  /* حالة مترجمة + لون بدل النص الخام (active/trialing/…) */
+  const STATUS_META: Record<string, { key: string; tone: 'moss' | 'gold' | 'rose' | 'neutral' }> = {
+    active: { key: 'admin.subscriptions.statusActive', tone: 'moss' },
+    trialing: { key: 'admin.subscriptions.statusTrial', tone: 'gold' },
+    expired: { key: 'admin.subscriptions.statusExpired', tone: 'rose' },
+    cancelled: { key: 'admin.subscriptions.statusCancelled', tone: 'neutral' },
+    past_due: { key: 'admin.subscriptions.statusPastDue', tone: 'rose' },
+  }
+  const statusMeta = (s: SubRow) => STATUS_META[statusLabel(s)] ?? { key: 'admin.subscriptions.statusUnknown', tone: 'neutral' as const }
+
+  /* المدة مترجمة: month/year/forever بدل القيمة الخام */
+  const INTERVAL_KEY: Record<string, string> = {
+    month: 'admin.intervalMonth',
+    year: 'admin.intervalYear',
+    forever: 'admin.intervalForever',
+  }
+  const intervalText = (s: SubRow) => {
+    const raw = String(s.interval_type || '')
+    return INTERVAL_KEY[raw] ? t(INTERVAL_KEY[raw]) : raw || '—'
+  }
+
+  /* تواريخ مقروءة بدل ISO خام (2026-11-12T01:57:24.000Z) */
+  const dateText = (v?: string) => (v ? formatDate(v) : '—')
 
   const onToggleAutoRenew = async (s: SubRow) => {
     if (!s.restaurant_id) return
@@ -116,7 +142,14 @@ export default function SubscriptionsTab() {
 
   const onClosePackage = async (s: SubRow) => {
     if (!s.restaurant_id) return
-    if (!window.confirm(`Close/suspend subscription for ${restaurantLabel(s)}? The site will be paused.`)) return
+    const ok = await confirmDialog({
+      title: t('admin.subscriptions.closeTitle', { defaultValue: 'إيقاف الاشتراك؟' }),
+      message: t('admin.subscriptions.closeConfirm', { name: restaurantLabel(s) }),
+      confirmLabel: t('admin.subscriptions.closePackage'),
+      cancelLabel: t('common.cancel'),
+      tone: 'danger',
+    })
+    if (!ok) return
     setActing(s.id)
     try {
       await platformAPI.updateSubscription(s.restaurant_id, { status: 'cancelled' })
@@ -129,20 +162,39 @@ export default function SubscriptionsTab() {
     }
   }
 
-  const onReactivate = async (s: SubRow) => {
+  /* تجديد شهر — زرّار السوبر أدمن بيدوسه لما يتحصّل الفلوس كاش:
+     status = active + renews_at = max(الآن، renews_at الحالي) شهر.
+     يعني لو باقي أيام تُضاف الشهر فوقها، ولو انتهت يبدأ الشهر من النهارده. */
+  const onRenewMonth = async (s: SubRow) => {
     if (!s.restaurant_id) return
-    if (!window.confirm(t('admin.subscriptions.reactivateConfirm', { name: restaurantLabel(s) }))) return
+    const base = new Date(Math.max(new Date(s.renews_at ?? 0).getTime(), Date.now()))
+    base.setMonth(base.getMonth() + 1)
+    const renewsAt = base.toISOString().slice(0, 10)
+    const ok = await confirmDialog({
+      title: t('admin.subscriptions.renewMonthTitle'),
+      message: t('admin.subscriptions.renewMonthConfirm', { name: restaurantLabel(s), date: renewsAt }),
+      confirmLabel: t('admin.subscriptions.renewMonth'),
+      cancelLabel: t('common.cancel'),
+      tone: 'accent',
+    })
+    if (!ok) return
     setActing(s.id)
     try {
-      await platformAPI.updateSubscription(s.restaurant_id, { status: 'active' })
-      showToast({ title: t('admin.subscriptions.reactivated'), message: t('admin.subscriptions.reactivatedMsg', { name: restaurantLabel(s) }), tone: 'success' })
+      await platformAPI.updateSubscription(s.restaurant_id, { status: 'active', renews_at: renewsAt })
+      showToast({ title: t('admin.subscriptions.renewed'), message: t('admin.subscriptions.renewedMsg', { name: restaurantLabel(s), date: renewsAt }), tone: 'success' })
       await loadSubs()
     } catch (err: any) {
-      showToast({ title: t('admin.subscriptions.reactivateFailed'), message: err?.message || t('admin.subscriptions.reactivateFailed'), tone: 'error' })
+      showToast({ title: t('admin.subscriptions.renewFailed'), message: err?.message || t('admin.subscriptions.renewFailed'), tone: 'error' })
     } finally {
       setActing(null)
     }
   }
+
+  /* هل الشهر انتهى فعليًا رغم أن الصف لا يزال active في القاعدة؟ */
+  const isDateExpired = (s: SubRow) => Boolean(s.renews_at && new Date(s.renews_at).getTime() < Date.now())
+  /* فعّال فعلًا = الحالة خام نشطة ولم يمرّ تاريخ renews_at (القفل يحدث بالقراءة) */
+  const isEffectivelyActive = (s: SubRow) =>
+    (String(s.status) === 'active' || String(s.status) === 'trialing') && !isDateExpired(s)
 
   const onApprove = async (row: RequestRow) => {
     setActing(row.id)
@@ -245,67 +297,93 @@ export default function SubscriptionsTab() {
           <DarkEmpty title={t('admin.subscriptions.noSubscriptions')} message={t('admin.subscriptions.noSubscriptionsMsg')} />
         ) : (
           <div className="mt-4 space-y-3">
-            {subscriptions.map((s) => (
-              <div key={s.id} className="p-4 bg-white/5 rounded-xl border border-white/10">
-                <div className="flex justify-between items-start mb-2">
-                  <span className="font-medium text-ivory">{planLabel(s)}</span>
-                  <span className="badge bg-ivory/20 text-ivory/70 text-xs capitalize">{statusLabel(s)}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="rounded-xl border border-white/8 bg-white/4 px-3.5 py-3">
-                    <div className="text-[11px] uppercase tracking-[0.12em] text-ivory/40">{t('admin.subscriptions.planPrice')}</div>
-                    <div className="mt-1 text-[13px] font-medium text-ivory">{priceLabel(s)}</div>
-                  </div>
-                  <div className="rounded-xl border border-white/8 bg-white/4 px-3.5 py-3">
-                    <div className="text-[11px] uppercase tracking-[0.12em] text-ivory/40">{t('admin.subscriptions.restaurant')}</div>
-                    <div className="mt-1 text-[13px] font-medium text-ivory">{restaurantLabel(s)}</div>
-                  </div>
-                  <div className="rounded-xl border border-white/8 bg-white/4 px-3.5 py-3">
-                    <div className="text-[11px] uppercase tracking-[0.12em] text-ivory/40">{t('admin.subscriptions.startsAt')}</div>
-                    <div className="mt-1 text-[13px] font-medium text-ivory">{s.started_at || '-'}</div>
-                  </div>
-                  <div className="rounded-xl border border-white/8 bg-white/4 px-3.5 py-3">
-                    <div className="text-[11px] uppercase tracking-[0.12em] text-ivory/40">{t('admin.subscriptions.duration')}</div>
-                    <div className="mt-1 text-[13px] font-medium text-ivory">{intervalLabel(s)}</div>
-                  </div>
-                  {s.owner_email ? (
-                    <div className="col-span-2 rounded-xl border border-white/8 bg-white/4 px-3.5 py-3">
-                      <div className="text-[11px] uppercase tracking-[0.12em] text-ivory/40">{t('admin.subscriptions.owner')}</div>
-                      <div className="mt-1 text-[13px] font-medium text-ivory">{s.owner_name || s.owner_email} · {s.owner_email}</div>
+            {subscriptions.map((s) => {
+              const meta = statusMeta(s)
+              const owner = ownerLabel(s)
+              const dateExpired = isDateExpired(s)
+              return (
+                <div key={s.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5 transition-colors hover:bg-white/[0.06]">
+                  {/* Header: owner front and center + status */}
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-flame/25 text-[13px] font-bold text-ivory">
+                          {(owner || restaurantLabel(s)).charAt(0).toUpperCase()}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="truncate text-[15px] font-semibold text-ivory">
+                            {owner || t('admin.subscriptions.noOwner')}
+                          </div>
+                          <div className="truncate text-[12.5px] text-ivory/55">
+                            {restaurantLabel(s)} · {planLabel(s)}
+                          </div>
+                        </div>
+                      </div>
+                      {owner && s.owner_email ? (
+                        <div className="mt-1.5 ps-10 text-[12px] text-ivory/45" dir="ltr">{s.owner_email}</div>
+                      ) : null}
                     </div>
-                  ) : null}
-                  {s.renews_at ? (
-                    <div className="col-span-2 rounded-xl border border-white/8 bg-white/4 px-3.5 py-3">
-                      <div className="text-[11px] uppercase tracking-[0.12em] text-ivory/40">{t('admin.renews')}</div>
-                      <div className="mt-1 text-[13px] font-medium text-ivory">{s.renews_at}</div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <Badge tone={meta.tone}>{t(meta.key)}</Badge>
+                      <span className="text-[12px] text-ivory/50">
+                        {priceLabel(s) === 0 ? t('admin.free') : `${money(priceLabel(s))} ${t('admin.subscriptions.perMonth')}`}
+                      </span>
                     </div>
-                  ) : null}
-                </div>
+                  </div>
 
-                {/* Actions: auto-renew toggle + close package / reactivate */}
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <label className="flex items-center gap-2 text-[12px] text-ivory/70">
-                    <input
-                      type="checkbox"
-                      checked={isAutoRenew(s)}
-                      disabled={acting === s.id || String(s.status) !== 'active'}
-                      onChange={() => onToggleAutoRenew(s)}
-                      className="h-4 w-4"
-                    />
-                    {t('admin.subscriptions.autoRenew')}
-                  </label>
-                  {String(s.status) === 'active' || String(s.status) === 'trialing' ? (
-                    <Button size="sm" variant="danger" icon="x" loading={acting === s.id} onClick={() => onClosePackage(s)}>
-                      {t('admin.subscriptions.closePackage')}
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="accent" icon="refresh" loading={acting === s.id} onClick={() => onReactivate(s)}>
-                      {t('admin.subscriptions.reactivate')}
-                    </Button>
-                  )}
+                  {/* Facts row */}
+                  <div className="mt-3.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-2.5">
+                      <div className="text-[10.5px] uppercase tracking-[0.12em] text-ivory/40">{t('admin.subscriptions.restaurant')}</div>
+                      <div className="mt-0.5 truncate text-[13px] font-medium text-ivory">{restaurantLabel(s)}</div>
+                    </div>
+                    <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-2.5">
+                      <div className="text-[10.5px] uppercase tracking-[0.12em] text-ivory/40">{t('admin.subscriptions.startsAt')}</div>
+                      <div className="mt-0.5 text-[13px] font-medium text-ivory">{dateText(s.started_at)}</div>
+                    </div>
+                    <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-2.5">
+                      <div className="text-[10.5px] uppercase tracking-[0.12em] text-ivory/40">{t('admin.subscriptions.duration')}</div>
+                      <div className="mt-0.5 text-[13px] font-medium text-ivory">{intervalText(s)}</div>
+                    </div>
+                    <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-2.5">
+                      <div className="text-[10.5px] uppercase tracking-[0.12em] text-ivory/40">{t('admin.renews')}</div>
+                      <div className={cx('mt-0.5 text-[13px] font-medium', dateExpired && s.renews_at ? 'text-rose' : 'text-ivory')}>
+                        {s.renews_at ? dateText(s.renews_at) : t('admin.subscriptions.never')}
+                      </div>
+                    </div>
+                  </div>
+
+                  {dateExpired && s.renews_at ? (
+                    <div className="mt-2 text-[12px] text-rose/85">⚠ {t('admin.subscriptions.expiredByDate')}</div>
+                  ) : null}
+
+                  {/* Actions: auto-renew toggle + close package / renew another month */}
+                  <div className="mt-3.5 flex flex-wrap items-center gap-3 border-t border-white/[0.07] pt-3">
+                    <label className="flex cursor-pointer items-center gap-2 text-[12.5px] text-ivory/70">
+                      <input
+                        type="checkbox"
+                        checked={isAutoRenew(s)}
+                        disabled={acting === s.id || String(s.status) !== 'active'}
+                        onChange={() => onToggleAutoRenew(s)}
+                        className="h-4 w-4"
+                      />
+                      {t('admin.subscriptions.autoRenew')}
+                    </label>
+                    <div className="ms-auto flex flex-wrap items-center gap-2">
+                      {isEffectivelyActive(s) ? (
+                        <Button size="sm" variant="danger" icon="x" loading={acting === s.id} onClick={() => onClosePackage(s)}>
+                          {t('admin.subscriptions.closePackage')}
+                        </Button>
+                      ) : null}
+                      {/* التجديد دائمًا متاح: وهو حلّ «الشهر خلص» — يفعّل شهر إضافي بعد تحصيل الكاش */}
+                      <Button size="sm" variant="accent" icon="refresh" loading={acting === s.id} onClick={() => onRenewMonth(s)}>
+                        {t('admin.subscriptions.renewMonth')}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </Panel>

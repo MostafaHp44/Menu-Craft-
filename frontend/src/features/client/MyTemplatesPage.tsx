@@ -6,6 +6,7 @@ import { useSelectedTemplates } from './useSelectedTemplates.ts'
 import { useActiveRestaurant, useStore } from '../../shared/store/useStore.ts'
 import { cx, tx } from '../../shared/lib/utils.ts'
 import { useI18n } from '../../shared/i18n'
+import { confirmDialog } from '../../shared/components/dialogs.tsx'
 import type { TemplateDefinition } from '../../shared/lib/types.ts'
 
 /**
@@ -27,7 +28,14 @@ export default function MyTemplatesPage() {
   }
 
   const handleDelete = async (templateId: string) => {
-    if (!window.confirm(t('myTemplates.confirmDelete'))) return
+    const ok = await confirmDialog({
+      title: t('myTemplates.deleteTitle', { defaultValue: 'حذف القالب؟' }),
+      message: t('myTemplates.confirmDelete'),
+      confirmLabel: t('common.delete'),
+      cancelLabel: t('common.cancel'),
+      tone: 'danger',
+    })
+    if (!ok) return
     await remove(templateId)
   }
 

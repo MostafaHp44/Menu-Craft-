@@ -91,6 +91,7 @@ const en = {
     orderNumber: 'Order #{number}',
     totalPaid: 'Total',
     trackOrder: 'Track your order',
+    backToMenu: 'Back to menu',
     thanksNote: 'Thank you! The restaurant received your order.',
 
     /* ----------------------------- tracking -------------------------------- */
@@ -182,6 +183,7 @@ const ar: Deep<typeof en> = {
     orderNumber: 'طلب #{number}',
     totalPaid: 'الإجمالي',
     trackOrder: 'تتبع طلبك',
+    backToMenu: 'الرجوع للمنيو',
     thanksNote: 'شكرًا لك! وصلكم طلبك للمطعم.',
 
     trackingTitle: 'تتبع الطلب',
@@ -272,6 +274,7 @@ const ku: Deep<typeof en> = {
     orderNumber: 'داوا #{number}',
     totalPaid: 'گشتی',
     trackOrder: 'داواکە ببینە',
+    backToMenu: 'گەڕانەوە بۆ مینیو',
     thanksNote: 'سوپاس! داواکەت گەیشت بۆ چێشتخانە.',
 
     trackingTitle: 'بەدواداچوونی داوا',

@@ -4,7 +4,7 @@
  * HttpOnly JWT cookie is sent to the backend on every request.
  * ------------------------------------------------------------------ */
 
-const API_BASE = import.meta.env.VITE_API_URL_ABSOLUTE || '';
+const API_BASE = (import.meta.env.VITE_API_URL_ABSOLUTE || (import.meta.env.PROD ? 'https://api.vertex-electric.org' : '')).trim().replace(/\/+$/, '')
 
 function apiUrl(path: string): string {
   return `${API_BASE}${path}`;

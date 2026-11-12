@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { apiUrl } from '../api/url.ts'
 import { create } from 'zustand'
 import { useBackendAuth } from '../store/useBackendAuth'
 
@@ -43,7 +44,7 @@ export const useDashboardThemeStore = create<DashboardThemeState>()((set) => ({
     if (!restaurantId) return
     set({ status: 'loading' })
     try {
-      const res = await fetch('/api/dashboard-theme?restaurantId=' + encodeURIComponent(restaurantId), {
+      const res = await fetch(apiUrl('/api/dashboard-theme?restaurantId=') + encodeURIComponent(restaurantId), {
         credentials: 'include',
       })
       if (!res.ok) {
@@ -64,7 +65,7 @@ export const useDashboardThemeStore = create<DashboardThemeState>()((set) => ({
     set({ status: 'saving', theme })
     applyTheme(theme)
     try {
-      const res = await fetch('/api/dashboard-theme', {
+      const res = await fetch(apiUrl('/api/dashboard-theme'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

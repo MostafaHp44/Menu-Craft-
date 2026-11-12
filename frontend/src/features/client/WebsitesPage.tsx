@@ -5,6 +5,7 @@ import { Badge, Button, Card } from '../../shared/ui/ui.tsx'
 import { useStore } from '../../shared/store/useStore.ts'
 import { useSites } from './useSites.ts'
 import { sitesAPI, ApiError } from '../../shared/api/service'
+import { alertDialog, formDialog } from '../../shared/components/dialogs.tsx'
 
 const STATUS_LABEL: Record<string, string> = {
   published: 'Published',
@@ -43,12 +44,26 @@ export default function WebsitesPage() {
   const handleCreate = async () => {
     if (!canCreate) return
 
-    const name = window.prompt('Website name', 'New Website')
-    if (!name || !name.trim()) return
+    const nameRes = await formDialog({
+      title: 'Website name',
+      message: 'Choose a name for your new website.',
+      fields: [{ key: 'name', label: 'Website name', initialValue: 'New Website' }],
+      confirmLabel: 'Next',
+    })
+    if (!nameRes) return
+    const name = nameRes.name
+    if (!name.trim()) return
 
     const defaultSlug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 32)
-    const slug = window.prompt('Website slug', defaultSlug)
-    if (!slug || !slug.trim()) return
+    const slugRes = await formDialog({
+      title: 'Website slug',
+      message: 'The short address used for your site link.',
+      fields: [{ key: 'slug', label: 'Website slug', initialValue: defaultSlug }],
+      confirmLabel: 'Create',
+    })
+    if (!slugRes) return
+    const slug = slugRes.slug
+    if (!slug.trim()) return
 
     try {
       const created = await sitesAPI.create({ name: name.trim(), slug: slug.trim() })
@@ -64,14 +79,14 @@ export default function WebsitesPage() {
       navigate('/dashboard/templates')
     } catch (e: any) {
       if (e instanceof ApiError && e.status === 409) {
-        window.alert('A website with this slug already exists. Please choose another slug.')
+        await alertDialog({ title: 'Slug already exists', message: 'A website with this slug already exists. Please choose another slug.' })
         return
       }
       if (e instanceof ApiError && e.status === 403) {
-        window.alert('Your subscription plan does not allow creating more websites.')
+        await alertDialog({ title: 'Plan limit', message: 'Your subscription plan does not allow creating more websites.' })
         return
       }
-      window.alert('Failed to create website: ' + (e?.message || 'unknown error'))
+      await alertDialog({ title: 'Create failed', message: 'Failed to create website: ' + (e?.message || 'unknown error') })
     }
   }
 

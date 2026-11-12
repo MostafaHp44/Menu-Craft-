@@ -1,0 +1,5 @@
+# SPA fallback for React Router — any non-file route serves index.html
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ /index.html [L]

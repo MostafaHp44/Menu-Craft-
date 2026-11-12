@@ -21,6 +21,7 @@ import {
   useInlineEdit,
   type ActiveField,
 } from '../editor/inlineEdit.tsx'
+import { confirmDialog } from '../../shared/components/dialogs.tsx'
 import './site.css'
 import CheckoutOverlay from './CheckoutOverlay';
 
@@ -100,6 +101,12 @@ export interface RestaurantSiteProps {
   onAddItem?: (item: MenuItem) => void
   /** in-place menu editing (admin): append/remove categories & items */
   onMenuEdit?: (recipe: (draft: Restaurant) => void) => void
+  /**
+   * false for menu-only (static) sites: full menu stays visible, but every
+   * ordering affordance is removed — add-to-cart buttons and the cart button.
+   * Defaults to true so editor previews and template demos stay interactive.
+   */
+  orderingEnabled?: boolean
 }
 
 export function RestaurantSite({
@@ -113,6 +120,7 @@ export function RestaurantSite({
   onStyle,
   onOpenCart,
   onMenuEdit,
+  orderingEnabled = true,
 }: RestaurantSiteProps) {
   const { layout } = r.design
   const enabled = r.design.sections.filter((s) => s.enabled).map((s) => s.id)
@@ -151,11 +159,11 @@ export function RestaurantSite({
         id={`${idPrefix}rs-top`}
         onClick={editable ? stopNavigation : undefined}
       >
-        <SiteHeader r={r} nav={nav} anchor={anchor} prefix={idPrefix} onOpenCart={onOpenCart ? () => onOpenCart() : () => setCartOpen(true)} />
+        <SiteHeader r={r} nav={nav} anchor={anchor} prefix={idPrefix} orderingEnabled={orderingEnabled} onOpenCart={onOpenCart ? () => onOpenCart() : () => setCartOpen(true)} />
         <SiteHero r={r} anchor={anchor} />
 
         {enabled.includes('featured') ? <FeaturedSection r={r} prefix={idPrefix} /> : null}
-        {enabled.includes('menu') ? <MenuSection r={r} prefix={idPrefix} editable={editable} onMenuEdit={onMenuEdit} /> : null}
+        {enabled.includes('menu') ? <MenuSection r={r} prefix={idPrefix} editable={editable} onMenuEdit={onMenuEdit} orderingEnabled={orderingEnabled} /> : null}
         {enabled.includes('about') ? <AboutSection r={r} prefix={idPrefix} /> : null}
         {enabled.includes('gallery') && r.gallery.length > 0 ? (
           <GallerySection r={r} prefix={idPrefix} />
@@ -164,9 +172,8 @@ export function RestaurantSite({
         {enabled.includes('contact') ? <ContactSection r={r} prefix={idPrefix} /> : null}
 
         <SiteFooter r={r} nav={nav} anchor={anchor} prefix={idPrefix} />
-        {cartOpen ? <SiteCartOverlay onClose={() => setCartOpen(false)} onCheckout={() => { setCartOpen(false); setCheckoutOpen(true); }} /> : null}
-        {checkoutOpen ? <CheckoutOverlay restaurant={r} onClose={() => setCheckoutOpen(false)} onPlaced={() => { setCheckoutOpen(false); useCartStore.getState().clear(); }} /> : null}
-        {cartOpen ? <SiteCartOverlay onClose={() => setCartOpen(false)} onCheckout={() => { setCartOpen(false); setCheckoutOpen(true); }} /> : null}
+        {orderingEnabled && cartOpen ? <SiteCartOverlay onClose={() => setCartOpen(false)} onCheckout={() => { setCartOpen(false); setCheckoutOpen(true); }} /> : null}
+        {orderingEnabled && checkoutOpen ? <CheckoutOverlay restaurant={r} onClose={() => setCheckoutOpen(false)} onPlaced={() => { setCheckoutOpen(false); useCartStore.getState().clear(); }} /> : null}
       </div>
     </InlineEditProvider>
   )
@@ -181,13 +188,13 @@ function SiteCartOverlay({ onClose, onCheckout }: { onClose: () => void; onCheck
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-label="Cart">
       <div className="w-full max-w-md rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl sm:p-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-gray-900">Cart</h3>
+          <Ed as="h3" path="copy.site.cart.title" fallback="Cart" className="text-lg font-bold text-gray-900" label="editor.inline.f.cart" />
           <button type="button" onClick={onClose} className="rounded-full p-2 hover:bg-gray-100" aria-label="Close cart">
             <Icon name="x" size={18} />
           </button>
         </div>
         {lines.length === 0 ? (
-          <p className="mt-6 text-sm text-gray-600">Your cart is empty.</p>
+          <Ed as="p" path="copy.site.cart.empty" fallback="Your cart is empty." className="mt-6 text-sm text-gray-600" label="editor.inline.f.note" />
         ) : (
           <ul className="mt-4 max-h-80 space-y-3 overflow-y-auto">
             {lines.map((line) => (
@@ -200,7 +207,7 @@ function SiteCartOverlay({ onClose, onCheckout }: { onClose: () => void; onCheck
                   <button type="button" onClick={() => cart.setQty(line.itemId, cartSignature(line), line.qty - 1)} className="h-7 w-7 rounded-md bg-gray-100 text-sm font-bold leading-none" aria-label="Decrease">−</button>
                   <span className="w-6 text-center text-sm font-medium tabular-nums">{line.qty}</span>
                   <button type="button" onClick={() => cart.setQty(line.itemId, cartSignature(line), line.qty + 1)} className="h-7 w-7 rounded-md bg-gray-100 text-sm font-bold leading-none" aria-label="Increase">+</button>
-                  <button type="button" onClick={() => cart.remove(line.itemId, cartSignature(line))} className="ms-1 text-[11px] font-semibold text-red-600" aria-label="Remove">Remove</button>
+                  <button type="button" onClick={() => cart.remove(line.itemId, cartSignature(line))} className="ms-1 text-[11px] font-semibold text-red-600" aria-label="Remove"><Ed path="copy.site.cart.remove" fallback="Remove" label="editor.inline.f.cart" /></button>
                 </div>
               </li>
             ))}
@@ -209,14 +216,19 @@ function SiteCartOverlay({ onClose, onCheckout }: { onClose: () => void; onCheck
         {lines.length > 0 && (
           <div className="mt-5 border-t border-gray-200 pt-4">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">Total</span>
+              <Ed as="span" path="copy.site.cart.total" fallback="Total" className="text-gray-600" label="editor.inline.f.price" />
               <span className="text-base font-bold text-gray-900">{total.toFixed(2)}</span>
             </div>
-            <p className="mt-3 text-[11px] leading-relaxed text-gray-500">
-              Checkout is available on the published ordering page. This preview cart is connected to the same shared ordering flow; placing an order requires a published restaurant linked to the backend.
-            </p>
+            <Ed
+              as="p"
+              path="copy.site.cart.note"
+              fallback="Checkout is available on the published ordering page. This preview cart is connected to the same shared ordering flow; placing an order requires a published restaurant linked to the backend."
+              className="mt-3 text-[11px] leading-relaxed text-gray-500"
+              multiline
+              label="editor.inline.f.note"
+            />
             <button type="button" onClick={onCheckout ? onCheckout : undefined} disabled={!onCheckout} className={`mt-3 w-full rounded-xl py-2.5 text-sm font-semibold text-white transition ${onCheckout ? 'bg-primary hover:bg-primary-dark' : 'cursor-not-allowed bg-gray-300 text-gray-700'}`}>
-              Checkout
+              <Ed path="copy.site.cart.checkout" fallback="Checkout" label="editor.inline.f.cart" />
             </button>
           </div>
         )}
@@ -233,12 +245,14 @@ function SiteHeader({
   anchor,
   prefix,
   onOpenCart,
+  orderingEnabled = true,
 }: {
   r: Restaurant
   nav: SectionId[]
   anchor: (id: string) => string
   prefix: string
   onOpenCart: () => void
+  orderingEnabled?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const { t } = useI18n()
@@ -285,18 +299,20 @@ function SiteHeader({
               label="editor.inline.f.headerBtn"
             />
           </a>
-          <button
-            type="button"
-            onClick={onOpenCart}
-            className="rs-btn rs-header__cta"
-            style={{ marginLeft: '0.5rem', display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}
-            aria-label={t('web.site.cart', { defaultValue: 'Cart' })}
-          >
-            {t('web.site.cart', { defaultValue: 'Cart' })}
-            <span className="rs-cart-badge" style={{ minWidth: '1.4rem', height: '1.4rem', lineHeight: '1.4rem', textAlign: 'center', borderRadius: '999px', background: 'var(--rs-accent)', color: 'var(--rs-on-button)', fontSize: '0.72rem', fontWeight: 700 }}>
-              {cartCount}
-            </span>
-          </button>
+          {orderingEnabled ? (
+            <button
+              type="button"
+              onClick={onOpenCart}
+              className="rs-btn rs-header__cta"
+              style={{ marginLeft: '0.5rem', display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}
+              aria-label={t('web.site.cart', { defaultValue: 'Cart' })}
+            >
+              <Ed as="span" path="copy.site.cart.title" fallback={t('web.site.cart', { defaultValue: 'Cart' })} label="editor.inline.f.cart" />
+              <span className="rs-cart-badge" style={{ minWidth: '1.4rem', height: '1.4rem', lineHeight: '1.4rem', textAlign: 'center', borderRadius: '999px', background: 'var(--rs-accent)', color: 'var(--rs-on-button)', fontSize: '0.72rem', fontWeight: 700 }}>
+                {cartCount}
+              </span>
+            </button>
+          ) : null}
           <button
             type="button"
             className="rs-burger"
@@ -679,14 +695,14 @@ function Badges({ item }: { item: MenuItem }) {
   const { t } = useI18n()
   if (item.available && item.featured) {
     return (
-      <span className="rs-badge">{t('web.site.badges.chefsPick')}</span>
+      <span className="rs-badge"><Ed path="copy.site.badges.chefsPick" fallback={t('web.site.badges.chefsPick')} label="editor.inline.f.badge" /></span>
     )
   }
   if (item.available && item.popular) {
-    return <span className="rs-badge rs-badge--soft">{t('web.site.badges.popular')}</span>
+    return <span className="rs-badge rs-badge--soft"><Ed path="copy.site.badges.popular" fallback={t('web.site.badges.popular')} label="editor.inline.f.badge" /></span>
   }
   if (!item.available) {
-    return <span className="rs-badge rs-badge--muted">{t('web.site.badges.soldOut')}</span>
+    return <span className="rs-badge rs-badge--muted"><Ed path="copy.site.badges.soldOut" fallback={t('web.site.badges.soldOut')} label="editor.inline.f.badge" /></span>
   }
   return null
 }
@@ -772,6 +788,17 @@ function FeaturedSection({ r, prefix }: { r: Restaurant; prefix: string }) {
   )
 }
 
+/** live dish count for the `{count}` placeholder in editable chip copy */
+function dishCount(restaurant: Restaurant): number {
+  return restaurant.menu.reduce((sum, c) => sum + c.items.length, 0)
+}
+
+/** `{count}` tokens get replaced; legacy saved strings with a baked-in number get their first number swapped */
+function dishCountFormat(count: number) {
+  const n = String(count)
+  return (raw: string) => (raw.includes('{count}') ? raw.split('{count}').join(n) : raw.replace(/\d+/, n))
+}
+
 function addToCart(restaurant: Restaurant, item: MenuItem) {
   useCartStore.getState().add({
     restaurantId: restaurant.id,
@@ -784,7 +811,7 @@ function addToCart(restaurant: Restaurant, item: MenuItem) {
   })
 }
 
-function MenuCard({ item, base, restaurant, editable = false, onDelete }: { item: MenuItem; base: string; restaurant: Restaurant; editable?: boolean; onDelete?: () => void }) {
+function MenuCard({ item, base, restaurant, editable = false, onDelete, orderingEnabled = true }: { item: MenuItem; base: string; restaurant: Restaurant; editable?: boolean; onDelete?: () => void; orderingEnabled?: boolean }) {
   const { t } = useI18n()
   return (
     <article className={cx('rs-item group relative overflow-hidden rounded-2xl bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md', !item.available && 'rs-item--out')}>
@@ -802,7 +829,7 @@ function MenuCard({ item, base, restaurant, editable = false, onDelete }: { item
             {editable && onDelete ? (
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this item?')) onDelete() }}
+                onClick={async (e) => { e.stopPropagation(); if (await confirmDialog({ title: t('editor.deleteItemTitle', { defaultValue: 'حذف الصنف؟' }), message: t('editor.deleteItemConfirm', { defaultValue: 'سيتم حذف هذا الصنف من القائمة.' }), confirmLabel: t('common.delete'), cancelLabel: t('common.cancel'), tone: 'danger' })) onDelete() }}
                 className="flex h-6 w-6 items-center justify-center rounded-full bg-[rgba(220,38,38,0.92)] text-[13px] leading-none text-white transition hover:bg-[rgba(220,38,38,1)]"
                 aria-label="Delete item"
                 title="Delete item"
@@ -820,23 +847,23 @@ function MenuCard({ item, base, restaurant, editable = false, onDelete }: { item
           label="editor.inline.f.dishDesc"
         />
         {!item.available ? (
-          <span className="rs-item__out-label">{t('web.site.availability.backTomorrow')}</span>
-        ) : (
+          <Ed as="span" path="copy.site.availability.backTomorrow" fallback={t('web.site.availability.backTomorrow')} className="rs-item__out-label" label="editor.inline.f.note" />
+        ) : orderingEnabled ? (
           <button
             type="button"
             onClick={() => addToCart(restaurant, item)}
             className="rs-btn"
             style={{ marginTop: '0.5rem', display: 'inline-block', fontSize: '0.85rem', padding: '0.35rem 0.7rem' }}
           >
-            {t('web.site.menu.add', { defaultValue: 'Add to cart' })}
+            <Ed as="span" path="copy.site.menu.add" fallback={t('web.site.menu.add', { defaultValue: 'Add to cart' })} label="editor.inline.f.addButton" />
           </button>
-        )}
+        ) : null}
       </div>
     </article>
   )
 }
 
-function MenuRow({ item, base, restaurant, editable = false, onDelete }: { item: MenuItem; base: string; restaurant: Restaurant; editable?: boolean; onDelete?: () => void }) {
+function MenuRow({ item, base, restaurant, editable = false, onDelete, orderingEnabled = true }: { item: MenuItem; base: string; restaurant: Restaurant; editable?: boolean; onDelete?: () => void; orderingEnabled?: boolean }) {
   const { t } = useI18n()
   return (
     <article className={cx('rs-item group relative overflow-hidden rounded-2xl bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md', !item.available && 'rs-item--out')}>
@@ -851,7 +878,7 @@ function MenuRow({ item, base, restaurant, editable = false, onDelete }: { item:
             {editable && onDelete ? (
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this item?')) onDelete() }}
+                onClick={async (e) => { e.stopPropagation(); if (await confirmDialog({ title: t('editor.deleteItemTitle', { defaultValue: 'حذف الصنف؟' }), message: t('editor.deleteItemConfirm', { defaultValue: 'سيتم حذف هذا الصنف من القائمة.' }), confirmLabel: t('common.delete'), cancelLabel: t('common.cancel'), tone: 'danger' })) onDelete() }}
                 className="flex h-6 w-6 items-center justify-center rounded-full bg-[rgba(220,38,38,0.92)] text-[13px] leading-none text-white transition hover:bg-[rgba(220,38,38,1)]"
                 aria-label="Delete item"
                 title="Delete item"
@@ -871,17 +898,17 @@ function MenuRow({ item, base, restaurant, editable = false, onDelete }: { item:
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.15rem' }}>
           <Badges item={item} />
           {!item.available ? (
-            <span className="rs-item__out-label">{t('web.site.availability.unavailable')}</span>
+            <Ed as="span" path="copy.site.availability.unavailable" fallback={t('web.site.availability.unavailable')} className="rs-item__out-label" label="editor.inline.f.note" />
           ) : null}
         </div>
-        {item.available ? (
+        {item.available && orderingEnabled ? (
           <button
             type="button"
             onClick={() => addToCart(restaurant, item)}
             className="rs-btn"
             style={{ marginTop: '0.35rem', display: 'inline-block', fontSize: '0.85rem', padding: '0.35rem 0.7rem' }}
           >
-            {t('web.site.menu.add', { defaultValue: 'Add to cart' })}
+            <Ed as="span" path="copy.site.menu.add" fallback={t('web.site.menu.add', { defaultValue: 'Add to cart' })} label="editor.inline.f.addButton" />
           </button>
         ) : null}
       </div>
@@ -889,51 +916,56 @@ function MenuRow({ item, base, restaurant, editable = false, onDelete }: { item:
   )
 }
 
-function MenuBoardItem({ item, restaurant }: { item: MenuItem; restaurant: Restaurant }) {
+function MenuBoardItem({ item, base, restaurant, orderingEnabled = true }: { item: MenuItem; base: string; restaurant: Restaurant; orderingEnabled?: boolean }) {
+  const { t } = useI18n()
   return (
     <article className="rs-board-item">
       <div className="rs-board-item__row">
-        <h3 className="rs-board-item__name">{item.name}</h3>
+        <Ed as="h3" path={`${base}.name`} className="rs-board-item__name" label="editor.inline.f.dishName" />
         <span className="rs-board-item__dots" />
-        <span className="rs-board-item__price">{money(item.price)}</span>
+        <Ed numeric path={`${base}.price`} format={moneyFormat} as="span" className="rs-board-item__price" label="editor.inline.f.price" />
       </div>
-      {item.description ? <p className="rs-board-item__desc">{item.description}</p> : null}
-      <button type="button" className="rs-board-item__add" onClick={() => addToCart(restaurant, item)}>
-        Add
-      </button>
+      {item.description ? <Ed as="p" path={`${base}.description`} className="rs-board-item__desc" multiline label="editor.inline.f.dishDesc" /> : null}
+      {orderingEnabled ? (
+        <button type="button" className="rs-board-item__add" onClick={() => addToCart(restaurant, item)}>
+          <Ed path="copy.site.menu.addShort" fallback={t('web.site.menu.addShort', { defaultValue: 'Add' })} label="editor.inline.f.addButton" />
+        </button>
+      ) : null}
     </article>
   )
 }
 
-function MenuCompactItem({ item, base, restaurant, editable = false, onDelete }: { item: MenuItem; base: string; restaurant: Restaurant; editable?: boolean; onDelete?: () => void }) {
+function MenuCompactItem({ item, base, restaurant, editable = false, onDelete, orderingEnabled = true }: { item: MenuItem; base: string; restaurant: Restaurant; editable?: boolean; onDelete?: () => void; orderingEnabled?: boolean }) {
   return (
     <article className="rs-compact-item">
       <div className="rs-compact-item__thumb"><EdImage path={`${base}.image`} src={item.image} alt={item.name} label="editor.inline.f.photo" style={imageFitStyle(item.imageFit) as any} /></div>
       <div className="rs-compact-item__body">
-        <h3 className="rs-compact-item__name">{item.name}</h3>
-        <p className="rs-compact-item__desc">{item.description}</p>
+        <Ed as="h3" path={`${base}.name`} className="rs-compact-item__name" label="editor.inline.f.dishName" />
+        <Ed as="p" path={`${base}.description`} className="rs-compact-item__desc" multiline label="editor.inline.f.dishDesc" />
       </div>
-      <span className="rs-compact-item__price">{money(item.price)}</span>
-      <button type="button" className="rs-compact-item__add" onClick={() => addToCart(restaurant, item)}>+</button>
+      <Ed numeric path={`${base}.price`} format={moneyFormat} as="span" className="rs-compact-item__price" label="editor.inline.f.price" />
+      {orderingEnabled ? (
+        <button type="button" className="rs-compact-item__add" onClick={() => addToCart(restaurant, item)}>+</button>
+      ) : null}
       {editable && onDelete ? <button type="button" onClick={onDelete} className="rs-compact-item__del" aria-label="Delete">×</button> : null}
     </article>
   )
 }
 
-function MenuItemsGrid({ items, baseFor, restaurant, editable = false }: { items: MenuItem[]; baseFor: (index: number, item: MenuItem) => { base: string; onDelete?: () => void }; restaurant: Restaurant; editable?: boolean; onMenuEdit?: any }) {
+function MenuItemsGrid({ items, baseFor, restaurant, editable = false, orderingEnabled = true }: { items: MenuItem[]; baseFor: (index: number, item: MenuItem) => { base: string; onDelete?: () => void }; restaurant: Restaurant; editable?: boolean; onMenuEdit?: any; orderingEnabled?: boolean }) {
   const layout = restaurant.design.layout.menuLayout
-  if (layout === 'board') return <div className="rs-board">{items.map((it) => <MenuBoardItem key={it.id} item={it} restaurant={restaurant} />)}</div>
-  if (layout === 'compact') return <div className="rs-compact">{items.map((it, idx) => { const { base, onDelete } = baseFor(idx, it); return <MenuCompactItem key={it.id} item={it} base={base} restaurant={restaurant} editable={editable} onDelete={onDelete} /> })}</div>
-  if (layout === 'deck') return <div className="rs-deck">{items.map((it, idx) => { const { base, onDelete } = baseFor(idx, it); return <MenuCard key={it.id} item={it} base={base} restaurant={restaurant} editable={editable} onDelete={onDelete} /> })}</div>
+  if (layout === 'board') return <div className="rs-board">{items.map((it, idx) => { const { base } = baseFor(idx, it); return <MenuBoardItem key={it.id} item={it} base={base} restaurant={restaurant} orderingEnabled={orderingEnabled} /> })}</div>
+  if (layout === 'compact') return <div className="rs-compact">{items.map((it, idx) => { const { base, onDelete } = baseFor(idx, it); return <MenuCompactItem key={it.id} item={it} base={base} restaurant={restaurant} editable={editable} onDelete={onDelete} orderingEnabled={orderingEnabled} /> })}</div>
+  if (layout === 'deck') return <div className="rs-deck">{items.map((it, idx) => { const { base, onDelete } = baseFor(idx, it); return <MenuCard key={it.id} item={it} base={base} restaurant={restaurant} editable={editable} onDelete={onDelete} orderingEnabled={orderingEnabled} /> })}</div>
   const listMode = layout === 'list'
   return (
     <div className={listMode ? 'rs-list' : 'rs-menu__grid'}>
-      {items.map((it, idx) => { const { base, onDelete } = baseFor(idx, it); return listMode ? <MenuRow key={it.id} item={it} base={base} restaurant={restaurant} editable={editable} onDelete={onDelete} /> : <MenuCard key={it.id} item={it} base={base} restaurant={restaurant} editable={editable} onDelete={onDelete} /> })}
+      {items.map((it, idx) => { const { base, onDelete } = baseFor(idx, it); return listMode ? <MenuRow key={it.id} item={it} base={base} restaurant={restaurant} editable={editable} onDelete={onDelete} orderingEnabled={orderingEnabled} /> : <MenuCard key={it.id} item={it} base={base} restaurant={restaurant} editable={editable} onDelete={onDelete} orderingEnabled={orderingEnabled} /> })}
     </div>
   )
 }
 
-function MenuSection({ r, prefix, editable = false, onMenuEdit }: { r: Restaurant; prefix: string; editable?: boolean; onMenuEdit?: (recipe: (draft: Restaurant) => void) => void }) {
+function MenuSection({ r, prefix, editable = false, onMenuEdit, orderingEnabled = true }: { r: Restaurant; prefix: string; editable?: boolean; onMenuEdit?: (recipe: (draft: Restaurant) => void) => void; orderingEnabled?: boolean }) {
   const { t } = useI18n()
   const categories: MenuCategory[] = editable ? r.menu : r.menu.filter((c) => c.items.length > 0)
   const [selected, setSelected] = useState<string | null>(null)
@@ -982,12 +1014,12 @@ function MenuSection({ r, prefix, editable = false, onMenuEdit }: { r: Restauran
             title={t('web.site.menu.title', { defaultValue: 'Menu' } as any) || 'Menu'}
             sub={t('web.site.menu.noteFallback')}
             split
-            action={<span className="rs-chip">{t('web.site.menu.dishesCount', { count: r.menu.reduce((s, c) => s + c.items.length, 0) })}</span>}
+            action={<span className="rs-chip"><Ed path="copy.site.menu.dishesCount" fallback={t('web.site.menu.dishesCount', { count: dishCount(r) })} format={dishCountFormat(dishCount(r))} label="editor.inline.f.note" /></span>}
           />
           <div className="rs-menu__sticky" role="tablist" aria-label={t('web.site.menu.categoriesAria')}>
             {categories.map((cat) => (
               <button key={cat.id} type="button" data-tab-id={cat.id} aria-selected={activeId === cat.id} role="tab" className={`rs-menu__tab rs-menu__tab--sticky${activeId === cat.id ? ' is-active' : ''}`} onClick={() => scrollToCat(cat.id)}>
-                {cat.name}<span className="rs-menu__count">{cat.items.length}</span>
+                <Ed path={`menu.${r.menu.indexOf(cat)}.name`} fallback={cat.name} label="editor.inline.f.category" /><span className="rs-menu__count">{cat.items.length}</span>
               </button>
             ))}
           </div>
@@ -997,12 +1029,13 @@ function MenuSection({ r, prefix, editable = false, onMenuEdit }: { r: Restauran
               return (
                 <div key={cat.id} id={`${prefix}cat-${cat.id}`} data-cat-id={cat.id} ref={(el) => { if (el) sectionRefs.current.set(cat.id, el); else sectionRefs.current.delete(cat.id) }} className="rs-menu-cat">
                   <header className="rs-menu-cat__head">
-                    <h3 className="rs-menu-cat__title">{cat.name}</h3>
-                    {cat.note ? <p className="rs-menu-cat__note">{cat.note}</p> : null}
+                    <h3 className="rs-menu-cat__title"><Ed path={`menu.${idx}.name`} fallback={cat.name} label="editor.inline.f.category" /></h3>
+                    {cat.note ? <Ed as="p" path={`menu.${idx}.note`} fallback={cat.note} className="rs-menu-cat__note" multiline label="editor.inline.f.note" /> : null}
                   </header>
                   <MenuItemsGrid
                     items={cat.items}
                     restaurant={r}
+                    orderingEnabled={orderingEnabled}
                     baseFor={(itemIdx) => ({ base: `menu.${idx}.items.${itemIdx}` })}
                   />
                 </div>
@@ -1027,9 +1060,7 @@ function MenuSection({ r, prefix, editable = false, onMenuEdit }: { r: Restauran
           split
           action={
             <span className="rs-chip" style={{ alignSelf: 'flex-start' }}>
-              {t('web.site.menu.dishesCount', {
-                count: r.menu.reduce((sum, c) => sum + c.items.length, 0),
-              })}
+              <Ed path="copy.site.menu.dishesCount" fallback={t('web.site.menu.dishesCount', { count: dishCount(r) })} format={dishCountFormat(dishCount(r))} label="editor.inline.f.note" />
             </span>
           }
         />
@@ -1045,8 +1076,8 @@ function MenuSection({ r, prefix, editable = false, onMenuEdit }: { r: Restauran
             }}
           >
             <Icon name="book" size={26} />
-            <p style={{ marginTop: '0.7rem', fontWeight: 600 }}>{t('web.site.menu.updating')}</p>
-            <p style={{ fontSize: '0.9em' }}>{t('web.site.menu.updatingSub')}</p>
+            <Ed as="p" path="copy.site.menu.updating" fallback={t('web.site.menu.updating')} style={{ marginTop: '0.7rem', fontWeight: 600 }} label="editor.inline.f.note" />
+            <Ed as="p" path="copy.site.menu.updatingSub" fallback={t('web.site.menu.updatingSub')} style={{ fontSize: '0.9em' }} label="editor.inline.f.note" />
           </div>
         ) : (
           <>
@@ -1064,7 +1095,7 @@ function MenuSection({ r, prefix, editable = false, onMenuEdit }: { r: Restauran
                   className="rs-menu__tab"
                   onClick={() => setSelected(category.id)}
                 >
-                  {category.name}
+                  <Ed path={`menu.${r.menu.indexOf(category)}.name`} fallback={category.name} label="editor.inline.f.category" />
                   <span className="rs-menu__count">{category.items.length}</span>
                 </button>
               ))}
@@ -1092,6 +1123,7 @@ function MenuSection({ r, prefix, editable = false, onMenuEdit }: { r: Restauran
               items={current?.items || []}
               restaurant={r}
               editable={editable}
+              orderingEnabled={orderingEnabled}
               baseFor={(itemIdx) => {
                 const onDelete = editable && onMenuEdit
                   ? () => onMenuEdit((draft) => {
@@ -1529,7 +1561,7 @@ function SiteFooter({
             />
           </span>
           <span>
-            {t('web.site.footer.publishedWith')} <strong>Digital Menu</strong> · {r.slug}.example.com
+            <Ed path="copy.site.footer.publishedWith" fallback={t('web.site.footer.publishedWith')} label="editor.inline.f.footerTitle" /> <strong>Digital Menu</strong> · {r.slug}.example.com
           </span>
         </div>
       </div>

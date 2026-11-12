@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { apiUrl } from '../../shared/api/url.ts'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Icon, Wordmark } from '../../shared/ui/icons.tsx'
 import { Button, Card, ChoiceCard, Img, Input, Segmented } from '../../shared/ui/ui.tsx'
@@ -322,7 +323,7 @@ export default function SignIn() {
     if (hadDraft && savedTemplateId && backendResponse?.user?.restaurant_id) {
       try {
         // Use the restaurant update API to apply the saved template/design
-        const updateRes = await fetch(`/api/restaurants/${backendResponse.user.restaurant_id}`, {
+        const updateRes = await fetch(apiUrl(`/api/restaurants/${backendResponse.user.restaurant_id}`), {
           method: 'PUT',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
