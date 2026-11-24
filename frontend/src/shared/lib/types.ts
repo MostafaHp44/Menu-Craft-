@@ -42,7 +42,7 @@ export interface TypographyConfig {
 }
 
 export type HeaderStyle = 'split' | 'centered' | 'minimal'
-export type HeroStyle = 'fullscreen' | 'split' | 'editorial'
+export type HeroStyle = 'fullscreen' | 'split' | 'editorial' | 'magazine'
 export type MenuLayout = 'grid' | 'list' | 'board' | 'deck' | 'compact'
 export type CardStyle = 'bordered' | 'elevated' | 'flat'
 export type ImageAspect = 'square' | 'portrait' | 'landscape' | 'wide'
@@ -60,8 +60,9 @@ export interface LayoutConfig {
   aspect: ImageAspect
   theme: ThemeMode
   /** Structural variant for the public site. `classic` keeps the shared renderer;
-   *  `krispy` enables the donut-shop treatment (green/red branding, banner chips, price-first list). */
-  variant?: 'classic' | 'krispy'
+   *  `krispy` enables the donut-shop treatment (green/red branding, banner chips, price-first list);
+   *  `aurum` renders the dedicated dark/gold renderer (designs/aurum, template `aurum-lounge`). */
+  variant?: 'classic' | 'krispy' | 'aurum' | 'caffe-brew' | 'basta' | 'dabba' | 'noir-bistro' | 'fast-food-menu' | 'desserts-menu' | 'tavern'
   /** `tabs` (default) shows one category at a time. `scroll-sticky` stacks all
    *  categories vertically under sticky tabs with scrollspy: scrolling
    *  highlights the tab of the section in view, clicking a tab scrolls to it. */
@@ -92,6 +93,12 @@ export interface MenuItem {
   isGf?: boolean
   isSpicy?: boolean
   isSpecial?: boolean
+  /** option groups from the public API (`options.groups`) — absent on classic data */
+  optionGroups?: PublicMenuItemOptionGroup[]
+  /** nutritional data — shown only when the API provides it */
+  calories?: number
+  ingredients?: string
+  allergens?: string[]
 }
 
 export interface MenuCategory {
@@ -124,6 +131,7 @@ export type DemoPlanId = 'trial' | 'starter' | 'professional' | 'business'
 export type LogoStyle = 'monogram' | 'wordmark' | 'badge'
 
 import { type Multilang } from '../i18n'
+import type { PublicMenuItemOptionGroup } from '../types/public'
 
 export interface ImageFit {
   position?: string
@@ -160,6 +168,8 @@ export interface Restaurant {
   description: string | Multilang
   logoText: string | Multilang
   logoStyle: LogoStyle
+  /** optional logo image — overrides the monogram when set */
+  logoImage?: string
   heroImage: string
   heroImageFit?: ImageFit
   /** optional mobile (9:16) variant of heroImage — desktop uses heroImage (16:9) */

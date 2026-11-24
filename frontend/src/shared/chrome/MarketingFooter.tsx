@@ -18,9 +18,11 @@ const COLUMNS: Array<{ title: TKey; links: FooterLink[] }> = [
     title: 'nav.templates',
     links: [
       { label: 'web.footer.allTemplates', to: '/templates' },
-      { name: 'The Royal', to: '/templates/the-royal' },
-      { name: 'Bella Italia', to: '/templates/bella-italia' },
-      { name: 'Urban Cafe', to: '/templates/urban-cafe' },
+      { name: 'Kreme Deals', to: '/templates/kreme-deals' },
+      { name: 'Aurum Lounge', to: '/templates/aurum-lounge' },
+      { name: 'BREWNI Coffee', to: '/templates/caffe-brew' },
+      { name: 'Basta', to: '/templates/basta' },
+      { name: 'Dabba', to: '/templates/dabba' },
     ],
   },
   {

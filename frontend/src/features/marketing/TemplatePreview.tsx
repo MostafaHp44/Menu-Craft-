@@ -111,7 +111,12 @@ export default function TemplatePreview() {
                 <Icon name="smartphone" size={15} />
               </button>
             </div>
-            <Button size="sm" variant="outline" to="/menu-demo" icon="external" className="hidden md:inline-flex">
+            <Button
+              size="sm"
+              variant="outline"
+              to={`/menu-demo?template=${encodeURIComponent(template.id)}`}
+              icon="external"
+            >
               {t('web.preview.liveMenu')}
             </Button>
             <Button size="sm" variant="accent" icon="arrowRight" onClick={() => customize(template.id)}>

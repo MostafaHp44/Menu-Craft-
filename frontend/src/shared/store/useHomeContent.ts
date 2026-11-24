@@ -86,14 +86,16 @@ export type HomeSectionKey = keyof HomeContent
 const SEED_EN: HomeContent = {
   hero: {
     enabled: true,
-    eyebrow: 'The digital menu builder for food businesses',
-    title: 'Your Restaurant Menu.\nYour Brand. *Your Rules.*',
-    sub: 'Create a beautiful digital menu for your restaurant, cafe, or bakery. Choose your design, customize every detail, and share your menu with the world — no coding required.',
-    cta: 'Explore Templates',
+    eyebrow: 'Your restaurant menu, live in minutes',
+    title: 'Digital Menu',
+    sub: '',
+    cta: 'Explore templates',
     secondaryCta: 'Explore the Editor',
     // the hero uses the live restaurant preview as its visual — no photo today
     image: '',
-    variant: 'menu-alive',
+    variant: 'scroll-hero',
+    textColors: { eyebrow: '#0e0ad8', title: '#0e0ad8', sub: '#ffffff' },
+    textSizes: { title: 100, sub: 100 },
     note: 'A real Digital Menu preview — the same renderer that powers the editor and the published site.',
   },
   templates: {
@@ -190,9 +192,9 @@ const SEED_EN: HomeContent = {
 const SEED_AR: HomeContent = {
   hero: {
     enabled: true,
-    eyebrow: 'منشئ القوائم الرقمية لأعمال المطاعم',
-    title: 'قائمة مطعمك.\nعلامتك التجارية. *شروطك أنت.*',
-    sub: 'أنشئ قائمة رقمية جميلة لمطعمك أو مقهاك أو مخبزك. اختر تصميمك، وخصّص كل تفصيلة، وشارك قائمتك مع العالم — دون أي برمجة.',
+    eyebrow: 'منيو مطعمك جاهز في دقائق',
+    title: 'Digital Menu',
+    sub: '',
     cta: 'تصفّح القوالب',
     secondaryCta: 'تصفّح المحرّر',
     image: '',

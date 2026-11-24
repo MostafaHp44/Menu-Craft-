@@ -1,1258 +1,687 @@
-import { Fragment, useMemo, useState, useRef, useEffect } from 'react'
-import { gsap } from 'gsap'
-import CinematicHero from './CinematicHero.tsx'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform, useMotionValue } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { BrowserFrame, PhoneFrame, ScaledFrame } from '../../shared/ui/ScaledFrame.tsx'
-import { Icon } from '../../shared/ui/icons.tsx'
-import { MarketingFooter } from '../../shared/chrome/MarketingFooter.tsx'
 import { MarketingHeader } from '../../shared/chrome/MarketingHeader.tsx'
-import { RestaurantSite } from '../../templates/site/RestaurantSite.tsx'
-import { Badge, Button, SectionHeading, Sparkline } from '../../shared/ui/ui.tsx'
+import { MarketingFooter } from '../../shared/chrome/MarketingFooter.tsx'
+import { Icon } from '../../shared/ui/icons.tsx'
+import { Button, Badge } from '../../shared/ui/ui.tsx'
 import { PLANS } from '../../shared/lib/demoData.ts'
-import { useCustomize } from '../../shared/lib/hooks.ts'
-import { PALETTE_PRESETS } from '../../templates/data/palettes.ts'
-import { TEMPLATES } from '../../templates/data/templates.ts'
-import type { ColorSet, FontId } from '../../shared/lib/types.ts'
-import { cx } from '../../shared/lib/utils.ts'
-import type { Restaurant } from '../../shared/lib/types.ts'
-import { useI18n } from '../../shared/i18n'
-import type { TKey, Lang } from '../../shared/i18n'
+import { useCustomize, publicSiteLink } from '../../shared/lib/hooks.ts'
 import { useActiveRestaurant } from '../../shared/store/useStore.ts'
-import { useScrollReveal } from '../../shared/lib/useScrollReveal.ts'
-import { ScrollProgressBar } from '../../shared/ui/ScrollProgressBar.tsx'
-import { DraggableScrollbar } from '../../shared/ui/DraggableScrollbar.tsx'
-import { CustomCursor } from '../../shared/ui/CustomCursor.tsx'
-import { PageIntro } from '../../shared/ui/PageIntro.tsx'
-import { SectionDivider } from '../../shared/ui/SectionDivider.tsx'
-import { Marquee } from '../../shared/ui/Marquee.tsx'
-import { MagneticButton } from '../../shared/ui/MagneticButton.tsx'
-import { SplitText } from '../../shared/ui/SplitText.tsx'
-import { ParallaxLayer } from '../../shared/ui/ParallaxLayer.tsx'
-import { ShapeMorph } from '../../shared/ui/ShapeMorph.tsx'
-import { MaskTextReveal } from '../../shared/ui/MaskTextReveal.tsx'
-import { StaggerList } from '../../shared/ui/StaggerList.tsx'
-import { WaveBackground } from '../../shared/ui/WaveBackground.tsx'
-import { DeviceMockup } from '../../shared/ui/DeviceMockup.tsx'
-import { FloatingVideo } from '../../shared/ui/FloatingVideo.tsx'
-import { HOME_SEED, useHomeContentByLang } from '../../shared/store/useHomeContent.ts'
-import type { HomeContent, HomeContentByLang } from '../../shared/store/useHomeContent.ts'
+import { TEMPLATES, getTemplate } from '../../templates/data/templates.ts'
+import MiniMenuScreen from './heroes/MiniMenuScreen.tsx'
+import ScrollHero from './heroes/ScrollHero.tsx'
+import { useI18n } from '../../shared/i18n'
+import CinematicStageHero from './heroes/CinematicStageHero.tsx'
+import LivingPhonesHero from './heroes/LivingPhonesHero.tsx'
+import SingleFocusHero from './heroes/SingleFocusHero.tsx'
+import StoryboardHero from './heroes/StoryboardHero.tsx'
+import TemplateSpotlightHero from './heroes/TemplateSpotlightHero.tsx'
+import { useHomeContentByLang } from '../../shared/store/useHomeContent.ts'
+import { cx } from '../../shared/lib/utils.ts'
 
-/* ------------------------- store copy → rendered copy ------------------------ */
+const ease: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
-/**
- * Stored titles may contain `*accent*` spans and `\n` line breaks — the seed
- * copy uses them to reproduce the original hand-written markup exactly.
- */
-function AccentText({ text, accentClass = 'text-flame' }: { text: string; accentClass?: string }) {
+function Reveal({
+  children,
+  delay = 0,
+  className,
+}: {
+  children: ReactNode
+  delay?: number
+  className?: string
+}) {
+  const reduce = useReducedMotion()
   return (
-    <>
-      {text.split('\n').map((line, lineIndex) => (
-        <Fragment key={lineIndex}>
-          {lineIndex > 0 ? <br /> : null}
-          {line.split(/(\*[^*]+\*)/g).map((part, partIndex) =>
-            part.length > 2 && part.startsWith('*') && part.endsWith('*') ? (
-              <span key={partIndex} className={accentClass}>
-                {part.slice(1, -1)}
-              </span>
-            ) : (
-              part
-            )
-          )}
-        </Fragment>
-      ))}
-    </>
+    <motion.div
+      className={className}
+      initial={reduce ? false : { opacity: 0, y: 26 }}
+      whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.18 }}
+      transition={{ duration: 0.72, delay, ease }}
+    >
+      {children}
+    </motion.div>
   )
 }
 
-/** an emptied field falls back to the next candidate, so the page can never look broken */
-function firstText(...candidates: (string | undefined)[]): string {
-  for (const candidate of candidates) {
-    if (candidate && candidate.trim()) return candidate
-  }
-  return ''
+
+
+function Hero() {
+  const { t, lang } = useI18n();
+  const restaurant = useActiveRestaurant();
+  const reduce = useReducedMotion();
+
+  const stageRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: stageRef,
+    offset: ["start end", "end start"],
+  });
+
+  const stageParallax = useTransform(scrollYProgress, [0, 1], [18, -18]);
+  const pointerX = useMotionValue(0);
+  const pointerParallax = useTransform(pointerX, [-0.5, 0.5], [-7, 7]);
+
+  // the three phones show real menu screens — same templates as the screenshots
+  const heroTemplates = [
+    getTemplate('aurum-lounge'),
+    getTemplate('caffe-brew'),
+    getTemplate('basta'),
+  ];
+
+  // split the i18n title into two colourable words (stays admin/i18n editable)
+  const titleWords = t("homeV2.titleA").trim().split(/\s+/);
+  const titleFirst = titleWords[0] || "Digital";
+  const titleSecond = titleWords.slice(1).join(" ") || "Menu";
+
+  const qrScans = new Intl.NumberFormat(
+    lang === "ar"
+      ? "ar-EG"
+      : lang === "ku"
+        ? "ckb-IQ"
+        : "en-US",
+  ).format(restaurant.stats?.qrScans ?? 0);
+
+  const [live, setLive] = useState(true);
+
+  return (
+    <section
+      id="home"
+      className="mc-hero relative isolate overflow-hidden bg-[#08090b] pb-12 pt-28 text-white sm:pb-20 sm:pt-32 lg:min-h-[calc(100svh-5rem)] lg:pb-16 lg:pt-24"
+    >
+      {/* Background */}
+      <div
+        aria-hidden
+        className="mc-hero-grid pointer-events-none absolute inset-0 opacity-50"
+      />
+
+      <div
+        aria-hidden
+        className="mc-hero-glow pointer-events-none absolute inset-0"
+      />
+
+      <div className="page relative z-10 mx-auto w-full max-w-[1600px] px-4 sm:px-8 lg:px-10">
+        <div className="grid items-center gap-7 lg:min-h-[650px] lg:grid-cols-[0.9fr_1.1fr] lg:gap-5 xl:gap-10">
+          {/* ================= HERO CONTENT ================= */}
+          <div className="relative z-20 mx-auto w-full max-w-[650px] text-center lg:mx-0 lg:text-start">
+            <Reveal>
+              <span className="mc-pill inline-flex items-center gap-2 rounded-full border border-[#0e0ad8]/45 bg-[#0e0ad8]/[0.14] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#0e0ad8] sm:text-[11px]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#0e0ad8] shadow-[0_0_12px_#0e0ad8]" />
+                {t("homeV2.pill")}
+              </span>
+            </Reveal>
+
+            {/* Main title — the two words converge once when the page opens */}
+            <div className="mt-6 sm:mt-7">
+              <h1 className="mc-hero-title mx-auto max-w-[760px] text-[clamp(2.5rem,8vw,6.8rem)] font-semibold leading-[0.98] tracking-[-0.065em] lg:mx-0 lg:text-[clamp(2.8rem,6.2vw,6.8rem)] lg:leading-[0.96]">
+                <span className="inline-flex flex-wrap items-baseline justify-center gap-x-[0.22em] lg:justify-start">
+                  <motion.span
+                    className="text-[#0e0ad8] [text-shadow:0_0_34px_rgba(14,10,216,.35)]"
+                    initial={reduce ? false : { opacity: 0, x: -70, filter: "blur(9px)" }}
+                    animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                    transition={{ duration: 0.9, ease }}
+                  >
+                    {titleFirst}
+                  </motion.span>
+                  <motion.span
+                    className="text-white"
+                    initial={reduce ? false : { opacity: 0, x: 70, filter: "blur(9px)" }}
+                    animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                    transition={{ duration: 0.9, delay: 0.12, ease }}
+                  >
+                    {titleSecond}
+                  </motion.span>
+                </span>
+              </h1>
+            </div>
+
+   
+
+            {/* CTA buttons */}
+            <Reveal
+              delay={0.24}
+              className="mt-7 flex flex-col items-stretch justify-center gap-3 sm:mt-8 sm:flex-row sm:items-center lg:justify-start"
+            >
+              <Link
+                to="/templates"
+                className="inline-flex min-h-14 items-center justify-center gap-3 rounded-full px-7 py-3 text-sm font-bold text-white transition duration-300 hover:-translate-y-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#0e0ad8] sm:min-w-[220px]"
+                style={{ background: '#0e0ad8', boxShadow: '0 12px 38px -14px rgba(14,10,216,.75)' }}
+              >
+                {t("homeV2.primaryCta")}
+                <Icon name="arrowRight" size={16} className="rtl:rotate-180" />
+              </Link>
+
+              <Link
+                to="/dashboard/editor"
+                className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.035] px-7 py-3 text-sm font-semibold text-white/85 transition hover:border-white/40 hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white sm:min-w-[190px]"
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-full border border-white/25">
+                  <Icon name="play" size={10} />
+                </span>
+                {t("homeV2.secondaryCta")}
+              </Link>
+            </Reveal>
+
+            {/* Quick stats */}
+            <Reveal delay={0.32}>
+              <div className="mt-8 flex items-center justify-center gap-10 sm:mt-10 lg:justify-start">
+                <div>
+                  <div className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                    5 min
+                  </div>
+                  <div className="mt-2 text-[11px] text-white/40">
+                    to go live
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                    4.9★
+                  </div>
+                  <div className="mt-2 text-[11px] text-white/40">
+                    owner rating
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+
+          {/* ================= HERO VISUAL ================= */}
+          <motion.div
+            ref={stageRef}
+            style={
+              reduce
+                ? undefined
+                : {
+                    y: stageParallax,
+                    x: pointerParallax,
+                  }
+            }
+            onMouseMove={(event) => {
+              if (reduce) return;
+
+              const bounds = event.currentTarget.getBoundingClientRect();
+
+              if (bounds.width > 0) {
+                pointerX.set(
+                  (event.clientX - bounds.left) / bounds.width - 0.5,
+                );
+              }
+            }}
+            onMouseLeave={() => pointerX.set(0)}
+            className="mc-hero-stage relative mx-auto mt-3 h-[440px] w-full max-w-[680px] xs:h-[470px] sm:mt-5 sm:h-[610px] lg:mt-0 lg:h-[650px] xl:h-[700px]"
+          >
+            {/* Background glows */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-[8%] bottom-[8%] h-32 rounded-full bg-[#0e0ad8]/[0.18] blur-[75px] sm:inset-x-[10%] sm:h-40 sm:blur-[90px]"
+            />
+
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-[12%] rounded-full bg-violet-600/[0.10] blur-[80px] sm:blur-[100px]"
+            />
+
+            {/* ================= BACK PHONE LEFT ================= */}
+            {heroTemplates[1] && (
+              <motion.div
+                className="mc-phone absolute start-[1%] top-[20%] z-10 w-[36%] max-w-[190px] rotate-[-7deg] sm:start-[1%] sm:top-[20%] sm:w-[40%] lg:start-[3%] lg:top-[18%]"
+                initial={
+                  reduce
+                    ? false
+                    : {
+                        opacity: 0,
+                        x: -35,
+                        y: 30,
+                        scale: 0.88,
+                      }
+                }
+                whileInView={
+                  reduce
+                    ? undefined
+                    : {
+                        opacity: 1,
+                        x: 0,
+                        y: 0,
+                        scale: 1,
+                      }
+                }
+                viewport={{ once: true }}
+                transition={{ duration: 0.85, delay: 0.2, ease }}
+              >
+                <motion.div
+                  whileInView={reduce ? undefined : { y: [0, -3, 0] }}
+                  viewport={{ once: false, amount: 0.2 }}
+                  transition={{
+                    duration: 9,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  className="rounded-[25px] border-[4px] border-[#343044] bg-[#11101c] p-1.5 shadow-[0_25px_65px_rgba(0,0,0,.65)] sm:rounded-[34px] sm:border-[5px] sm:p-2 sm:shadow-[0_35px_90px_rgba(0,0,0,.65)]"
+                >
+                  <div className="relative h-[255px] overflow-hidden rounded-[19px] bg-[#0b3b2c] sm:h-[390px] sm:rounded-[25px] lg:h-[430px]">
+                    <MiniMenuScreen templateId={heroTemplates[1].id} />
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+
+            {/* ================= BACK PHONE RIGHT ================= */}
+            {heroTemplates[2] && (
+              <motion.div
+                className="mc-phone absolute end-[1%] top-[23%] z-10 w-[36%] max-w-[190px] rotate-[7deg] sm:end-[1%] sm:top-[23%] sm:w-[40%] lg:end-[2%] lg:top-[20%]"
+                initial={
+                  reduce
+                    ? false
+                    : {
+                        opacity: 0,
+                        x: 35,
+                        y: 30,
+                        scale: 0.88,
+                      }
+                }
+                whileInView={
+                  reduce
+                    ? undefined
+                    : {
+                        opacity: 1,
+                        x: 0,
+                        y: 0,
+                        scale: 1,
+                      }
+                }
+                viewport={{ once: true }}
+                transition={{ duration: 0.85, delay: 0.28, ease }}
+              >
+                <motion.div
+                  whileInView={reduce ? undefined : { y: [0, -3, 0] }}
+                  viewport={{ once: false, amount: 0.2 }}
+                  transition={{
+                    duration: 9,
+                    delay: 2.5,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  className="rounded-[25px] border-[4px] border-[#303832] bg-[#0d120e] p-1.5 shadow-[0_25px_65px_rgba(0,0,0,.65)] sm:rounded-[34px] sm:border-[5px] sm:p-2 sm:shadow-[0_35px_90px_rgba(0,0,0,.65)]"
+                >
+                  <div className="relative h-[255px] overflow-hidden rounded-[19px] bg-[#f2eae3] sm:h-[390px] sm:rounded-[25px] lg:h-[430px]">
+                    <MiniMenuScreen templateId={heroTemplates[2].id} />
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+
+            {/* ================= MAIN FRONT PHONE ================= */}
+            {heroTemplates[0] && (
+              <motion.div
+                className="mc-phone absolute start-1/2 top-[5%] z-20 w-[54%] max-w-[230px] -translate-x-1/2 sm:top-[9%] sm:w-[43%] sm:max-w-[285px] lg:top-[7%]"
+                initial={
+                  reduce
+                    ? false
+                    : {
+                        opacity: 0,
+                        y: 45,
+                        scale: 0.82,
+                      }
+                }
+                whileInView={
+                  reduce
+                    ? undefined
+                    : {
+                        opacity: 1,
+                        y: 0,
+                        scale: 1,
+                      }
+                }
+                viewport={{ once: true }}
+                transition={{ duration: 0.95, delay: 0.35, ease }}
+              >
+                <motion.div
+                  whileInView={reduce ? undefined : { y: [0, -3, 0] }}
+                  viewport={{ once: false, amount: 0.2 }}
+                  transition={{
+                    duration: 9,
+                    delay: 5,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  className="rounded-[30px] border-[5px] border-[#30313a] bg-[#0d0e12] p-1.5 shadow-[0_35px_85px_rgba(0,0,0,.72)] sm:rounded-[38px] sm:border-[6px] sm:p-2 sm:shadow-[0_40px_100px_rgba(0,0,0,.72)]"
+                >
+                  <div className="relative h-full overflow-hidden rounded-[23px] bg-[#101010] sm:rounded-[29px]">
+                    <MiniMenuScreen templateId={heroTemplates[0].id} />
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+
+            {/* ================= QR SCANS ANALYTICS ================= */}
+            <motion.div
+              className="mc-float-card absolute start-0 top-[2%] z-30 w-[118px] rounded-xl border border-white/10 bg-[#111813]/95 p-2.5 shadow-2xl backdrop-blur-xl sm:start-0 sm:top-[10%] sm:w-[190px] sm:rounded-2xl sm:p-4"
+              animate={reduce ? undefined : { y: [0, -9, 0] }}
+              transition={{
+                duration: 6,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            >
+              <div className="flex items-center justify-between gap-1 text-[8px] text-white/55 sm:text-[11px]">
+                <span className="truncate">{t("homeV2.scans")}</span>
+                <span className="shrink-0 rounded-full bg-[#0e0ad8]/15 px-1.5 py-1 text-[8px] font-bold text-[#0e0ad8] sm:px-2 sm:text-[10px]">
+                  +18%
+                </span>
+              </div>
+
+              <div className="mt-2 text-xl font-semibold tracking-tight text-white sm:mt-3 sm:text-3xl">
+                {qrScans}
+              </div>
+
+              <div className="mt-2 flex h-6 items-end gap-1 sm:mt-4 sm:h-10 sm:gap-1.5">
+                {[35, 54, 43, 72, 57, 88, 68, 100, 77].map((height, index) => (
+                  <span
+                    key={index}
+                    className="flex-1 rounded-t bg-gradient-to-t from-[#8ab63d] to-[#d4fa83]"
+                    style={{ height: `${height}%` }}
+                  />
+                ))}
+              </div>
+
+              <div className="mt-1 text-[8px] text-white/35 sm:mt-2 sm:text-[10px]">
+                + {t("homeV2.scans")}
+              </div>
+            </motion.div>
+
+            {/* ================= LIVE EDIT CARD ================= */}
+            <motion.button
+              type="button"
+              onClick={() => setLive((value) => !value)}
+              aria-pressed={live}
+              className="absolute end-0 top-[53%] z-30 flex min-h-11 max-w-[155px] items-center gap-2 rounded-xl border border-white/10 bg-[#111813]/95 p-2 text-start shadow-2xl backdrop-blur-xl transition hover:border-[#0e0ad8]/40 sm:top-[43%] sm:min-h-14 sm:max-w-none sm:gap-3 sm:rounded-2xl sm:p-3.5 lg:end-0"
+              animate={reduce ? undefined : { y: [0, 8, 0] }}
+              transition={{
+                duration: 5.4,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#0e0ad8]/15 text-[#0e0ad8] sm:h-9 sm:w-9 sm:rounded-xl">
+                <Icon name="pencil" size={14} />
+              </span>
+
+              <span className="block min-w-0">
+                <span className="block text-[9px] font-semibold text-white sm:text-[11px]">
+                  {t("homeV2.live")}
+                </span>
+
+                <span className="mt-1 block truncate text-[8px] text-white/45 sm:text-[10px]">
+                  {live ? t("homeV2.priceUpdated") : t("homeV2.preview")}
+                </span>
+              </span>
+
+              <span
+                className={cx(
+                  "relative ms-1 h-4 w-7 shrink-0 rounded-full transition-colors sm:ms-2 sm:h-5 sm:w-9",
+                  live ? "bg-[#0e0ad8]" : "bg-white/20",
+                )}
+              >
+                <span
+                  className={cx(
+                    "absolute top-0.5 h-3 w-3 rounded-full bg-[#10150a] transition-all sm:h-4 sm:w-4",
+                    live ? "end-0.5" : "start-0.5",
+                  )}
+                />
+              </span>
+            </motion.button>
+
+            {/* ================= QR CODE CARD ================= */}
+            <motion.div
+              className="absolute bottom-[1%] start-0 z-30 flex items-center gap-2 rounded-xl border border-white/10 bg-[#111813]/95 p-2 shadow-2xl backdrop-blur-xl sm:bottom-[5%] sm:start-[2%] sm:gap-3 sm:rounded-2xl sm:p-3"
+              animate={reduce ? undefined : { y: [0, -7, 0] }}
+              transition={{
+                duration: 5.8,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            >
+              <span className="rounded-md bg-white p-1 sm:rounded-lg sm:p-1.5">
+                <QRCodeSVG
+                  value={publicSiteLink(restaurant.slug)}
+                  size={36}
+                  className="h-9 w-9 sm:h-[52px] sm:w-[52px]"
+                />
+              </span>
+
+              <span className="max-w-[75px] text-[8px] font-semibold leading-3 text-white sm:max-w-[100px] sm:text-[10px] sm:leading-4">
+                {t("homeV2.scanToOrder")}
+              </span>
+            </motion.div>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
-/** an emptied list falls back to the next candidate list */
-function firstList<T>(...candidates: (T[] | undefined)[]): T[] {
-  for (const candidate of candidates) {
-    if (candidate && candidate.length > 0) return candidate
-  }
-  return []
+
+function Templates({ onCustomize }: { onCustomize: (id: string) => void }) {
+  const { t } = useI18n()
+  const reduce = useReducedMotion()
+  const templates = useMemo(() => TEMPLATES.slice(0, 5), [])
+  const [active, setActive] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const current = templates[active]
+
+  // cycle templates every 5s; hovering / keyboard focus pauses so manual picks stick
+  useEffect(() => {
+    if (reduce || paused) return
+    const id = window.setInterval(() => setActive((i) => (i + 1) % templates.length), 5000)
+    return () => window.clearInterval(id)
+  }, [reduce, paused, templates.length, active])
+
+  return (
+    <section
+      id="templates"
+      className="mc-templates bg-[#0b100d] py-20 text-white sm:py-24 lg:py-28"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setPaused(false)
+      }}
+    >
+      <div className="page">
+        <Reveal>
+          <div className="text-center">
+            <p className="text-[10px] font-bold uppercase tracking-[.24em] text-[#0e0ad8]">{t('homeV2.templatesEyebrow')}</p>
+            <h2 className="mt-5 text-[clamp(2.1rem,5vw,4.5rem)] font-semibold leading-[1.02] tracking-[-.055em]">
+              {t('homeV2.templatesTitle')}{' '}
+              <span className="mc-serif-accent text-[#0e0ad8]">{t('homeV2.templatesAccent')}</span>
+            </h2>
+            <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-white/55">{t('homeV2.templatesDescription')}</p>
+          </div>
+        </Reveal>
+
+        <div className="mt-14 grid gap-7 lg:grid-cols-[1.35fr_.65fr] lg:items-stretch">
+          <div className="relative min-h-[430px] overflow-hidden rounded-[28px] border border-white/10 bg-[#131a15] sm:min-h-[520px]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={current.id}
+                className="absolute inset-0"
+                initial={reduce ? false : { opacity: 0, scale: 1.025, x: 12 }}
+                animate={{ opacity: 1, scale: 1, x: 0 }}
+                exit={reduce ? undefined : { opacity: 0, scale: 0.985, x: -12 }}
+                transition={{ duration: 0.45, ease }}
+              >
+                <img src={current.previewImage} alt={current.name} className="h-full w-full object-cover opacity-80" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#080c09] via-[#080c09]/20 to-transparent" />
+                <div className="absolute inset-x-5 top-5 flex items-center justify-between sm:inset-x-8 sm:top-8">
+                  <span className="rounded-full border border-white/25 bg-black/25 px-3 py-1.5 text-[10px] font-semibold tracking-[.18em] backdrop-blur">{String(active + 1).padStart(2, '0')} / {String(templates.length).padStart(2, '0')}</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[.18em] text-white/70">{t(`homeV2.templateDetails.${current.id}.category`)}</span>
+                </div>
+                <div className="absolute inset-x-5 bottom-6 sm:inset-x-8 sm:bottom-8">
+                  <div className="flex flex-wrap gap-2">
+                    {current.tags.slice(0, 3).map((tag, tagIndex) => <span key={tag} className="rounded-full border border-white/20 bg-black/20 px-3 py-1.5 text-[10px] text-white/80 backdrop-blur">{t(`homeV2.templateDetails.${current.id}.tags.${tagIndex}`)}</span>)}
+                  </div>
+                  <h3 className="mt-4 font-serif text-4xl leading-none sm:text-5xl">{current.name}</h3>
+                  <p className="mt-3 max-w-lg text-sm leading-6 text-white/70">{t(`homeV2.templateDetails.${current.id}.tagline`)}</p>
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <button type="button" onClick={() => onCustomize(current.id)} className="mc-primary-cta inline-flex min-h-11 items-center gap-2 rounded-full px-5 py-3 text-xs font-bold text-white transition hover:-translate-y-0.5">
+                      {t('homeV2.useTemplate')} <Icon name="arrowRight" size={14} className="rtl:rotate-180" />
+                    </button>
+                    <Link to={`/templates/${current.id}`} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/30 px-5 py-3 text-xs font-semibold text-white transition hover:bg-white/10">
+                      {t('homeV2.preview')} <Icon name="external" size={13} />
+                    </Link>
+                  </div>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {templates.map((template, index) => ({ template, index })).filter(({ index }) => index !== active).map(({ template, index }) => {
+              const selected = index === active
+              return (
+                <button
+                  key={template.id}
+                  type="button"
+                  onClick={() => setActive(index)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+                      event.preventDefault()
+                      setActive((index + 1) % templates.length)
+                    }
+                    if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+                      event.preventDefault()
+                      setActive((index - 1 + templates.length) % templates.length)
+                    }
+                  }}
+                  aria-pressed={selected}
+                  className={cx(
+                    'group flex min-h-[76px] items-center gap-4 rounded-2xl border px-3 py-3 text-start transition duration-300 sm:min-h-[88px] sm:px-4',
+                    selected ? 'border-[#0e0ad8]/55 bg-[#0e0ad8]/[0.08]' : 'border-white/10 bg-white/[0.025] hover:border-white/25 hover:bg-white/[0.06]'
+                  )}
+                >
+                  <span className="h-14 w-16 shrink-0 overflow-hidden rounded-xl sm:h-16 sm:w-[76px]">
+                    <img src={template.previewImage} alt="" className={cx('h-full w-full object-cover transition duration-500 group-hover:scale-110', selected && 'scale-105')} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className={cx('block text-[10px] font-bold tracking-[.16em]', selected ? 'text-[#0e0ad8]' : 'text-white/35')}>{String(index + 1).padStart(2, '0')}</span>
+                    <span className="mt-1 block truncate text-sm font-semibold text-white">{template.name}</span>
+                    <span className="mt-1 block truncate text-[11px] text-white/45">{t(`homeV2.templateDetails.${template.id}.category`)}</span>
+                  </span>
+                  <Icon name={selected ? 'arrowUpRight' : 'arrowRight'} size={16} className={cx('shrink-0 transition', selected ? 'text-[#0e0ad8]' : 'text-white/30 group-hover:text-white')} />
+                </button>
+              )
+            })}
+            <Link to="/templates" className="mt-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/15 px-5 text-xs font-semibold text-white/70 transition hover:border-white/35 hover:text-white">
+              {t('nav.templates')} <Icon name="arrowRight" size={14} className="rtl:rotate-180" />
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
 }
 
-/**
- * Reads the copy for the active language, with a per-field fallback chain:
- * active language → English page → the active language's seed.
- */
-function safeCopy(content: HomeContentByLang, lang: Lang): HomeContent {
-  const active = content[lang]
-  const en = content.en
-  const seed = HOME_SEED[lang]
-  return {
-    ...active,
-    hero: {
-      ...active.hero,
-      eyebrow: firstText(active.hero.eyebrow, en.hero.eyebrow, seed.hero.eyebrow),
-      title: firstText(active.hero.title, en.hero.title, seed.hero.title),
-      sub: firstText(active.hero.sub, en.hero.sub, seed.hero.sub),
-      cta: firstText(active.hero.cta, en.hero.cta, seed.hero.cta),
-      secondaryCta: firstText(active.hero.secondaryCta, en.hero.secondaryCta, seed.hero.secondaryCta),
-      video: firstText(active.hero.video, en.hero.video, seed.hero.video),
-      videoDesktop: firstText(active.hero.videoDesktop, en.hero.videoDesktop, seed.hero.videoDesktop),
-      videoMobile: firstText(active.hero.videoMobile, en.hero.videoMobile, seed.hero.videoMobile),
-      variant: firstText(active.hero.variant, en.hero.variant, seed.hero.variant),
-      note: firstText(active.hero.note, en.hero.note, seed.hero.note),
-    },
-    templates: {
-      ...active.templates,
-      eyebrow: firstText(active.templates.eyebrow, en.templates.eyebrow, seed.templates.eyebrow ?? ''),
-      title: firstText(active.templates.title, en.templates.title, seed.templates.title),
-      sub: firstText(active.templates.sub, en.templates.sub, seed.templates.sub ?? ''),
-    },
-    editorShowcase: {
-      ...active.editorShowcase,
-      eyebrow: firstText(
-        active.editorShowcase.eyebrow,
-        en.editorShowcase.eyebrow,
-        seed.editorShowcase.eyebrow
-      ),
-      title: firstText(active.editorShowcase.title, en.editorShowcase.title, seed.editorShowcase.title),
-      sub: firstText(active.editorShowcase.sub, en.editorShowcase.sub, seed.editorShowcase.sub),
-      bullets: firstList(
-        active.editorShowcase.bullets,
-        en.editorShowcase.bullets,
-        seed.editorShowcase.bullets
-      ),
-    },
-    workflow: {
-      ...active.workflow,
-      eyebrow: firstText(active.workflow.eyebrow, en.workflow.eyebrow, seed.workflow.eyebrow),
-      title: firstText(active.workflow.title, en.workflow.title, seed.workflow.title),
-      sub: firstText(active.workflow.sub, en.workflow.sub, seed.workflow.sub),
-      steps: firstList(active.workflow.steps, en.workflow.steps, seed.workflow.steps),
-    },
-    highlights: {
-      ...active.highlights,
-      items: firstList(active.highlights.items, en.highlights.items, seed.highlights.items),
-    },
-    showcase: {
-      ...active.showcase,
-      eyebrow: firstText(active.showcase.eyebrow, en.showcase.eyebrow, seed.showcase.eyebrow ?? ''),
-      title: firstText(active.showcase.title, en.showcase.title, seed.showcase.title),
-      sub: firstText(active.showcase.sub, en.showcase.sub, seed.showcase.sub ?? ''),
-    },
-    pricing: {
-      ...active.pricing,
-      eyebrow: firstText(active.pricing.eyebrow, en.pricing.eyebrow, seed.pricing.eyebrow ?? ''),
-      title: firstText(active.pricing.title, en.pricing.title, seed.pricing.title),
-      sub: firstText(active.pricing.sub, en.pricing.sub, seed.pricing.sub ?? ''),
-      note: firstText(active.pricing.note, en.pricing.note, seed.pricing.note),
-    },
-    finalCta: {
-      ...active.finalCta,
-      title: firstText(active.finalCta.title, en.finalCta.title, seed.finalCta.title),
-      sub: firstText(active.finalCta.sub, en.finalCta.sub, seed.finalCta.sub),
-      cta: firstText(active.finalCta.cta, en.finalCta.cta, seed.finalCta.cta),
-    },
-    logos: {
-      ...active.logos,
-      title: firstText(active.logos?.title, en.logos?.title, seed.logos?.title),
-      items: firstList(active.logos?.items, en.logos?.items, seed.logos?.items),
-    },
-  }
+function Pricing({ onCustomize }: { onCustomize: (id: string) => void }) {
+  const { t } = useI18n()
+  const reduce = useReducedMotion()
+
+  return (
+    <section id="pricing" className="mc-pricing bg-[#080b09] pb-24 pt-20 text-white sm:pb-28 sm:pt-24">
+      <div className="page">
+        <Reveal>
+          <div className="text-center">
+            <p className="text-[10px] font-bold uppercase tracking-[.24em] text-[#0e0ad8]">{t('homeV2.pricingEyebrow')}</p>
+            <h2 className="mt-5 text-[clamp(2.1rem,5vw,4.5rem)] font-semibold leading-[1.02] tracking-[-.055em]">
+              {t('homeV2.pricingTitle')}{' '}
+              <span className="mc-serif-accent text-[#0e0ad8]">{t('homeV2.pricingAccent')}</span>
+            </h2>
+            <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-white/55">{t('homeV2.pricingDescription')}</p>
+            <div className="mt-7 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] p-1">
+              <span className="rounded-full bg-white/10 px-4 py-2 text-xs font-semibold text-white">{t('homeV2.monthly')}</span>
+            </div>
+          </div>
+        </Reveal>
+
+        <div className="mt-12 grid gap-5 lg:grid-cols-3 lg:items-stretch">
+          {PLANS.map((plan, index) => (
+            <Reveal key={plan.id} delay={index * 0.08} className="h-full">
+              <motion.article
+                whileHover={reduce ? undefined : { y: -7 }}
+                transition={{ duration: 0.25 }}
+                className={cx(
+                  'relative flex h-full flex-col rounded-[26px] border p-6 sm:p-7',
+                  plan.highlight
+                    ? 'mc-featured-plan border-transparent bg-[#111813] shadow-[0_25px_90px_rgba(0,0,0,.35)]'
+                    : 'border-white/10 bg-white/[0.035] hover:border-white/25'
+                )}
+              >
+                {plan.highlight ? <span className="absolute -top-3 end-6 rounded-full bg-[#0e0ad8] px-4 py-1.5 text-[10px] font-extrabold uppercase tracking-[.12em] text-white">{t('homeV2.mostLoved')}</span> : null}
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-bold uppercase tracking-[.15em]">{plan.name}</h3>
+                  <Badge tone={plan.highlight ? 'moss' : 'outline'}>{t(plan.mode === 'live' ? 'home.pricing.modeLive' : 'home.pricing.modeStatic')}</Badge>
+                </div>
+                <p className="mt-4 min-h-[48px] text-sm leading-6 text-white/50">{t(`homeV2.plans.${plan.id}.description`)}</p>
+                <div className="mt-7 flex items-end gap-2">
+                  <span className="text-5xl font-semibold tracking-[-.06em]">{plan.price === 0 ? t('home.pricing.free') : `$${plan.price}`}</span>
+                  <span className="pb-1.5 text-xs text-white/45">{plan.period === 'forever' ? t('homeV2.forever') : t('homeV2.perMonth')}</span>
+                </div>
+                <ul className="mt-7 flex-1 space-y-4 border-t border-white/10 pt-6">
+                  {plan.features.map((feature, featureIndex) => (
+                    <li key={feature} className="flex items-start gap-3 text-sm leading-6 text-white/75">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#0e0ad8]/15 text-[#0e0ad8]"><Icon name="check" size={12} /></span>
+                      <span>{t(`homeV2.plans.${plan.id}.features.${featureIndex}`)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-8">
+                  <Button
+                    full
+                    size="lg"
+                    variant={plan.highlight ? 'accent' : 'outline'}
+                    onClick={() => onCustomize('bella-italia')}
+                    className={plan.highlight ? 'mc-plan-button' : ''}
+                  >
+                    {plan.price === 0 ? t('homeV2.startFree') : t('homeV2.choosePlan')}
+                  </Button>
+                </div>
+              </motion.article>
+            </Reveal>
+          ))}
+        </div>
+        <div className="mt-9 text-center">
+          <Link to="/plans" className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/20 px-6 py-3 text-xs font-semibold text-white/70 transition hover:border-[#0e0ad8]/60 hover:text-[#0e0ad8]">
+            {t('home.pricing.viewAllPlans')} <Icon name="arrowRight" size={14} className="rtl:rotate-180" />
+          </Link>
+        </div>
+      </div>
+    </section>
+  )
 }
 
 export default function Home() {
-  const restaurant = useActiveRestaurant()
   const customize = useCustomize()
   const { lang } = useI18n()
   const contentByLang = useHomeContentByLang()
-  const copy = useMemo(() => safeCopy(contentByLang, lang), [contentByLang, lang])
-
+  const heroVariantId = (contentByLang[lang]?.hero as any)?.variant
+  const previewHero = new URLSearchParams(window.location.search).get('hero')
+  const heroPreview = previewHero || heroVariantId
+  const showCinematicStage = heroPreview === 'cinematic-stage'
+  const showLivingPhones = heroPreview === 'living-phones'
+  const showSingleFocus = heroPreview === 'single-focus'
+  const showStoryboard = heroPreview === 'storyboard'
+  const showSpotlight = heroPreview === 'template-spotlight'
+  const showClassic = heroPreview === 'classic'
   return (
-    <div className="min-h-screen bg-ivory">
-      <ScrollProgressBar />
-      <DraggableScrollbar />
-      <CustomCursor />
-      <PageIntro />
-      <FloatingVideo src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4" />
-
-      {/* 1 — cinematic + main hero */}
-      <CinematicHero />
-      <MarketingHeader themeEnabled />
-      {copy.hero.enabled ? <Hero restaurant={restaurant} hero={copy.hero} /> : null}
-
-      {/* 2 — social proof */}
-      <SectionDivider />
-      {copy.logos.enabled ? <ClientLogos section={copy.logos} /> : null}
-
-      {/* 3 — the product (templates) */}
-      <SectionDivider />
-      {copy.templates.enabled ? (
-        <FeaturedTemplates onCustomize={customize} section={copy.templates} />
-      ) : null}
-
-      {/* 4 — how it works */}
-      <SectionDivider />
-      {copy.workflow.enabled ? <Workflow onCustomize={customize} section={copy.workflow} /> : null}
-
-      {/* 5 — editor showcase */}
-      <SectionDivider />
-      {copy.editorShowcase.enabled ? (
-        <EditorShowcase restaurant={restaurant} section={copy.editorShowcase} />
-      ) : null}
-
-      {/* 6 — feature highlights */}
-      <SectionDivider />
-      {copy.highlights.enabled ? <FeatureHighlights section={copy.highlights} /> : null}
-
-      {/* 7 — pricing */}
-      <SectionDivider />
-      {copy.pricing.enabled ? <Pricing onCustomize={customize} section={copy.pricing} /> : null}
-
-      {/* 8 — animated marquee */}
-      <SectionDivider />
-      <Marquee
-        items={['QR Ordering', 'Multi-Branch', 'Real-time Analytics', 'Digital Menus', 'Custom Templates', 'Fast Payments']}
-        className="border-y border-sand bg-paper"
-      />
-
-      {/* responsive showcase — temporarily disabled
-      <SectionDivider />
-      {SHOW_RESPONSIVE && copy.showcase.enabled ? (
-        <ResponsiveShowcase restaurant={restaurant} section={copy.showcase} />
-      ) : null}
-      */}
-
-      {/* 9 — final CTA */}
-      <SectionDivider />
-      {copy.finalCta.enabled ? <FinalCta section={copy.finalCta} /> : null}
+    <div className="mc-home min-h-screen bg-[#080b09]">
+      <MarketingHeader themeEnabled darkTheme />
+      <main>
+        {showCinematicStage ? <CinematicStageHero /> : showLivingPhones ? <LivingPhonesHero /> : showSingleFocus ? <SingleFocusHero /> : showStoryboard ? <StoryboardHero /> : showSpotlight ? <TemplateSpotlightHero /> : showClassic ? <Hero /> : <ScrollHero />}
+        <Templates onCustomize={customize} />
+        <Pricing onCustomize={customize} />
+      </main>
       <MarketingFooter />
     </div>
-  )
-}
-
-/* ---------------------------------- hero ---------------------------------- */
-
-function Hero({ restaurant, hero }: { restaurant: Restaurant; hero: HomeContent['hero'] }) {
-  const { t } = useI18n()
-  const ref = useRef<HTMLElement>(null)
-  useScrollReveal(ref)
-
-  return (
-    <section ref={ref} className="relative overflow-hidden border-b border-sand bg-cream pb-28 pt-[118px] lg:pt-[142px]">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[760px] bg-[radial-gradient(ellipse_at_top,rgba(232,87,31,0.10),transparent_62%)]"
-      />
-      <div aria-hidden="true" className="grid-lines pointer-events-none absolute inset-0 opacity-70" />
-
-      <div className="page relative">
-        <div className="mx-auto max-w-3xl text-center">
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
-            <Button to="/templates" size="lg" icon="arrowRight">
-              {hero.cta}
-            </Button>
-            <Button to="/dashboard/editor" size="lg" variant="outline" icon="layout">
-              {hero.secondaryCta}
-            </Button>
-          </div>
-        </div>
-
-        {/* ------------------------- product composition ------------------------ */}
-        <div className="relative mx-auto mt-14 w-full max-w-[1100px] lg:mt-16">
-          <BrowserFrame url="menudigital" badge={t('home.hero.liveBadge')}>
-            <ScaledFrame width={1440} maxHeight={540}>
-              <RestaurantSite
-                restaurant={restaurant}
-                interactive={false}
-                mode="preview"
-                idPrefix="hero-"
-              />
-            </ScaledFrame>
-          </BrowserFrame>
-
-          {/* floating analytics card */}
-          <ParallaxLayer speed={-40} className="absolute -start-6 top-8 hidden w-[196px] lg:block xl:-start-14">
-            <div className="rounded-2xl border border-sand bg-paper p-3.5 shadow-[0_30px_60px_-40px_rgba(15,13,11,0.8)]">
-            <div className="flex items-center justify-between">
-              <span className="text-[11.5px] font-medium text-umber">{t('home.hero.viewsLabel')}</span>
-              <Badge tone="moss" icon="trendUp">
-                +18%
-              </Badge>
-            </div>
-            <div className="mt-1 text-[22px] font-semibold tracking-[-0.02em] text-charcoal">
-              {t('home.hero.viewsLabel')} {restaurant.stats?.views || 0}
-            </div>
-            <div className="mt-1 text-flame">
-              {restaurant.stats?.trend && <Sparkline values={restaurant.stats.trend} />}
-            </div>
-            </div>
-          </ParallaxLayer>
-
-          {/* floating QR card */}
-          <div className="absolute -start-4 bottom-6 hidden w-[218px] rounded-2xl border border-sand bg-paper p-3.5 shadow-[0_30px_60px_-40px_rgba(15,13,11,0.8)] lg:block xl:-start-12">
-            <div className="flex items-center gap-3">
-              <span className="rounded-lg border border-sand bg-white p-1.5">
-                <QRCodeSVG value={`https://${restaurant.slug}.menudigital.com`} size={54} level="M" />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[12.5px] font-semibold text-charcoal">
-                  {t('home.hero.qrTitle')}
-                </span>
-                <span className="line-clamp-1 text-[11.5px] text-umber">
-                  {restaurant.slug}.menudigital.com
-                </span>
-                <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-moss">
-                  <span className="h-1.5 w-1.5 rounded-full bg-moss anim-pulse-dot" />
-                  {t('home.hero.scans', { count: '1,284' })}
-                </span>
-              </span>
-            </div>
-          </div>
-
-          {/* phone preview */}
-          <div className="absolute -bottom-16 -end-6 hidden w-[252px] xl:block">
-            <DeviceMockup>
-              <PhoneFrame width={252} screen={476}>
-                <ScaledFrame width={390} maxHeight={476}>
-                  <RestaurantSite
-                    restaurant={restaurant}
-                    interactive={false}
-                    mode="preview"
-                    idPrefix="herophone-"
-                  />
-                </ScaledFrame>
-              </PhoneFrame>
-            </DeviceMockup>
-          </div>
-        </div>
-
-        <p className="mt-14 text-center text-[13px] text-clay xl:mt-24">{hero.note}</p>
-      </div>
-    </section>
-  )
-}
-
-/* ---------------------------- featured templates --------------------------- */
-
-function FeaturedTemplates({
-  onCustomize,
-  section,
-}: {
-  onCustomize: (id: string) => void
-  section: HomeContent['templates']
-}) {
-  const { t } = useI18n()
-  const featured = TEMPLATES.filter((item) => item.featured).slice(0, 3)
-  const ref = useRef<HTMLElement>(null)
-  useScrollReveal(ref)
-
-  return (
-    <section ref={ref} className="border-t border-sand bg-paper py-20 lg:py-28" id="templates">
-      <div className="page">
-        <div data-reveal className="flex items-center justify-center gap-4">
-          <span aria-hidden="true" className="h-px w-16 bg-clay/60" />
-          <span className="eyebrow">{section.eyebrow ?? ''}</span>
-          <span aria-hidden="true" className="h-px w-16 bg-clay/60" />
-        </div>
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {featured.map((template) => (
-            <article
-              key={template.id}
-              className="group flex flex-col overflow-hidden rounded-3xl border border-sand bg-ivory transition duration-300 hover:border-clay hover:shadow-[0_40px_80px_-56px_rgba(15,13,11,0.9)]"
-            >
-              <Link to={`/templates/${template.id}`} className="relative block aspect-[4/3] overflow-hidden">
-                <img
-                  data-reveal-img
-                  src={template.previewImage}
-                  alt={t('home.templates.previewAlt', { name: template.name })}
-                  loading="lazy"
-                  className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.06]"
-                />
-                <span className="absolute start-4 top-4 flex gap-1.5 rounded-full bg-ink/65 px-2.5 py-1.5 backdrop-blur-sm">
-                  {template.chips.map((chip) => (
-                    <span
-                      key={chip}
-                      className="h-3.5 w-3.5 rounded-full border border-white/40"
-                      style={{ backgroundColor: chip }}
-                    />
-                  ))}
-                </span>
-                <span className="absolute inset-x-4 bottom-4 flex justify-center opacity-0 transition duration-300 group-hover:opacity-100">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-paper px-3.5 py-1.5 text-[12.5px] font-semibold text-charcoal">
-                    <Icon name="eye" size={14} />
-                    {t('home.templates.previewChip')}
-                  </span>
-                </span>
-              </Link>
-
-              <div className="flex flex-1 flex-col p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <span className="eyebrow">{template.category}</span>
-                    <h3 className="display-serif mt-1.5 text-[24px] leading-none text-charcoal">
-                      {template.name}
-                    </h3>
-                  </div>
-                  <Badge tone="outline">{template.personality.split(' · ')[0]}</Badge>
-                </div>
-
-                <p className="mt-3 flex-1 text-[14.5px] leading-relaxed text-umber">
-                  {template.tagline}
-                </p>
-
-                <div className="mt-5 flex items-center gap-2">
-                  <Button
-                    to={`/templates/${template.id}`}
-                    size="sm"
-                    variant="outline"
-                    icon="eye"
-                    className="flex-1"
-                  >
-                    {t('home.templates.preview')}
-                  </Button>
-                  <Button size="sm" onClick={() => onCustomize(template.id)} className="flex-1">
-                    {t('home.templates.customize')}
-                  </Button>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        <div className="mt-10 flex justify-center">
-          <Button to="/templates" size="lg" variant="outline" icon="grid" iconRight="arrowRight">
-            {t('home.templates.browseAll', { count: TEMPLATES.length })}
-          </Button>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/* ----------------------------- editor showcase ----------------------------- */
-
-const SHOWCASE_PALETTES: ColorSet[] = [
-  PALETTE_PRESETS[0].colors,
-  PALETTE_PRESETS[1].colors,
-  PALETTE_PRESETS[3].colors,
-]
-
-const SHOWCASE_PALETTE_NAMES = ['Ivory & Flame', 'Midnight & Gold', 'Olive Garden']
-
-function EditorShowcase({
-  restaurant,
-  section,
-}: {
-  restaurant: Restaurant
-  section: HomeContent['editorShowcase']
-}) {
-  const { t } = useI18n()
-  const [palette, setPalette] = useState(0)
-  const [headingFont, setHeadingFont] = useState<FontId>('playfair')
-  const [menuLayout, setMenuLayout] = useState<'grid' | 'list'>('list')
-
-  const preview = useMemo(() => {
-    const next = structuredClone(restaurant)
-    next.design.colors = { ...next.design.colors, ...SHOWCASE_PALETTES[palette] }
-    next.design.typography.heading = headingFont
-    next.design.layout.menuLayout = menuLayout
-    return next
-  }, [restaurant, palette, headingFont, menuLayout])
-
-  const bullets = section.bullets.filter((bullet) => bullet.trim())
-  const ref = useRef<HTMLElement>(null)
-  useScrollReveal(ref)
-
-  return (
-    <section ref={ref} className="relative overflow-hidden bg-ink py-20 text-ivory lg:py-28" id="features">
-      <div className="page">
-        <div className="grid items-center gap-12 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <span data-reveal className="eyebrow text-ivory/50">{section.eyebrow}</span>
-            <h2 data-reveal className="display-serif mt-4 text-[clamp(30px,4vw,48px)] leading-[1.06]">
-              <AccentText text={section.title} />
-            </h2>
-            <p data-reveal className="mt-5 text-[16px] leading-relaxed text-ivory/65">{section.sub}</p>
-
-            {bullets.length > 0 ? (
-              <ul className="mt-6 space-y-2.5">
-                {bullets.map((bullet) => (
-                  <li key={bullet} className="flex items-center gap-2.5 text-[14.5px] text-ivory/70">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-flame/15 text-flame-light">
-                      <Icon name="check" size={12} strokeWidth={3} />
-                    </span>
-                    {bullet}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-
-            <div className="mt-8 space-y-6">
-              <div>
-                <div className="mb-2.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-ivory/45">
-                  {t('home.editor.palette')}
-                </div>
-                <div className="flex flex-wrap gap-2.5">
-                  {SHOWCASE_PALETTE_NAMES.map((name, index) => (
-                    <button
-                      key={name}
-                      type="button"
-                      onClick={() => setPalette(index)}
-                      aria-pressed={palette === index}
-                      className={cx(
-                        'inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[13px] font-medium transition',
-                        palette === index
-                          ? 'border-flame bg-flame/12 text-ivory'
-                          : 'border-ivory/15 text-ivory/65 hover:border-ivory/35 hover:text-ivory'
-                      )}
-                    >
-                      <span className="flex">
-                        {SHOWCASE_PALETTES[index].accent === SHOWCASE_PALETTES[index].background ? null : (
-                          <span
-                            className="h-4 w-4 rounded-full border border-white/25"
-                            style={{ backgroundColor: SHOWCASE_PALETTES[index].accent }}
-                          />
-                        )}
-                        <span
-                          className="-ms-1.5 h-4 w-4 rounded-full border border-white/25"
-                          style={{ backgroundColor: SHOWCASE_PALETTES[index].background }}
-                        />
-                      </span>
-                      {name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-2.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-ivory/45">
-                  {t('home.editor.headingFont')}
-                </div>
-                <div className="flex flex-wrap gap-2.5">
-                  {(['playfair', 'inter', 'montserrat'] as FontId[]).map((font) => (
-                    <button
-                      key={font}
-                      type="button"
-                      onClick={() => setHeadingFont(font)}
-                      aria-pressed={headingFont === font}
-                      className={cx(
-                        'rounded-xl border px-4 py-2.5 text-[15px] transition',
-                        headingFont === font
-                          ? 'border-flame bg-flame/12 text-ivory'
-                          : 'border-ivory/15 text-ivory/65 hover:border-ivory/35 hover:text-ivory'
-                      )}
-                      style={{
-                        fontFamily:
-                          font === 'playfair'
-                            ? '"Playfair Display", serif'
-                            : font === 'montserrat'
-                              ? 'Montserrat, sans-serif'
-                              : '"Inter", sans-serif',
-                      }}
-                    >
-                      Aa
-                      <span className="ms-2 text-[12.5px] opacity-70">
-                        {font === 'playfair' ? 'Playfair' : font === 'montserrat' ? 'Montserrat' : 'Inter'}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-2.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-ivory/45">
-                  {t('home.editor.layout')}
-                </div>
-                <div className="inline-flex rounded-full border border-ivory/15 p-1">
-                  {(['grid', 'list'] as const).map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => setMenuLayout(option)}
-                      aria-pressed={menuLayout === option}
-                      className={cx(
-                        'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[13px] font-medium capitalize transition',
-                        menuLayout === option
-                          ? 'bg-ivory text-charcoal'
-                          : 'text-ivory/60 hover:text-ivory'
-                      )}
-                    >
-                      <Icon name={option === 'grid' ? 'grid' : 'list'} size={14} />
-                      {option === 'grid' ? t('home.editor.grid') : t('home.editor.list')}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-9 flex flex-wrap gap-3">
-              <Button to="/dashboard/editor" variant="accent" icon="arrowRight">
-                {t('home.editor.openEditor')}
-              </Button>
-              <Button to="/templates" variant="light">
-                {t('home.editor.seeAll')}
-              </Button>
-            </div>
-          </div>
-
-          <div className="relative">
-            <BrowserFrame
-              url={`${restaurant.slug}.menudigital.com/preview`}
-              badge={t('home.editor.liveBadge')}
-            >
-              <ScaledFrame width={1440} maxHeight={560}>
-                <RestaurantSite
-                  restaurant={preview}
-                  interactive={false}
-                  mode="preview"
-                  idPrefix="showcase-"
-                />
-              </ScaledFrame>
-            </BrowserFrame>
-            <div className="absolute -bottom-5 start-6 hidden rounded-full border border-ivory/15 bg-smoke px-3.5 py-2 text-[12px] text-ivory/70 shadow-xl sm:block">
-              <span className="flex items-center gap-2">
-                <Icon name="sparkles" size={13} className="text-flame" />
-                {t('home.editor.appliedNote')}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/* -------------------------------- workflow -------------------------------- */
-
-/** step number, icon, link and CTA label stay structural — only copy is editable */
-const STEP_META: { icon: string; to: string; cta: TKey }[] = [
-  { icon: 'layers', to: '/templates', cta: 'home.workflow.browseTemplates' },
-  { icon: 'palette', to: '/dashboard/editor', cta: 'home.workflow.tryEditor' },
-  { icon: 'send', to: '/menu-demo', cta: 'home.workflow.seePublished' },
-]
-
-const STEP_META_FALLBACK: { icon: string; to: string; cta: TKey } = {
-  icon: 'sparkles',
-  to: '/templates',
-  cta: 'home.workflow.learnMore',
-}
-
-function Workflow({
-  onCustomize,
-  section,
-}: {
-  onCustomize: (id: string) => void
-  section: HomeContent['workflow']
-}) {
-  const { t } = useI18n()
-  const containerRef = useRef<HTMLDivElement>(null)
-  const stepRefs = useRef<Array<HTMLDivElement | null>>([])
-
-  const steps = section.steps.filter((s) => s.title.trim())
-
-  /* full-screen pinned cards — each fades in/out with scroll (like the hero) */
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container || steps.length === 0) return
-
-    const cards = stepRefs.current.filter(Boolean) as HTMLDivElement[]
-    if (cards.length === 0) return
-
-    const ctx = gsap.context(() => {
-      cards.forEach((card, i) => {
-        gsap.set(card, { opacity: i === 0 ? 1 : 0, y: i === 0 ? 0 : 70 })
-      })
-
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: container,
-          start: 'top top',
-          end: 'bottom bottom',
-          scrub: 0.6,
-        },
-      })
-
-      cards.forEach((card, i) => {
-        if (i === 0) return
-        const at = i
-        tl.to(cards[i - 1], { opacity: 0, y: -70, duration: 0.4, ease: 'power2.in' }, at - 0.4)
-        tl.fromTo(card, { opacity: 0, y: 70 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }, at)
-      })
-    }, container)
-
-    return () => ctx.revert()
-  }, [steps.length])
-
-  return (
-    <section className="bg-ivory pt-20 lg:pt-28" id="how">
-      <div className="page">
-        <SectionHeading
-          eyebrow={section.eyebrow ?? ''}
-          title={<AccentText text={section.title} />}
-          description={section.sub ?? ''}
-        />
-      </div>
-
-      {/* pinned full-screen stage */}
-      <div
-        ref={containerRef}
-        className="relative mt-10"
-        style={{ height: `${Math.max(steps.length, 1) * 100}vh` }}
-      >
-        <div className="sticky top-0 flex h-screen items-center justify-center overflow-hidden px-5">
-          {steps.map((step, index) => {
-            const meta = STEP_META[index] ?? STEP_META_FALLBACK
-            const number = String(index + 1).padStart(2, '0')
-            return (
-              <div
-                key={number}
-                ref={(el) => {
-                  stepRefs.current[index] = el
-                }}
-                className="absolute inset-0 flex items-center justify-center px-5"
-              >
-                <Link
-                  to={meta.to}
-                  className="group w-full max-w-2xl rounded-[32px] border border-sand bg-paper p-8 text-center shadow-[0_50px_100px_-70px_rgba(15,13,11,0.9)] transition duration-300 hover:border-clay sm:p-12"
-                >
-                  <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-charcoal text-ivory transition group-hover:bg-flame">
-                    <Icon name={meta.icon} size={28} />
-                  </span>
-                  <span className="display-serif mt-6 block text-[64px] leading-none text-sand transition group-hover:text-flame/70 sm:text-[86px]">
-                    {number}
-                  </span>
-                  <h3 className="display-serif mt-3 text-[30px] leading-tight text-charcoal sm:text-[40px]">
-                    {step.title}
-                  </h3>
-                  <p className="mx-auto mt-4 max-w-lg text-[16px] leading-relaxed text-umber sm:text-[17px]">
-                    {step.body}
-                  </p>
-                  <span className="mt-7 inline-flex items-center gap-2 text-[15px] font-semibold text-charcoal">
-                    {t(meta.cta)}
-                    <Icon
-                      name="arrowRight"
-                      size={17}
-                      className="transition-transform duration-300 group-hover:translate-x-1 rtl:group-hover:-translate-x-1"
-                    />
-                  </span>
-                </Link>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      <div className="page pb-20 lg:pb-28">
-        <div className="flex justify-center">
-          <Button onClick={() => onCustomize('bella-italia')} variant="outline" icon="sparkles">
-            {t('home.workflow.startWith', { name: 'Bella Italia' })}
-          </Button>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/* --------------------------- feature highlights --------------------------- */
-
-/** icon + wide-card flag per highlight position — copy is fully editable */
-const HIGHLIGHT_META = [
-  { icon: 'palette', wide: true },
-  { icon: 'type', wide: false },
-  { icon: 'book', wide: false },
-  { icon: 'qr', wide: false },
-  { icon: 'smartphone', wide: false },
-]
-
-const HIGHLIGHT_META_FALLBACK = { icon: 'sparkles', wide: false }
-
-function FeatureHighlights({ section }: { section: HomeContent['highlights'] }) {
-  const restaurant = useActiveRestaurant()
-  const { t } = useI18n()
-  const ref = useRef<HTMLElement>(null)
-  useScrollReveal(ref)
-
-  return (
-    <section ref={ref} className="border-y border-sand bg-paper py-20 lg:py-28">
-      <div className="page">
-        <div data-reveal>
-          <SectionHeading
-            eyebrow={t('home.highlights.eyebrow')}
-            title={<SplitText text={t('home.highlights.title')} mode="words" />}
-            description={t('home.highlights.sub')}
-          />
-        </div>
-
-        <StaggerList itemSelector="article" className="mt-12 grid gap-5 lg:grid-cols-3">
-          {section.items.map((item, index) => {
-            const meta = HIGHLIGHT_META[index] ?? HIGHLIGHT_META_FALLBACK
-            return (
-              <article
-                key={`${index}-${item.title}`}
-                className={cx(
-                  'flex flex-col justify-between rounded-3xl border border-sand bg-ivory p-6 transition duration-300 hover:border-clay hover:bg-paper',
-                  meta.wide && 'lg:col-span-2'
-                )}
-              >
-                <div className="flex items-start gap-4">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-charcoal text-ivory">
-                    <Icon name={meta.icon} size={20} />
-                  </span>
-                  <div>
-                    <h3 className="text-[17px] font-semibold tracking-[-0.01em] text-charcoal">
-                      {item.title}
-                    </h3>
-                    <p className="mt-1.5 max-w-md text-[14.5px] leading-relaxed text-umber">
-                      {item.body}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-6">{highlightVisual(index, restaurant, t)}</div>
-              </article>
-            )
-          })}
-        </StaggerList>
-      </div>
-    </section>
-  )
-}
-
-function highlightVisual(
-  index: number,
-  restaurant: Restaurant,
-  t: ReturnType<typeof useI18n>['t']
-) {
-  switch (index) {
-    case 0:
-      return (
-        <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-sand bg-paper p-4">
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-charcoal font-display text-[17px] text-ivory">
-            {/* @ts-ignore */}
-            <span className="font-[family-name:'Playfair_Display']">{restaurant.logoText}</span>
-          </span>
-          <span className="min-w-0">
-            <span className="line-clamp-1 text-[15px] font-semibold text-charcoal">
-              {(restaurant.name as any)}
-            </span>
-            {/* @ts-ignore */}
-            <span className="line-clamp-1 text-[13px] text-umber">{restaurant.tagline}</span>
-          </span>
-          <span className="ms-auto hidden gap-1.5 sm:flex">
-            {['#1B1714', '#E8571F', '#3F5D45', '#C6A15B'].map((color) => (
-              <span
-                key={color}
-                className="h-6 w-6 rounded-full border border-black/10"
-                style={{ backgroundColor: color }}
-              />
-            ))}
-          </span>
-        </div>
-      )
-    case 1:
-      return (
-        <div className="flex items-end justify-between gap-4 rounded-2xl border border-sand bg-paper p-4">
-          <span className="display-serif text-[46px] leading-[0.85] text-charcoal">Aa</span>
-          <span className="text-end text-[13px] leading-relaxed text-umber">
-            Playfair Display
-            <br />
-            Inter · Lora · DM Sans
-          </span>
-        </div>
-      )
-    case 2:
-      return (
-        <div className="divide-y divide-sand rounded-2xl border border-sand bg-paper">
-          {restaurant.menu[0]?.items.slice(0, 3).map((item) => (
-            <div key={item.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-              <span className="line-clamp-1 text-[13.5px] text-charcoal">{item.name}</span>
-              <span className="font-mono text-[13px] text-umber">${item.price}</span>
-            </div>
-          ))}
-        </div>
-      )
-    case 3:
-      return (
-        <div className="flex items-center gap-4 rounded-2xl border border-sand bg-paper p-4">
-          <span className="rounded-xl border border-sand bg-white p-2">
-            <QRCodeSVG value={`https://${restaurant.slug}.menudigital.com`} size={72} level="M" />
-          </span>
-          <span className="text-[13px] leading-relaxed text-umber">
-            {t('home.highlights.scansTo')}
-            <br />
-            <span className="font-medium text-charcoal">{restaurant.slug}.menudigital.com</span>
-          </span>
-        </div>
-      )
-    default:
-      return (
-        <div className="flex items-center gap-4 rounded-2xl border border-sand bg-paper p-4">
-          <span className="w-[74px] shrink-0 rounded-[14px] border-2 border-charcoal bg-white p-1.5">
-            <span className="block space-y-1 rounded-lg bg-ivory p-1.5">
-              <span className="block h-1.5 w-full rounded-full bg-clay/60" />
-              <span className="block h-1.5 w-3/4 rounded-full bg-clay/40" />
-              <span className="block h-4 w-full rounded bg-flame/80" />
-              <span className="block h-1.5 w-2/3 rounded-full bg-clay/40" />
-            </span>
-          </span>
-          <span className="text-[13px] leading-relaxed text-umber">
-            {t('home.highlights.mobileFirst')
-              .split('\n')
-              .map((line, lineIndex, lines) => (
-                <Fragment key={lineIndex}>
-                  {line}
-                  {lineIndex < lines.length - 1 ? <br /> : null}
-                </Fragment>
-              ))}
-          </span>
-        </div>
-      )
-  }
-}
-
-/* --------------------------- responsive showcase -------------------------- */
-
-/** temporarily disabled in Home — export kept so it can be re-enabled later */
-export function ResponsiveShowcase({
-  restaurant,
-  section,
-}: {
-  restaurant: Restaurant
-  section: HomeContent['showcase']
-}) {
-  const { t } = useI18n()
-  const ref = useRef<HTMLElement>(null)
-  useScrollReveal(ref)
-
-  return (
-    <section ref={ref} className="overflow-hidden bg-charcoal py-20 text-ivory lg:py-28">
-      <div className="page-wide page">
-        <div className="grid items-center gap-14 lg:grid-cols-[1fr_1.25fr]">
-          <div>
-            <span data-reveal className="eyebrow text-ivory/50">{section.eyebrow}</span>
-            <h2 data-reveal className="display-serif mt-4 text-[clamp(30px,4vw,48px)] leading-[1.06]">
-              <AccentText text={section.title} />
-            </h2>
-            <p data-reveal className="mt-5 text-[16px] leading-relaxed text-ivory/65">{section.sub}</p>
-            <ul className="mt-8 space-y-3.5">
-              {[
-                {
-                  icon: 'monitor',
-                  title: t('home.showcase.desktop'),
-                  copy: t('home.showcase.desktopCopy'),
-                },
-                {
-                  icon: 'smartphone',
-                  title: t('home.showcase.mobile'),
-                  copy: t('home.showcase.mobileCopy'),
-                },
-                {
-                  icon: 'qr',
-                  title: t('home.showcase.table'),
-                  copy: t('home.showcase.tableCopy'),
-                },
-              ].map((point) => (
-                <li key={point.title} className="flex gap-4">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ivory/10 text-flame-light">
-                    <Icon name={point.icon} size={18} />
-                  </span>
-                  <span>
-                    <span className="block text-[15px] font-semibold">{point.title}</span>
-                    <span className="block text-[14px] text-ivory/60">{point.copy}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-9">
-              <Button to="/menu-demo" variant="accent" icon="external">
-                {t('home.showcase.openMenu')}
-              </Button>
-            </div>
-          </div>
-
-          <div className="relative">
-            <BrowserFrame url={`${restaurant.slug}.menudigital.com`} badge={t('home.showcase.liveBadge')}>
-              <ScaledFrame width={1440} maxHeight={470}>
-                <RestaurantSite
-                  restaurant={restaurant}
-                  interactive={false}
-                  mode="preview"
-                  idPrefix="resp-"
-                />
-              </ScaledFrame>
-            </BrowserFrame>
-            <div className="absolute -bottom-12 end-2 hidden md:block lg:-end-6">
-              <PhoneFrame width={214} screen={396} label={t('home.showcase.phoneLabel', { px: '390px' })}>
-                <ScaledFrame width={390} maxHeight={396}>
-                  <RestaurantSite
-                    restaurant={restaurant}
-                    interactive={false}
-                    mode="preview"
-                    idPrefix="respphone-"
-                  />
-                </ScaledFrame>
-              </PhoneFrame>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/* --------------------------------- pricing -------------------------------- */
-
-function Pricing({
-  onCustomize,
-  section,
-}: {
-  onCustomize: (id: string) => void
-  section: HomeContent['pricing']
-}) {
-  const { t } = useI18n()
-  const ref = useRef<HTMLElement>(null)
-  useScrollReveal(ref)
-
-  return (
-    <section ref={ref} className="bg-ivory py-20 lg:py-28" id="pricing">
-      <div className="page">
-        <div data-reveal>
-          <SectionHeading
-            eyebrow={section.eyebrow ?? ''}
-            title={<AccentText text={section.title} accentClass="italic text-flame" />}
-            description={section.sub ?? ''}
-          />
-        </div>
-
-        <div className="mt-6 flex justify-center">
-          <Badge tone="gold" icon="info">
-            {t('home.pricing.demoBadge')}
-          </Badge>
-        </div>
-
-        <div className="mt-10 grid gap-6 lg:grid-cols-3">
-          {PLANS.map((plan) => (
-            <div
-              key={plan.id}
-              className={cx(
-                'flex flex-col rounded-3xl border p-7 transition duration-300',
-                plan.highlight
-                  ? 'border-charcoal bg-charcoal text-ivory shadow-[0_50px_90px_-60px_rgba(15,13,11,1)]'
-                  : 'border-sand bg-paper hover:border-clay'
-              )}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-[15px] font-semibold uppercase tracking-[0.14em]">
-                  {plan.name}
-                </h3>
-                <span className="flex items-center gap-1.5">
-                  <span
-                    className={cx(
-                      'rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider',
-                      plan.mode === 'static'
-                        ? 'bg-sand text-espresso'
-                        : plan.highlight
-                          ? 'bg-ivory/15 text-ivory'
-                          : 'bg-moss/12 text-moss'
-                    )}
-                  >
-                    {t(plan.mode === 'static' ? 'home.pricing.modeStatic' : 'home.pricing.modeLive')}
-                  </span>
-                  {plan.highlight ? (
-                    <span className="rounded-full bg-flame px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white">
-                      {t('home.pricing.mostPopular')}
-                    </span>
-                  ) : null}
-                </span>
-              </div>
-
-              <div className="mt-5 flex items-end gap-2">
-                <span className="display-serif text-[52px] leading-none">
-                  {plan.price === 0 ? t('home.pricing.free') : `$${plan.price}`}
-                </span>
-                <span
-                  className={cx(
-                    'pb-1.5 text-[13.5px]',
-                    plan.highlight ? 'text-ivory/55' : 'text-umber'
-                  )}
-                >
-                  {plan.period === 'forever' ? t('home.pricing.forever') : t('home.pricing.perMonth')}
-                </span>
-              </div>
-
-              <p
-                className={cx(
-                  'mt-3 text-[14.5px] leading-relaxed',
-                  plan.highlight ? 'text-ivory/65' : 'text-umber'
-                )}
-              >
-                {plan.blurb}
-              </p>
-
-              <ul
-                className={cx(
-                  'mt-6 flex-1 space-y-3 border-t pt-6 text-[14.5px]',
-                  plan.highlight ? 'border-ivory/12' : 'border-sand'
-                )}
-              >
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex gap-2.5">
-                    <span
-                      className={cx(
-                        'mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full',
-                        plan.highlight ? 'bg-flame text-white' : 'bg-moss/12 text-moss'
-                      )}
-                    >
-                      <Icon name="check" size={11} strokeWidth={3} />
-                    </span>
-                    <span className={plan.highlight ? 'text-ivory/85' : 'text-espresso'}>
-                      {feature}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="mt-7">
-                <Button
-                  full
-                  size="lg"
-                  variant={plan.highlight ? 'accent' : 'outline'}
-                  onClick={() => onCustomize('bella-italia')}
-                >
-                  {plan.price === 0
-                    ? t('home.pricing.startFree')
-                    : t('home.pricing.choosePlan', { name: plan.name })}
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* زر بعد قسم أول 3 باقات → صفحة مخصّصة تعرض كل الباقات الست */}
-        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-          <Button to="/plans" size="lg" variant="dark" iconRight="arrowRight">
-            {t('home.pricing.viewAllPlans')}
-          </Button>
-        </div>
-
-        <p className="mt-7 text-center text-[13px] text-clay">{section.note}</p>
-      </div>
-    </section>
-  )
-}
-
-/* --------------------------------- logos ---------------------------------- */
-
-function ClientLogos({ section }: { section: HomeContent['logos'] }) {
-  const ref = useRef<HTMLElement>(null)
-  const trackRef = useRef<HTMLDivElement>(null)
-  useScrollReveal(ref)
-
-  /* logos strip moves horizontally with scroll */
-  useEffect(() => {
-    if (!trackRef.current || !ref.current) return
-
-    const tween = gsap.fromTo(
-      trackRef.current,
-      { xPercent: 0 },
-      {
-        xPercent: -30,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: ref.current,
-          start: 'top bottom',
-          end: 'bottom top',
-          scrub: 0.8,
-        },
-      }
-    )
-    return () => {
-      tween.scrollTrigger?.kill()
-      tween.kill()
-    }
-  }, [])
-
-  const items = section.items.filter((i) => i.name.trim())
-  if (items.length === 0) return null
-
-  return (
-    <section ref={ref} className="border-y border-sand bg-paper py-16 overflow-hidden">
-      <div className="page">
-        <div data-reveal className="text-center">
-          <span className="eyebrow">{section.title}</span>
-        </div>
-      </div>
-      <div ref={trackRef} className="mt-10 flex items-center gap-14 px-10 w-max">
-        {[...items, ...items].map((item, i) => (
-          <div key={i} className="flex items-center gap-3 opacity-45 grayscale transition hover:opacity-100 hover:grayscale-0">
-            {item.image ? (
-              <img src={item.image} alt={item.name} className="h-10 w-auto object-contain" loading="lazy" />
-            ) : (
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-charcoal text-[15px] font-bold text-ivory">
-                {item.name.charAt(0).toUpperCase()}
-              </span>
-            )}
-            <span className="whitespace-nowrap text-[15px] font-semibold text-umber">{item.name}</span>
-          </div>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-/* -------------------------------- final CTA ------------------------------- */
-
-function FinalCta({ section }: { section: HomeContent['finalCta'] }) {
-  const { t } = useI18n()
-  const ref = useRef<HTMLElement>(null)
-  useScrollReveal(ref)
-
-  const titleLines = section.title.split('\n')
-
-  return (
-    <section ref={ref} className="bg-ivory pb-24">
-      <div className="page">
-        <div className="relative overflow-hidden rounded-[36px] bg-ink px-8 py-16 text-center text-ivory lg:px-16 lg:py-20">
-          <WaveBackground />
-          <ShapeMorph />
-          <div aria-hidden="true" className="grid-lines pointer-events-none absolute inset-0 opacity-30" />
-
-          <div className="relative mx-auto max-w-3xl">
-            <span data-reveal className="eyebrow text-flame-light">{t('home.finalCta.eyebrow')}</span>
-            <MaskTextReveal
-              className="display-serif mt-4 text-[clamp(32px,5vw,58px)] leading-[1.05]"
-              lines={titleLines.map((line, i) => (
-                <AccentText key={i} text={line} />
-              ))}
-            />
-            <p data-reveal className="mx-auto mt-5 max-w-xl text-[16.5px] leading-relaxed text-ivory/65">
-              {section.sub}
-            </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <MagneticButton>
-                <Button to="/templates" size="lg" icon="arrowRight">
-                  {section.cta}
-                </Button>
-              </MagneticButton>
-              <MagneticButton>
-                <Button to="/dashboard/editor" size="lg" variant="light">
-                  {t('home.finalCta.secondary')}
-                </Button>
-              </MagneticButton>
-            </div>
-            <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[13px] text-ivory/45">
-              <span>{t('home.finalCta.noCard')}</span>
-              <span>·</span>
-              <span>{t('home.finalCta.noCode')}</span>
-              <span>·</span>
-              <span>{t('home.finalCta.demoOnly')}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
   )
 }

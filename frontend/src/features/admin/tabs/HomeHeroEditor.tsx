@@ -139,6 +139,7 @@ export default function HomeHeroEditor() {
   const [eyebrow, setEyebrow] = useState(content.hero.eyebrow || '')
   const [title, setTitle] = useState(content.hero.title || '')
   const [sub, setSub] = useState(content.hero.sub || '')
+  const [cta, setCta] = useState(content.hero.cta || '')
   const [imageDesktop, setImageDesktop] = useState(content.hero.imageDesktop || content.hero.image || '')
   const [imageMobile, setImageMobile] = useState(content.hero.imageMobile || '')
   const [videoDesktop, setVideoDesktop] = useState(content.hero.videoDesktop || content.hero.video || '')
@@ -147,9 +148,6 @@ export default function HomeHeroEditor() {
   const [colorEyebrow, setColorEyebrow] = useState(content.hero.textColors?.eyebrow || '')
   const [colorTitle, setColorTitle] = useState(content.hero.textColors?.title || '')
   const [colorSub, setColorSub] = useState(content.hero.textColors?.sub || '')
-  const [chipQr, setChipQr] = useState(content.hero.chipColors?.qr || '')
-  const [chipOrder, setChipOrder] = useState(content.hero.chipColors?.order || '')
-  const [chipPay, setChipPay] = useState(content.hero.chipColors?.pay || '')
   const [titleSize, setTitleSize] = useState(content.hero.textSizes?.title ?? 100)
   const [subSize, setSubSize] = useState(content.hero.textSizes?.sub ?? 100)
   const [saving, setSaving] = useState(false)
@@ -159,6 +157,7 @@ export default function HomeHeroEditor() {
     setEyebrow(content.hero.eyebrow || '')
     setTitle(content.hero.title || '')
     setSub(content.hero.sub || '')
+    setCta(content.hero.cta || '')
     setImageDesktop(content.hero.imageDesktop || content.hero.image || '')
     setImageMobile(content.hero.imageMobile || '')
     setVideoDesktop(content.hero.videoDesktop || content.hero.video || '')
@@ -167,9 +166,6 @@ export default function HomeHeroEditor() {
     setColorEyebrow(content.hero.textColors?.eyebrow || '')
     setColorTitle(content.hero.textColors?.title || '')
     setColorSub(content.hero.textColors?.sub || '')
-    setChipQr(content.hero.chipColors?.qr || '')
-    setChipOrder(content.hero.chipColors?.order || '')
-    setChipPay(content.hero.chipColors?.pay || '')
     setTitleSize(content.hero.textSizes?.title ?? 100)
     setSubSize(content.hero.textSizes?.sub ?? 100)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -183,6 +179,7 @@ export default function HomeHeroEditor() {
         eyebrow,
         title,
         sub,
+        cta,
         image: imageDesktop,
         imageDesktop,
         imageMobile,
@@ -191,7 +188,6 @@ export default function HomeHeroEditor() {
         videoMobile,
         variant: variantId,
         textColors: { eyebrow: colorEyebrow, title: colorTitle, sub: colorSub },
-        chipColors: { qr: chipQr, order: chipOrder, pay: chipPay },
         textSizes: { title: titleSize, sub: subSize },
       }
       update(lang, (c) => {
@@ -234,17 +230,14 @@ export default function HomeHeroEditor() {
       <Field label={t('adminUi.subLabel')}>
         <Input value={sub} onChange={(e) => setSub(e.target.value)} dir="ltr" />
       </Field>
+      <Field label={t('adminUi.ctaLabel')}>
+        <Input value={cta} onChange={(e) => setCta(e.target.value)} placeholder="Explore templates" dir="ltr" />
+      </Field>
 
       <div className="grid gap-3 md:grid-cols-3">
         <ColorField label={t('adminUi.colorEyebrow')} value={colorEyebrow} onChange={setColorEyebrow} />
         <ColorField label={t('adminUi.colorTitle')} value={colorTitle} onChange={setColorTitle} />
         <ColorField label={t('adminUi.colorSub')} value={colorSub} onChange={setColorSub} />
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <ColorField label={t('adminUi.chipQr')} value={chipQr} onChange={setChipQr} />
-        <ColorField label={t('adminUi.chipOrder')} value={chipOrder} onChange={setChipOrder} />
-        <ColorField label={t('adminUi.chipPay')} value={chipPay} onChange={setChipPay} />
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">

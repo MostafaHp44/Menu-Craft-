@@ -83,6 +83,14 @@ function buildMenu(menu: PublicMenuCategory[], lang: Lang): MenuCategory[] {
       featured: !!it.featured,
       popular: !!it.popular,
       available: it.available !== false,
+      optionGroups: it.options?.groups ?? [],
+      isVeg: it.isVeg,
+      isGf: it.isGf,
+      isSpicy: it.isSpicy,
+      isSpecial: it.isSpecial,
+      calories: it.calories,
+      ingredients: it.ingredients,
+      allergens: it.allergens,
     })),
   }));
 }
@@ -166,6 +174,7 @@ export function buildRestaurant(
     description: fallbackDescription,
     logoText: fallbackLogoText,
     logoStyle: (r.logoStyle as any) || 'monogram',
+    logoImage: (rr as any).logoImage || '',
     heroImage: fallbackHeroImage,
     heroImageFit: (rr as any).heroImageFit || undefined,
     heroVideo: r.heroVideo || '',
@@ -178,7 +187,7 @@ export function buildRestaurant(
     address: r.address || '',
     hours,
     socials: normalizeSocials(r.socials as any),
-    templateId: r.templateId || 'urban-cafe',
+    templateId: r.templateId || 'kreme-deals',
     design,
     menu: buildMenu(data.menu || [], resolvedLang),
     status: (r.status === 'published' ? 'published' : 'draft') as

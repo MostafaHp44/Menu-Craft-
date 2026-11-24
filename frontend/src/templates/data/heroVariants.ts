@@ -25,6 +25,12 @@ export interface HeroVariant {
 }
 
 export const HERO_VARIANTS: HeroVariant[] = [
+  { id: 'scroll-hero', name: 'Scroll Story', note: 'Current home · admin copy, colors & media · scroll reveals', align: 'center', font: 'montserrat', accent: '#0e0ad8', bg: '#08090b', glow: '#0e0ad8', chips: false, phoneMock: false, taglineRoam: false, bigType: 1 },
+  { id: 'cinematic-stage', name: 'Cinematic Stage', note: 'Admin video · one headline · one CTA', align: 'left', font: 'montserrat', accent: '#0e0ad8', bg: '#08090b', glow: '#0e0ad8', chips: false, phoneMock: false, taglineRoam: false, bigType: 1.1 },
+  { id: 'living-phones', name: 'Living Phones', note: 'Template videos inside the phones', align: 'center', font: 'montserrat', accent: '#0e0ad8', bg: '#08090b', glow: '#0e0ad8', chips: false, phoneMock: false, taglineRoam: false, bigType: 1 },
+  { id: 'single-focus', name: 'Single Focus', note: 'One hero phone · one template video', align: 'left', font: 'montserrat', accent: '#0e0ad8', bg: '#08090b', glow: '#0e0ad8', chips: false, phoneMock: false, taglineRoam: false, bigType: 1 },
+  { id: 'storyboard', name: 'Storyboard', note: 'Paper → Scan → Live · three quiet scenes', align: 'center', font: 'montserrat', accent: '#0e0ad8', bg: '#08090b', glow: '#0e0ad8', chips: false, phoneMock: false, taglineRoam: false, bigType: 1 },
+  { id: 'template-spotlight', name: 'Template Spotlight', note: 'Big template · switch arrows · Preview / Use', align: 'center', font: 'montserrat', accent: '#0e0ad8', bg: '#08090b', glow: '#0e0ad8', chips: false, phoneMock: false, taglineRoam: false, bigType: 1 },
   { id: 'scan-taste', name: 'Scan it. Taste it.', note: 'Touch & Feel', align: 'center', font: 'montserrat', accent: '#ffb020', bg: '#120a24', glow: '#7c3aed', chips: false, phoneMock: false, taglineRoam: false, bigType: 1 },
   { id: 'menu-alive', name: 'Your menu, alive.', note: 'Touch & Feel + QR/Order/Pay chips', align: 'center', font: 'montserrat', accent: '#55b8ff', bg: '#071426', glow: '#247bdf', chips: true, phoneMock: false, taglineRoam: true, bigType: 1.05 },
   { id: 'type-less', name: 'Type less. Order more.', note: 'Touch & Feel + phone mock', align: 'center', font: 'montserrat', accent: '#ffffff', bg: '#0a0f1a', glow: '#3b4a6b', chips: false, phoneMock: true, taglineRoam: false, bigType: 0.95 },

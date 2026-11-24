@@ -22,7 +22,7 @@ const NAV: NavItem[] = [
   { key: 'nav.pricing', to: '/#pricing' },
 ]
 
-export function MarketingHeader({ solid = false, themeEnabled = false }: { solid?: boolean; themeEnabled?: boolean }) {
+export function MarketingHeader({ solid = false, themeEnabled = false, darkTheme = false }: { solid?: boolean; themeEnabled?: boolean; darkTheme?: boolean }) {
   const { t } = useI18n()
   const session = useAuthStore((s) => s.session)
   const backendUser = useBackendAuth((s) => s.user)
@@ -46,6 +46,7 @@ export function MarketingHeader({ solid = false, themeEnabled = false }: { solid
     <header
       className={cx(
         'fixed inset-x-0 top-0 z-50 transition-all duration-300',
+        darkTheme ? 'mc-header-dark' : '',
         elevated
           ? 'border-b border-sand/80 bg-ivory/88 backdrop-blur-xl'
           : 'border-b border-transparent bg-transparent'

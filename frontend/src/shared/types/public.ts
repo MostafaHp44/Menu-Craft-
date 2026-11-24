@@ -68,6 +68,15 @@ export interface PublicMenuItem {
   popular?: boolean;
   available?: boolean;
   options?: { groups: PublicMenuItemOptionGroup[] } | null;
+  /** dietary flags when the API provides them (all optional — absent = no badge) */
+  isVeg?: boolean;
+  isGf?: boolean;
+  isSpicy?: boolean;
+  isSpecial?: boolean;
+  /** nutritional data — shown when present */
+  calories?: number;
+  ingredients?: string;
+  allergens?: string[];
 }
 
 export interface PublicMenuCategory {
@@ -85,6 +94,7 @@ export interface PublicRestaurant {
   description?: string | { en: string; ar: string; ku: string } | null;
   logoText?: string | { en: string; ar: string; ku: string } | null;
   logoStyle?: string;
+  logoImage?: string;
   heroImage?: string;
   heroVideo?: string;
   gallery?: string[];

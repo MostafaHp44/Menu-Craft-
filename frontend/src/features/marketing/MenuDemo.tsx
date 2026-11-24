@@ -1,7 +1,9 @@
 import type { CSSProperties } from 'react'
-import { Link } from 'react-router-dom'
+import { useMemo } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Icon } from '../../shared/ui/icons.tsx'
 import { RestaurantSite } from '../../templates/site/RestaurantSite.tsx'
+import { buildTemplatePreviewRestaurant, hasTemplate } from '../../templates/data/templates.ts'
 import { Button } from '../../shared/ui/ui.tsx'
 import { publicUrl } from '../../shared/lib/hooks.ts'
 import { useActiveRestaurant, useStore } from '../../shared/store/useStore.ts'
@@ -10,7 +12,14 @@ import { useI18n } from '../../shared/i18n'
 
 export default function MenuDemo() {
   const { t } = useI18n()
-  const r = useActiveRestaurant()
+  const [params] = useSearchParams()
+  const templateId = params.get('template')
+  const active = useActiveRestaurant()
+  const demo = useMemo(
+    () => (templateId && hasTemplate(templateId) ? buildTemplatePreviewRestaurant(templateId) : null),
+    [templateId],
+  )
+  const r = demo ?? active
   const dirty = useStore((s) => s.dirty)
   const publishDemo = useStore((s) => s.publishDemo)
   const sub = useSubscription(r.id)
@@ -92,7 +101,7 @@ export default function MenuDemo() {
         </div>
 
         {/* draft / unsaved notices */}
-        {dirty ? (
+        {!demo && dirty ? (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gold/25 bg-gold/12 px-4 py-2">
             <span className="flex items-center gap-2 text-[12.5px] font-medium text-gold">
               <Icon name="alert" size={14} />
@@ -113,7 +122,7 @@ export default function MenuDemo() {
           </div>
         ) : null}
 
-        {!dirty && r.status === 'draft' ? (
+        {!demo && !dirty && r.status === 'draft' ? (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-white/6 px-4 py-2">
             <span className="flex items-center gap-2 text-[12.5px] text-ivory/75">
               <Icon name="info" size={14} />

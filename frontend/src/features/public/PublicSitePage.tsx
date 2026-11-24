@@ -213,7 +213,7 @@ export default function PublicSitePage() {
 
   const [restaurantObj, setRestaurantObj] = useState(() => {
     // Initial render uses store data if available, otherwise fallback
-    const initialData = data || { restaurant: { id: '', name: '', slug: '', templateId: 'urban-cafe', design: {} as any, menu: [], ordering: {} as any } } as any;
+    const initialData = data || { restaurant: { id: '', name: '', slug: '', templateId: 'kreme-deals', design: {} as any, menu: [], ordering: {} as any } } as any;
     return buildRestaurant(initialData, lang);
   });
   // Recompute restaurantObj whenever the store data or API data updates, ensuring the selected template design is always applied
@@ -258,6 +258,7 @@ export default function PublicSitePage() {
     <div className="min-h-dvh" dir={lang === 'en' ? 'ltr' : 'rtl'}>
       <RestaurantSite restaurant={restaurantObj} mode="site" interactive={true}
         orderingEnabled={orderingOpen}
+        currency={currency}
         onOpenCart={() => { setOverlay('cart'); }} />
 
       {/* branch bar kept from original */}

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @theme {
+  --breakpoint-xs: 380px;
   --font-sans: "Inter", "Cairo", "Vazirmatn", "Noto Naskh Arabic", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: "Playfair Display", "Cairo", "Vazirmatn", "Noto Naskh Arabic", Georgia, "Times New Roman", serif;
 
@@ -38,6 +39,49 @@
   --color-amber: #b98a2e;
   --color-amber-dark: #8a6420;
   --color-rose-dark: #96453d;
+}
+
+/* ------------------------- marketing home v2 ------------------------- */
+@layer components {
+  .mc-hero-grid {
+    background-image: linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+    background-size: 46px 46px;
+    mask-image: radial-gradient(ellipse at 70% 45%, #000 10%, transparent 72%);
+  }
+  .mc-hero-glow {
+    background: radial-gradient(45% 55% at 72% 42%, rgba(14,10,216,.22), transparent 70%),
+      radial-gradient(38% 50% at 30% 70%, rgba(139,92,246,.12), transparent 70%);
+  }
+  .mc-hero-title { text-wrap: balance; }
+  .mc-primary-cta {
+    background: #0e0ad8;
+    box-shadow: 0 10px 34px -14px rgba(14,10,216,.65);
+  }
+  .mc-serif-accent { font-family: var(--font-display); font-style: italic; letter-spacing: -.03em; }
+  .mc-featured-plan {
+    background: radial-gradient(120% 100% at 50% 0%, rgba(14,10,216,.18), transparent 60%), #111813;
+    border-color: rgba(14,10,216,.55) !important;
+  }
+  .mc-plan-button { background: #0e0ad8 !important; color: #fff !important; }
+  .mc-float-card { box-shadow: 0 30px 70px -30px rgba(0,0,0,.8); }
+
+  /* the dark header variant used only by the new home page */
+  .mc-header-dark header, .mc-header-dark { --header-ink: #fff; }
+  .mc-header-dark nav a { color: rgba(255,255,255,.72) !important; }
+  .mc-header-dark nav a:hover { color: #fff !important; }
+  .mc-header-dark a > svg { color: #fff; }
+  .mc-header-dark .bg-ivory { background-color: #08090b !important; }
+  .mc-header-dark .border-sand { border-color: rgba(255,255,255,.13) !important; }
+  .mc-header-dark .text-charcoal, .mc-header-dark .text-espresso { color: rgba(255,255,255,.85) !important; }
+  .mc-header-dark .bg-paper { background-color: rgba(255,255,255,.08) !important; }
+  .mc-header-dark button[aria-label] { border-color: rgba(255,255,255,.2) !important; color: #fff !important; }
+
+  /* keep the floating stage inside small screens */
+  @media (max-width: 420px) {
+    .mc-hero-stage { height: 430px; }
+    .mc-float-card { transform-origin: top left; scale: .9; }
+  }
 }
 
 @layer base {

@@ -19,6 +19,9 @@ import { homePage } from './locales/ext/homePage'
 import { designUi } from './locales/ext/design'
 import { live } from './locales/ext/live'
 import { publicUi } from './locales/ext/publicUi'
+import { aurum } from './locales/ext/aurum'
+import { templateUi } from './locales/ext/templateUi'
+import { homeV2 } from './locales/ext/homeV2'
 import { setActiveLang } from '../lib/utils.ts'
 
 export type Lang = 'en' | 'ar' | 'ku'
@@ -34,7 +37,10 @@ type ExtDict =
   (typeof homePage)['en'] &
   (typeof designUi)['en'] &
   (typeof live)['en'] &
-  (typeof publicUi)['en']
+  (typeof publicUi)['en'] &
+  (typeof aurum)['en'] &
+  (typeof templateUi)['en'] &
+  (typeof homeV2)['en']
 
 type FullDict = Dict & ExtDict
 
@@ -50,9 +56,9 @@ type DeepKeys<T> = {
 type Vars = Record<string, string | number>
 
 const dictionaries: Record<Lang, FullDict> = {
-  en: { ...en, ...clientTabs.en, ...platform.en, ...kitchen.en, ...authFlow.en, ...marketing.en, ...homePage.en, ...designUi.en, ...live.en, ...publicUi.en },
-  ar: { ...ar, ...clientTabs.ar, ...platform.ar, ...kitchen.ar, ...authFlow.ar, ...marketing.ar, ...homePage.ar, ...designUi.ar, ...live.ar, ...publicUi.ar },
-  ku: { ...ku, ...clientTabs.ku, ...platform.ku, ...kitchen.ku, ...authFlow.ku, ...marketing.ku, ...homePage.ku, ...designUi.ku, ...live.ku, ...publicUi.ku },
+  en: { ...en, ...clientTabs.en, ...platform.en, ...kitchen.en, ...authFlow.en, ...marketing.en, ...homePage.en, ...designUi.en, ...live.en, ...publicUi.en, ...aurum.en, ...templateUi.en, ...homeV2.en },
+  ar: { ...ar, ...clientTabs.ar, ...platform.ar, ...kitchen.ar, ...authFlow.ar, ...marketing.ar, ...homePage.ar, ...designUi.ar, ...live.ar, ...publicUi.ar, ...aurum.ar, ...templateUi.ar, ...homeV2.ar },
+  ku: { ...ku, ...clientTabs.ku, ...platform.ku, ...kitchen.ku, ...authFlow.ku, ...marketing.ku, ...homePage.ku, ...designUi.ku, ...live.ku, ...publicUi.ku, ...aurum.ku, ...templateUi.ku, ...homeV2.ku },
 }
 
 export const LANGS: Array<{ id: Lang; native: string; dir: Dir }> = [

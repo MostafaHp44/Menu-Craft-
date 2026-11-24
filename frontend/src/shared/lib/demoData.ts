@@ -166,7 +166,7 @@ export function createRestaurantFromTemplate(
 const hoursAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString()
 
 export function createSeedRestaurants(): Restaurant[] {
-  const bella = createRestaurantFromTemplate('bella-italia', {
+  const bella = createRestaurantFromTemplate('kreme-deals', {
     id: 'rst-bella',
     name: 'Bella Italian Kitchen',
     slug: 'bella',
@@ -181,7 +181,7 @@ export function createSeedRestaurants(): Restaurant[] {
     updatedAt: hoursAgo(3),
   })
 
-  const copper = createRestaurantFromTemplate('urban-cafe', {
+  const copper = createRestaurantFromTemplate('kreme-deals', {
     id: 'rst-copper',
     name: 'The Copper Kettle',
     slug: 'copperkettle',
@@ -204,7 +204,7 @@ export function createSeedRestaurants(): Restaurant[] {
     updatedAt: hoursAgo(26),
   })
 
-  const hearth = createRestaurantFromTemplate('sweet-atelier', {
+  const hearth = createRestaurantFromTemplate('kreme-deals', {
     id: 'rst-hearth',
     name: 'Hearth & Crumb',
     slug: 'hearthcrumb',
@@ -279,16 +279,16 @@ export const RECENT_ACTIVITY: RecentActivity[] = [
  * ------------------------------------------------------------------ */
 
 export const ADMIN_ROWS: AdminRestaurantRow[] = [
-  { id: 'r1', name: 'Bella Italian Kitchen', owner: 'Marco Ferrante', plan: 'professional', templateId: 'bella-italia', status: 'published', views: 12480, created: '2026-03-04' },
-  { id: 'r2', name: 'The Copper Kettle', owner: 'Dana Whitfield', plan: 'starter', templateId: 'urban-cafe', status: 'published', views: 4120, created: '2026-05-19' },
-  { id: 'r3', name: 'Hearth & Crumb', owner: 'Owen Blake', plan: 'trial', templateId: 'sweet-atelier', status: 'draft', views: 860, created: '2026-09-30' },
-  { id: 'r4', name: 'Burger District', owner: 'Tyrone Hayes', plan: 'professional', templateId: 'burger-district', status: 'published', views: 21870, created: '2025-11-12' },
-  { id: 'r5', name: 'Bean & Brew', owner: 'Priya Raman', plan: 'business', templateId: 'bean-brew', status: 'published', views: 18340, created: '2025-08-02' },
-  { id: 'r6', name: 'Green Table', owner: 'Sofia Mendes', plan: 'professional', templateId: 'green-table', status: 'published', views: 9640, created: '2026-01-27' },
-  { id: 'r7', name: 'Maison Patisserie', owner: 'Julien Roux', plan: 'professional', templateId: 'maison-patisserie', status: 'published', views: 7210, created: '2026-02-14' },
-  { id: 'r8', name: 'The Royal', owner: 'Alexandra Vane', plan: 'business', templateId: 'the-royal', status: 'published', views: 15990, created: '2025-06-21' },
-  { id: 'r9', name: 'Nonnaâ€™s Table', owner: 'Luca Bianchi', plan: 'trial', templateId: 'bella-italia', status: 'draft', views: 320, created: '2026-10-18' },
-  { id: 'r10', name: 'Sunrise Juice Co.', owner: 'Mia Coleman', plan: 'starter', templateId: 'green-table', status: 'draft', views: 540, created: '2026-10-22' },
+  { id: 'r1', name: 'Bella Italian Kitchen', owner: 'Marco Ferrante', plan: 'professional', templateId: 'kreme-deals', status: 'published', views: 12480, created: '2026-03-04' },
+  { id: 'r2', name: 'The Copper Kettle', owner: 'Dana Whitfield', plan: 'starter', templateId: 'kreme-deals', status: 'published', views: 4120, created: '2026-05-19' },
+  { id: 'r3', name: 'Hearth & Crumb', owner: 'Owen Blake', plan: 'trial', templateId: 'kreme-deals', status: 'draft', views: 860, created: '2026-09-30' },
+  { id: 'r4', name: 'Burger District', owner: 'Tyrone Hayes', plan: 'professional', templateId: 'kreme-deals', status: 'published', views: 21870, created: '2025-11-12' },
+  { id: 'r5', name: 'Bean & Brew', owner: 'Priya Raman', plan: 'business', templateId: 'kreme-deals', status: 'published', views: 18340, created: '2025-08-02' },
+  { id: 'r6', name: 'Green Table', owner: 'Sofia Mendes', plan: 'professional', templateId: 'kreme-deals', status: 'published', views: 9640, created: '2026-01-27' },
+  { id: 'r7', name: 'Maison Patisserie', owner: 'Julien Roux', plan: 'professional', templateId: 'kreme-deals', status: 'published', views: 7210, created: '2026-02-14' },
+  { id: 'r8', name: 'The Royal', owner: 'Alexandra Vane', plan: 'business', templateId: 'kreme-deals', status: 'published', views: 15990, created: '2025-06-21' },
+  { id: 'r9', name: 'Nonnaâ€™s Table', owner: 'Luca Bianchi', plan: 'trial', templateId: 'kreme-deals', status: 'draft', views: 320, created: '2026-10-18' },
+  { id: 'r10', name: 'Sunrise Juice Co.', owner: 'Mia Coleman', plan: 'starter', templateId: 'kreme-deals', status: 'draft', views: 540, created: '2026-10-22' },
 ]
 
 export const PLATFORM_ACTIVITY: PlatformActivity[] = [

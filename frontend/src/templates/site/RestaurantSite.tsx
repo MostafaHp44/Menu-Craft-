@@ -23,7 +23,8 @@ import {
 } from '../editor/inlineEdit.tsx'
 import { confirmDialog } from '../../shared/components/dialogs.tsx'
 import './site.css'
-import CheckoutOverlay from './CheckoutOverlay';
+import CheckoutOverlay from './CheckoutOverlay'
+import { getSiteComponent } from './registry.ts';
 
 const SPACES = ['0.84', '1', '1.18'] as const
 
@@ -107,6 +108,8 @@ export interface RestaurantSiteProps {
    * Defaults to true so editor previews and template demos stay interactive.
    */
   orderingEnabled?: boolean
+  /** currency used for price display — public page passes the site's ordering currency */
+  currency?: string
 }
 
 export function RestaurantSite({
@@ -121,7 +124,27 @@ export function RestaurantSite({
   onOpenCart,
   onMenuEdit,
   orderingEnabled = true,
+  currency,
 }: RestaurantSiteProps) {
+  // Dedicated variants dispatch to their renderer before any general rendering.
+  const storedVariant = r.design?.layout?.variant
+  const variant = storedVariant ?? getTemplate(r.templateId || '').defaultDesign?.layout?.variant
+  const SiteVariant = variant ? getSiteComponent(variant) : null
+  if (SiteVariant) {
+    return (
+      <SiteVariant
+        restaurant={r}
+        interactive={interactive}
+        mode={mode}
+        currency={currency}
+        editable={editable}
+        onActiveChange={onActiveChange}
+        onCommit={onCommit}
+        onStyle={onStyle}
+        onMenuEdit={onMenuEdit}
+      />
+    )
+  }
   const { layout } = r.design
   const enabled = r.design.sections.filter((s) => s.enabled).map((s) => s.id)
   const nav = NAV_SECTIONS.filter((id) => enabled.includes(id))
@@ -582,6 +605,47 @@ function SiteHero({ r, anchor }: { r: Restaurant; anchor: (id: string) => string
                   label="editor.inline.f.chip"
                 />
               </span>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+    )
+  }
+
+  if (style === 'magazine') {
+    return (
+      <section className="rs-hero rs-hero--magazine">
+        <div className="rs-hero__grid rs-shell">
+          <div className="rs-hero__inner">
+            {body}
+            <div className="rs-hero__meta">
+              <span className="rs-hero__meta-item">
+                <Icon name="clock" size={15} />
+                {hoursMeta}
+              </span>
+              <span className="rs-hero__meta-item">
+                <Icon name="mapPin" size={15} />
+                <Ed path="address" label="editor.inline.f.address" />
+              </span>
+            </div>
+          </div>
+          <figure className="rs-hero__figure">
+            <EdImage
+              path="heroImage"
+              src={heroImage}
+              alt={t('web.site.hero.signatureAlt', { name: tx(r.name) })}
+              eager
+              label="editor.inline.f.photo"
+              style={imageFitStyle((r as any).heroImageFit) as any}
+            />
+            <ResponsiveHeroMedia r={r} poster={heroPoster} />
+            <figcaption className="rs-hero__float">
+              <Icon name="star" size={15} />
+              <Ed
+                path="copy.hero.favourite"
+                fallback={t('web.site.hero.favourite')}
+                label="editor.inline.f.heroNote"
+              />
             </figcaption>
           </figure>
         </div>

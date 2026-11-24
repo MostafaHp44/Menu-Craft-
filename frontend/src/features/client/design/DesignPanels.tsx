@@ -806,8 +806,8 @@ export function LayoutPanel() {
       </PanelBlock>
 
       <PanelBlock title={t('design.heroStyle')}>
-        <div className="grid grid-cols-3 gap-2">
-          {(['fullscreen', 'split', 'editorial'] as const).map((value) => (
+        <div className="grid grid-cols-2 gap-2">
+          {(['fullscreen', 'split', 'editorial', 'magazine'] as const).map((value) => (
             <ChoiceCard
               key={value}
               label={
@@ -815,7 +815,9 @@ export function LayoutPanel() {
                   ? t('design.heroFull')
                   : value === 'split'
                     ? t('design.heroSplit')
-                    : t('design.heroEditorial')
+                    : value === 'editorial'
+                      ? t('design.heroEditorial')
+                      : t('design.heroMagazine')
               }
               active={l.hero === value}
               onClick={() => apply({ hero: value })}
@@ -827,6 +829,11 @@ export function LayoutPanel() {
                     <span className="flex h-6 w-10 gap-0.5">
                       <span className="flex-1 rounded-s bg-clay/60" />
                       <span className="flex-1 rounded-e bg-stone" />
+                    </span>
+                  ) : value === 'magazine' ? (
+                    <span className="flex h-6 w-10 gap-0.5">
+                      <span className="flex-1 self-center rounded bg-clay/60" />
+                      <span className="w-3 self-stretch rounded bg-stone" />
                     </span>
                   ) : (
                     <span className="h-1.5 w-10 rounded bg-clay/60" />

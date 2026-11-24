@@ -3,7 +3,7 @@
  *
  * DB-backed per-template overrides merged on top of the stock definitions in
  * `frontend/src/templates/data/templates.ts`. Keys are base_template_id values
- * (stock ids like `glazed-kreme` or custom template row ids).
+ * (stock ids like `kreme-deals` or custom template row ids).
  *
  * - hero_title / hero_subtitle: texts on the hero section
  * - hero_image / hero_image_mobile: background images (desktop 16:9, mobile 9:16)

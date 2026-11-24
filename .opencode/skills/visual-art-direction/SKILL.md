@@ -1,0 +1,10 @@
+Luxury
+Bold
+Elegant
+Playful
+Urban
+Minimal
+Experimental
+Warm
+Editorial
+Futuristic

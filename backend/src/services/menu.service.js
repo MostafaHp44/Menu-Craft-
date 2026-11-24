@@ -208,7 +208,7 @@ async function getPublicMenuBySlug(slug, lang = 'en') {
       address: r.address || '',
       hours: parseJson(r.hours, []),
       socials: parseJson(r.socials, {}),
-      templateId: r.templateId || r.template_id || 'bella-italia',
+      templateId: r.templateId || r.template_id || 'kreme-deals',
       design: parseJson(r.design, null),
       language: r.language || 'en',
       status: r.status,
